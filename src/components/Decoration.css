@@ -1,0 +1,51 @@
+.decoration-container {
+  position: relative;
+}
+
+.decoration-rotator {
+  position: absolute;
+  width: 75%;
+  height: 75%;
+  left: 12.5%;
+  top: 12.5%;
+  animation-name: rotate;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+.decoration-ball {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  border: 2px solid;
+  border-radius: 50%;
+  animation-name: bounce;
+  animation-iteration-count: infinite;
+}
+
+@keyframes rotate {
+  0% { 
+    transform: rotate(0deg); 
+  }
+  100% { 
+    transform: rotate(360deg); 
+  }
+}
+
+@keyframes bounce {
+  0%, 100% { 
+    transform: translate(0, 0); 
+  }
+  20% { 
+    transform: translate(40px, 30px); 
+  }
+  40% { 
+    transform: translate(-30px, -40px); 
+  }
+  60% { 
+    transform: translate(50px, -20px); 
+  }
+  80% { 
+    transform: translate(-40px, 30px); 
+  }
+}

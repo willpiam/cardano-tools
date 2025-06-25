@@ -1,0 +1,92 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 220 10% 9%;
+    --foreground: 210 20% 98%;
+
+    --card: 224 10% 12%;
+    --card-foreground: 210 20% 98%;
+
+    --popover: 224 10% 12%;
+    --popover-foreground: 210 20% 98%;
+
+    --primary: 35 100% 50%;
+    --primary-foreground: 240 5.9% 10%;
+    --primary-light: 35 100% 60%;
+    --primary-dark: 35 100% 40%;
+
+    --secondary: 224 10% 15%;
+    --secondary-foreground: 210 20% 98%;
+
+    --muted: 224 10% 15%;
+    --muted-foreground: 220 10% 70%;
+
+    --accent: 224 10% 15%;
+    --accent-foreground: 210 20% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 20% 98%;
+
+    --border: 224 10% 20%;
+    --input: 224 10% 20%;
+    --ring: 35 100% 50%;
+
+    --radius: 0.75rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border selection:bg-primary/20 selection:text-primary;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: 'ss01', 'ss02', 'cv01', 'cv02', 'cv03';
+  }
+
+  html {
+    @apply scroll-smooth;
+  }
+
+  #root {
+    @apply min-h-screen w-full;
+  }
+}
+
+@layer utilities {
+  .scrollbar-none {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+
+  .glass-morphism {
+    @apply backdrop-blur-lg bg-white/5 border border-white/10 shadow-[0_4px_12px_-2px_rgba(0,0,0,0.3)];
+  }
+
+  .dark-blur {
+    @apply backdrop-blur-lg bg-black/40 border border-primary/20;
+  }
+
+  .gradient-text {
+    @apply bg-gradient-to-r from-primary via-primary-light to-primary bg-clip-text text-transparent;
+  }
+
+  .gradient-bg {
+    @apply bg-gradient-to-r from-primary to-primary-dark;
+  }
+
+  .gradient-border:before {
+    content: '';
+    @apply absolute inset-0 rounded-[inherit] p-[1px] bg-gradient-to-r from-primary/40 to-primary-light/40 -z-10;
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask-composite: xor;
+  }
+}
