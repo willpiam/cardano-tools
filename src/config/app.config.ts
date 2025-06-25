@@ -1,5 +1,5 @@
 export const appConfig = {
-  title: "Turn",
+  title: "Computerman's Cardano Tools",
   logo: {
     path: "/lucid-evolution-al-red.svg",
     alt: "Lucid Evolution Logo",

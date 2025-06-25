@@ -120,12 +120,6 @@ function ConnectWallet() {
                     <h3 className="font-semibold text-lg text-center md:text-left">
                       Available Wallets
                     </h3>
-                    <div className="md:animated-text pb-2">
-                      <p>
-                        Welcome to Turn Network, please connect your wallet to
-                        get started and begin protecting your financial data.
-                      </p>
-                    </div>
                     {walletSelectList.length === 0 ? (
                       <p>No wallets found. Please install a Cardano wallet.</p>
                     ) : (

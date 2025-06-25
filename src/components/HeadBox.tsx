@@ -10,7 +10,7 @@ export const HeadBox = () => {
     <div className="head-box">
       <div className="head-box-title">
         <img src="/logo-footer.png" alt="logo" />
-        <h1>Turn</h1>
+        <h1>$computerman's Cardano Tools</h1>
         {process.env.REACT_APP_NETWORK === 'preview' && (
           <div className="head-box-network">
             <a

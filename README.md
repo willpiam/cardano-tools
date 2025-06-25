@@ -1,21 +1,3 @@
-# Turn Classic Client
-
-## dotenv
-
-```ini
-REACT_APP_NETWORK="preview"
-# REACT_APP_BASE_SERVER_URL="http://localhost:8000"
-REACT_APP_BASE_SERVER_URL="https://"
-REACT_APP_ADMIN_CREDENTIAL=""
-```
-
-## Server
-
-https://turn-classic-xqhgyd89x5s0.deno.dev
-
-https://turn-classic-4k6sbjvgptzq.deno.dev/
-
-<br/>
 <br/>
 <br/>
 <br/>

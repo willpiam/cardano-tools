@@ -5,7 +5,7 @@ import ReactDOM from 'react-dom/client';
 import { Provider } from 'react-redux';
 import { store } from './store/store';
 import App from './App';
-import OldApp from './OldApp';
+// import OldApp from './OldApp';
 import { BrowserRouter, Route, Routes } from 'react-router';
 import Index from './pages/Index';
 import NotFound from './pages/NotFound';
@@ -28,7 +28,7 @@ root.render(
           <Routes>
             <Route path="/" element={<App />}>
               <Route index element={<Tools />} />
-              <Route path="/old-app" element={<OldApp />} />
+              {/* <Route path="/old-app" element={<OldApp />} /> */}
               <Route path="*" element={<NotFound />} />
             </Route>
           </Routes>
