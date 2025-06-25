@@ -4,7 +4,6 @@ import FeaturesSection from '../components/FeaturesSection';
 import MixingInterface from '../components/MixingInterface';
 import StatsSection from '../components/StatsSection';
 import CTASection from '../components/CTASection';
-import Footer from '../components/Footer';
 
 const Index = () => {
   return (
@@ -47,7 +46,6 @@ const Index = () => {
         <CTASection />
       </main>
 
-      <Footer />
     </div>
   );
 };

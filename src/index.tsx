@@ -8,9 +8,6 @@ import App from './App';
 import OldApp from './OldApp';
 import { BrowserRouter, Route, Routes } from 'react-router';
 import Index from './pages/Index';
-import Mix from './pages/Mix';
-import Pools from './pages/Pools';
-import Docs from './pages/Docs';
 import NotFound from './pages/NotFound';
 import Tools from './pages/Tools';
 import { Toaster } from './components/ui/toaster';
@@ -30,13 +27,8 @@ root.render(
           <Sonner />
           <Routes>
             <Route path="/" element={<App />}>
-              <Route index element={<Index />} />
+              <Route index element={<Tools />} />
               <Route path="/old-app" element={<OldApp />} />
-              <Route path="/mix" element={<Mix />} />
-              {/* <Route path="/pools" element={<Pools />} /> */}
-              <Route path="/docs" element={<Docs />} />
-              <Route path="/tools" element={<Tools />} />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Route>
           </Routes>

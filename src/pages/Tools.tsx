@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import Navbar from '../components/Navbar';
-import Footer from '../components/Footer';
 import { Button } from '../components/Button';
 import { useAppSelector } from '../store/hooks';
 import { CML, drepIDToCredential, Emulator, fromHex, Lucid, Transaction } from '@lucid-evolution/lucid';
@@ -151,7 +150,6 @@ const Tools = () => {
         <label htmlFor="registerStake">Register stake</label>
       </main>
 
-      <Footer />
     </div>
   );
 };
