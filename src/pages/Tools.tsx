@@ -73,17 +73,32 @@ const Tools = () => {
     const { _lucid, api, stakeAddress } = await setupLucid()
     const drepCredential = drepIDToCredential(williamDetails.drepId);
 
-    const txbuilder = (() => {
-      if (registerStake) {
-        return _lucid.newTx()
-          .registerStake(stakeAddress!)
-          .delegate.VoteToDRep(stakeAddress!, drepCredential)
-          .attachMetadata(674, ["delegating to $computerman", "using the $computerman delegation tool"])
-      }
-      return _lucid.newTx()
-        .delegate.VoteToDRep(stakeAddress!, drepCredential)
-        .attachMetadata(674, ["delegating to $computerman", "using the $computerman delegation tool"])
-    })()
+    // const txbuilder = (() => {
+    //   if (registerStake) {
+    //     return _lucid.newTx()
+    //       .registerStake(stakeAddress!)
+    //       .delegate.VoteToDRep(stakeAddress!, drepCredential)
+    //       .attachMetadata(674, ["delegating to $computerman", "using the $computerman delegation tool"])
+    //   }
+    //   return _lucid.newTx()
+    //     .delegate.VoteToDRep(stakeAddress!, drepCredential)
+    //     .attachMetadata(674, ["delegating to $computerman", "using the $computerman delegation tool"])
+    // })()
+
+    let txbuilder = _lucid.newTx()
+
+    if (registerStake) {
+      txbuilder.registerStake(stakeAddress!)
+    }
+
+    txbuilder
+      .delegate.VoteToDRep(stakeAddress!, drepCredential)
+      .attachMetadata(674, ["delegating to $computerman", "using the $computerman delegation tool"])
+    // const txbuilder = _lucid.newTx()
+    //   .delegate.VoteToDRep(stakeAddress!, drepCredential)
+    //   .attachMetadata(674, ["delegating to $computerman", "using the $computerman delegation tool"])
+    
+
         
     const tx = await txbuilder.complete()
     await signAndSubmitTx(tx, api)
