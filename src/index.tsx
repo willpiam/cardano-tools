@@ -7,7 +7,6 @@ import { store } from './store/store';
 import App from './App';
 // import OldApp from './OldApp';
 import { BrowserRouter, Route, Routes } from 'react-router';
-import Index from './pages/Index';
 import NotFound from './pages/NotFound';
 import Tools from './pages/Tools';
 import { Toaster } from './components/ui/toaster';
