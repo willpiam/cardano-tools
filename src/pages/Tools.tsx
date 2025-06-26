@@ -4,10 +4,25 @@ import { useAppSelector } from '../store/hooks';
 import { CML, drepIDToCredential, Emulator, fromHex, Lucid, Transaction } from '@lucid-evolution/lucid';
 import ConnectWallet from '../components/ConnectWallet';
 
+const williamDetails = {
+  drepId: "drep1yfpgzfymq6tt9c684e7vzata8r5pl4w84fmrjqeztdqw0sgpzw3nt",
+  paymentAddress: "addr1qxvkgrnhfrrkgvck67u2ygjgz0j4k0zjrup85gtza5zqf43lt26kuqf2rylhgsdhsy63dxfnh8g723ax2r7zg9y35p9qkxnven", 
+};
+
+/*
+  Todo: 
+   - add tip to send to williamDetails.paymentAddress
+   - tool to allow donating to treasury
+*/
+
 const Tools = () => {
   const walletName  = useAppSelector((state) => state.wallet.selectedWallet);
   const [registerStake, setRegisterStake] = useState(false);
- 
+  const [showExtraItems, setShowExtraItems] = useState(false);
+  const isWalletConnected = useAppSelector(
+    (state) => state.walletConnected.isWalletConnected
+  );
+
   const signAndSubmitTx = async (tx: any, api: any) => {
     const txbytes = tx.toCBOR()
     const witnesses = await api.signTx(txbytes)
@@ -56,15 +71,7 @@ const Tools = () => {
 
   const handleDelegateToComputerman = async () => {
     const { _lucid, api, stakeAddress } = await setupLucid()
-    const drepCredential = drepIDToCredential("drep1yfpgzfymq6tt9c684e7vzata8r5pl4w84fmrjqeztdqw0sgpzw3nt");
-
-    // const txbuilder =  _lucid.newTx()
-    //     .delegate.VoteToDRep(stakeAddress!, drepCredential)
-    //     .attachMetadata(674, ["delegating to $computerman", "using the $computerman delegation tool"])
-
-    // if (registerStake) {
-    //   txbuilder.registerStake(stakeAddress!)
-    // }
+    const drepCredential = drepIDToCredential(williamDetails.drepId);
 
     const txbuilder = (() => {
       if (registerStake) {
@@ -86,11 +93,6 @@ const Tools = () => {
   const handleDelegateToAlwaysAbstain = async () => {
     const { _lucid, api, stakeAddress } = await setupLucid()
 
-    // const txbuilder = _lucid.newTx()
-    //     .delegate.VoteToDRep(stakeAddress!, {
-    //       __typename: "AlwaysAbstain"
-    //     })
-    //     .attachMetadata(674, ["delegating to always abstain", "using the $computerman delegation tool"])
     const txbuilder = (() => {
       if (registerStake) {
         return _lucid.newTx()
@@ -107,10 +109,6 @@ const Tools = () => {
         .attachMetadata(674, ["delegating to always abstain", "using the $computerman delegation tool"])
     })()
 
-    // if (registerStake) {
-    //   txbuilder.registerStake(stakeAddress!)
-    // }
-
     const tx = await txbuilder.complete()
     await signAndSubmitTx(tx, api)
     setRegisterStake(false)
@@ -118,16 +116,6 @@ const Tools = () => {
 
   const handleDelegateToAlwaysNoConfidence = async () => {
     const { _lucid, api, stakeAddress } = await setupLucid()
-
-    // const txbuilder = _lucid.newTx()
-    //     .delegate.VoteToDRep(stakeAddress!, {
-    //       __typename: "AlwaysNoConfidence"
-    //     })
-    //     .attachMetadata(674, ["delegating to always no confidence", "using the $computerman delegation tool"])
-
-    // if (registerStake) {
-    //   txbuilder.registerStake(stakeAddress!)
-    // }
 
     const txbuilder = (() => {
       if (registerStake) {
@@ -163,18 +151,42 @@ const Tools = () => {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <ConnectWallet />
-      <main className="flex-grow container mx-auto px-4 py-12 flex items-center justify-center">
-        <p>Register stake: {registerStake ? "true" : "false"}</p>
-        <Button onClick={handleDeregisterStake}>Deregister stake</Button>
-        <Button onClick={handleDelegateToComputerman}>Delegate to $computerman</Button>
-        <Button onClick={handleDelegateToAlwaysAbstain}>Delegate to always abstain</Button>
-        <Button onClick={handleDelegateToAlwaysNoConfidence}>Delegate to always no AlwaysNoConfidence</Button>
-        {/* a check box which when checked will add a step to the tx to register the stake */}
-        <input type="checkbox" id="registerStake" checked={registerStake} onChange={() => setRegisterStake(!registerStake)} />
-        <label htmlFor="registerStake">Register stake</label>
+      {
+        isWalletConnected && <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
+          <div className="main-section" style={{ display: 'flex', flexDirection: 'column', gap: '1rem', alignItems: 'flex-start', justifyContent: 'center', width: '100%' }}>
+            {/* <p>Register stake: {registerStake ? "true" : "false"}</p> */}
+            <Button onClick={handleDelegateToComputerman}>Delegate to $computerman</Button>
+            <Button onClick={handleDelegateToAlwaysAbstain}>Delegate to AlwaysAbstain</Button>
+            <Button onClick={handleDelegateToAlwaysNoConfidence}>Delegate AlwaysNoConfidence</Button>
+            {/* a check box which when checked will add a step to the tx to register the stake */}
+            <div>
+              <input type="checkbox" id="registerStake" checked={registerStake} onChange={() => setRegisterStake(!registerStake)} />
+              <label htmlFor="registerStake">Register stake (select if you have not registered your account)</label>
+            </div>
 
-      </main>
+            <div>
+              <input type="checkbox" id="showExtraItems" checked={showExtraItems} onChange={() => setShowExtraItems(!showExtraItems)} />
+              <label htmlFor="showExtraItems">Show extra options</label>
+            </div>
+
+            {showExtraItems && (
+              <div className="extra-items" style={{ border: '1px solid #ccc', padding: '1rem', borderRadius: '4px' }}>
+                <h3> Extra Options</h3>
+                <p>You likely don't need to use these options</p>
+                <Button onClick={handleDeregisterStake}>Deregister stake</Button>
+              </div>
+            )}
+          </div>
+        </div>
+      }
+      {
+        !isWalletConnected && <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
+            <div>
+              Connect With A Cardano Wallet To Continue
+            </div>
+            <ConnectWallet />
+          </div>
+      }
 
     </div>
   );

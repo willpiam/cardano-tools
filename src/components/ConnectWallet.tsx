@@ -1,4 +1,4 @@
-import { CheckCircle2, Wallet } from 'lucide-react';
+// import { CheckCircle2, Wallet } from 'lucide-react';
 import { setShowWalletSelect } from '../store/modalSlice';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { useEffect, useState } from 'react';
@@ -94,7 +94,7 @@ function ConnectWallet() {
           <Button
             onClick={disconnectWallet}
           >
-            <CheckCircle2 className="mr-2 h-4 w-4" /> Wallet Connected
+            Wallet Connected
           </Button>
         ) : (
           <div>
@@ -104,7 +104,7 @@ function ConnectWallet() {
                 setIsConnectDialogOpen(true);
               }}
             >
-              <Wallet className="mr-2 h-4 w-4" /> Connect Wallet
+               Connect Wallet
             </Button>
             {isConnectDialogOpen && (
               <div
@@ -123,7 +123,7 @@ function ConnectWallet() {
                       {walletSelectList.length === 0 ? (
                         <p>No wallets found. Please install a Cardano wallet.</p>
                       ) : (
-                        <div className="wallet-list">
+                        <div className="wallet-list" style={{display: 'flex', flexDirection: 'column', gap: '1rem', alignItems: 'flex-start' }}>
                           {walletSelectList.map((wallet, index) => (
                             <button
                               key={index}
