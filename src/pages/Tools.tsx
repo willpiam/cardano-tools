@@ -14,9 +14,8 @@ const williamDetails = {
   Todo: 
    - tool to allow donating to treasury
 */
-
 const Tools = () => {
-  const walletName  = useAppSelector((state) => state.wallet.selectedWallet);
+  const walletName = useAppSelector((state) => state.wallet.selectedWallet);
   const walletAddress = useAppSelector(state => state.wallet.address);
   const walletBalance = useAppSelector(state => state.wallet.balance)
   const [registerStake, setRegisterStake] = useState(false);
@@ -33,7 +32,7 @@ const Tools = () => {
     const witnesses = await api.signTx(txbytes)
     const witnessSet = CML.TransactionWitnessSet.from_cbor_hex(witnesses)
     const witnessSetBuilder = CML.TransactionWitnessSetBuilder.new()
-    witnessSetBuilder.add_existing(witnessSet) 
+    witnessSetBuilder.add_existing(witnessSet)
 
     const txObj = CML.Transaction.from_cbor_hex(txbytes)
     witnessSetBuilder.add_existing(txObj.witness_set())
@@ -44,10 +43,10 @@ const Tools = () => {
     const auxiliaryData = txObj.auxiliary_data()
 
     const signedTx = CML.Transaction.new(
-        txBody,
-        witnessSetBuilder.build(),
-        true,
-        auxiliaryData
+      txBody,
+      witnessSetBuilder.build(),
+      true,
+      auxiliaryData
     );
 
     const signedTxBytes = signedTx.to_cbor_hex()
@@ -58,7 +57,7 @@ const Tools = () => {
 
   const setupLucid = async () => {
     if (!walletName) {
-        throw new Error('No wallet selected');
+      throw new Error('No wallet selected');
     }
     const wallet = (window as any).cardano[walletName];
     const api = await wallet.enable();
@@ -78,8 +77,8 @@ const Tools = () => {
     }
   }
 
-  React.useEffect(( ) => {
-    if ((!isWalletConnected ) || (null === walletName)) {
+  React.useEffect(() => {
+    if ((!isWalletConnected) || (null === walletName)) {
       return
     }
 
@@ -109,7 +108,7 @@ const Tools = () => {
     txbuilder
       .delegate.VoteToDRep(stakeAddress!, drepCredential)
       .attachMetadata(674, ["delegating to $computerman", "using the $computerman delegation tool"])
-        
+
     const tx = await txbuilder.complete()
     await signAndSubmitTx(tx, api)
     setRegisterStake(false)
@@ -180,35 +179,63 @@ const Tools = () => {
 
   const handleJustTheTip = async () => {
     const { _lucid, api } = await setupLucid()
-    
+
     const tx = await _lucid.newTx()
       .pay.ToAddress(williamDetails.paymentAddress, {
         lovelace: BigInt(tipAmount * 1_000_000)
       })
       .attachMetadata(674, ["sending tip to $computerman", "using the $computerman delegation tool"])
       .complete()
-    
+
     await signAndSubmitTx(tx, api)
+  }
+
+  const handleTreasuryDonation = async () => {
+    const { _lucid, api, stakeAddress } = await setupLucid()
+    const tx = await _lucid.newTx()
+      .attachMetadata(674, ["donating to treasury", "using the $computerman delegation tool"])
+      .complete()
+
+    const cmltx = tx.toTransaction()
+    console.log(`current treasury value: ${cmltx.body().current_treasury_value()}`);
+    // await signAndSubmitTx(tx, api)
+
   }
 
   return (
     <div className="min-h-screen flex flex-col">
-      <h1>
-        $computerman's governance shortcuts
-      </h1>
       {
-        isWalletConnected && <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
-          <div className="main-section" style={{ display: 'flex', flexDirection: 'column', gap: '1rem', alignItems: 'flex-start', justifyContent: 'center', width: '100%' }}>
-      <code>
-        Address: {walletAddress}
-      </code>
+        isWalletConnected && <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '2rem' }}>
+          <div className="main-section" style={{ display: 'flex', flexDirection: 'column', gap: '1rem', alignItems: 'flex-start', justifyContent: 'center', width: '100%', maxWidth: '800px' }}>
+            <h1>
+              $computerman's governance shortcuts
+            </h1>
+            <code>
+              Address: {walletAddress}
+            </code>
             {/* <p>Register stake: {registerStake ? "true" : "false"}</p> */}
-            <Button onClick={handleDelegateToComputerman}>Delegate to $computerman</Button>
-            <Button onClick={handleDelegateToAlwaysAbstain}>Delegate to AlwaysAbstain</Button>
-            <Button onClick={handleDelegateToAlwaysNoConfidence}>Delegate to AlwaysNoConfidence</Button>
+            <div style={{border: '1px solid #ccc'}}>
+              <p>
+                Delegate to $computerman, that's me! My campain is basically to ensure Cardano
+                lasts for generations to come. You can learn more about me <a href="https://github.com/willpiam/drep/tree/master" target="_blank" rel="noopener noreferrer">here</a>
+              </p>
+              <Button onClick={handleDelegateToComputerman}>Delegate to $computerman</Button>
+            </div>
+            <div style={{border: '1px solid #ccc'}}>
+              <p>
+                Delegating to the Always Abstain DRep is useful in cases where you feel it is inappropiate for you to participate in the governance process.
+              </p>
+              <Button onClick={handleDelegateToAlwaysAbstain}>Delegate to AlwaysAbstain</Button>
+            </div>
+            <div style={{border: '1px solid #ccc'}}>
+              <p>
+                Voting for a state of no confidence on Cardano signals that the community no longer trusts the current Constitutional Committee, triggering its removal and a pause on governance actions requiring its approval until a new committee is in place.
+              </p>
+              <Button onClick={handleDelegateToAlwaysNoConfidence}>Delegate to AlwaysNoConfidence</Button>
+            </div>
             {/* a check box which when checked will add a step to the tx to register the stake */}
-            
-            { (!isStaking) && <div>
+
+            {(!isStaking) && <div>
               <input type="checkbox" id="registerStake" checked={registerStake} onChange={() => setRegisterStake(!registerStake)} />
               <label htmlFor="registerStake">Register stake (select if you have not registered your account)</label>
             </div>
@@ -222,10 +249,10 @@ const Tools = () => {
                 includeTip && <div className='include-tip-section'>
                   <div>
                     <label htmlFor="tipAmount">Tip amount (ADA):</label>
-                    <input 
-                      type="number" 
-                      id="tipAmount" 
-                      value={tipAmount} 
+                    <input
+                      type="number"
+                      id="tipAmount"
+                      value={tipAmount}
                       onChange={(e) => setTipAmount(parseFloat(e.target.value) || 0)}
                       min="0"
                       step="0.000001"
@@ -234,9 +261,24 @@ const Tools = () => {
                   </div>
                   <Button onClick={handleJustTheTip}>Just the tip</Button>
                 </div>
-  
               }
             </div>
+
+            {/* <div className="treasury-donation-section" style={{ border: '1px solid #ccc' }}>
+              <h3>
+                Treasury Donation
+              </h3>
+              <p>
+                Use this section to make a donation to the Cardano Treasury
+              </p>
+
+              <Button onClick={handleTreasuryDonation}>
+                Donate To The Treasury
+              </Button>
+
+
+            </div> */}
+
 
             <div>
               <input type="checkbox" id="showExtraItems" checked={showExtraItems} onChange={() => setShowExtraItems(!showExtraItems)} />
@@ -250,16 +292,17 @@ const Tools = () => {
                 <Button onClick={handleDeregisterStake}>Deregister stake</Button>
               </div>
             )}
+
           </div>
         </div>
       }
       {
         !isWalletConnected && <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
-            <div>
-              Connect With A Cardano Wallet To Continue
-            </div>
-            <ConnectWallet />
+          <div>
+            Connect With A Cardano Wallet To Continue
           </div>
+          <ConnectWallet />
+        </div>
       }
 
     </div>
