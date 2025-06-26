@@ -1,7 +1,7 @@
 import { useLocation } from 'react-router';
 import { useEffect } from 'react';
-import { Button } from '../components/ui/button';
 import { ArrowLeft } from 'lucide-react';
+import { Button } from '../components/Button';
 
 const NotFound = () => {
   const location = useLocation();
@@ -26,15 +26,12 @@ const NotFound = () => {
           </p>
           <div className="flex flex-col sm:flex-row justify-center gap-4">
             <Button
-              className="gradient-bg text-black hover:opacity-90 transition-opacity font-medium"
               onClick={() => window.history.back()}
             >
               <ArrowLeft className="mr-2 h-4 w-4" />
               Go Back
             </Button>
             <Button
-              variant="outline"
-              className="border-primary/30 hover:bg-primary/5"
               onClick={() => (window.location.href = '/')}
             >
               Return Home
