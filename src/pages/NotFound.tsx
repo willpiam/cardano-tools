@@ -24,19 +24,6 @@ const NotFound = () => {
           <p className="text-xl md:text-2xl text-muted-foreground mb-8">
             Oops! The page you're looking for doesn't exist.
           </p>
-          <div className="flex flex-col sm:flex-row justify-center gap-4">
-            <Button
-              onClick={() => window.history.back()}
-            >
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Go Back
-            </Button>
-            <Button
-              onClick={() => (window.location.href = '/')}
-            >
-              Return Home
-            </Button>
-          </div>
         </div>
       </div>
 

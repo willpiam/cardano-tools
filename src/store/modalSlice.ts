@@ -16,27 +16,27 @@ export const modalSlice = createSlice({
     name: 'modal',
     initialState,
     reducers: {
-        setQueueModalOpen: (state, action: PayloadAction<boolean>) => {
-            state.isQueueModalOpen = action.payload;
-        },
-        setActiveView: (state, action: PayloadAction<'signup' | 'info'>) => {
-            state.activeView = action.payload;
-        },
+        // setQueueModalOpen: (state, action: PayloadAction<boolean>) => {
+        //     state.isQueueModalOpen = action.payload;
+        // },
+        // setActiveView: (state, action: PayloadAction<'signup' | 'info'>) => {
+        //     state.activeView = action.payload;
+        // },
         setShowWalletSelect: (state, action: PayloadAction<boolean>) => {
             state.showWalletSelect = action.payload;
         },
-        closeAllModals: (state) => {
-            state.isQueueModalOpen = false;
-            state.showWalletSelect = false;
-        },
+        // closeAllModals: (state) => {
+        //     state.isQueueModalOpen = false;
+        //     state.showWalletSelect = false;
+        // },
     },
 });
 
 export const {
-    setQueueModalOpen,
-    setActiveView,
+    // setQueueModalOpen,
+    // setActiveView,
     setShowWalletSelect,
-    closeAllModals,
+    // closeAllModals,
 } = modalSlice.actions;
 
 export default modalSlice.reducer; 

@@ -17,6 +17,8 @@ const williamDetails = {
 
 const Tools = () => {
   const walletName  = useAppSelector((state) => state.wallet.selectedWallet);
+  const walletAddress = useAppSelector(state => state.wallet.address);
+  const walletBalance = useAppSelector(state => state.wallet.balance)
   const [registerStake, setRegisterStake] = useState(false);
   const [showExtraItems, setShowExtraItems] = useState(false);
   const [isStaking, setIsStaking] = useState(false)
@@ -197,6 +199,9 @@ const Tools = () => {
       {
         isWalletConnected && <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
           <div className="main-section" style={{ display: 'flex', flexDirection: 'column', gap: '1rem', alignItems: 'flex-start', justifyContent: 'center', width: '100%' }}>
+      <code>
+        Address: {walletAddress}
+      </code>
             {/* <p>Register stake: {registerStake ? "true" : "false"}</p> */}
             <Button onClick={handleDelegateToComputerman}>Delegate to $computerman</Button>
             <Button onClick={handleDelegateToAlwaysAbstain}>Delegate to AlwaysAbstain</Button>
