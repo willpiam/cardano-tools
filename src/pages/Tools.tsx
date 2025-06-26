@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
-import Navbar from '../components/Navbar';
 import { Button } from '../components/Button';
 import { useAppSelector } from '../store/hooks';
 import { CML, drepIDToCredential, Emulator, fromHex, Lucid, Transaction } from '@lucid-evolution/lucid';
+import ConnectWallet from '../components/ConnectWallet';
 
 const Tools = () => {
-  const walletAddress = useAppSelector(state => state.wallet.address);
   const walletName  = useAppSelector((state) => state.wallet.selectedWallet);
   const [registerStake, setRegisterStake] = useState(false);
  
@@ -59,13 +58,25 @@ const Tools = () => {
     const { _lucid, api, stakeAddress } = await setupLucid()
     const drepCredential = drepIDToCredential("drep1yfpgzfymq6tt9c684e7vzata8r5pl4w84fmrjqeztdqw0sgpzw3nt");
 
-    const txbuilder =  _lucid.newTx()
+    // const txbuilder =  _lucid.newTx()
+    //     .delegate.VoteToDRep(stakeAddress!, drepCredential)
+    //     .attachMetadata(674, ["delegating to $computerman", "using the $computerman delegation tool"])
+
+    // if (registerStake) {
+    //   txbuilder.registerStake(stakeAddress!)
+    // }
+
+    const txbuilder = (() => {
+      if (registerStake) {
+        return _lucid.newTx()
+          .registerStake(stakeAddress!)
+          .delegate.VoteToDRep(stakeAddress!, drepCredential)
+          .attachMetadata(674, ["delegating to $computerman", "using the $computerman delegation tool"])
+      }
+      return _lucid.newTx()
         .delegate.VoteToDRep(stakeAddress!, drepCredential)
         .attachMetadata(674, ["delegating to $computerman", "using the $computerman delegation tool"])
-
-    if (registerStake) {
-      txbuilder.registerStake(stakeAddress!)
-    }
+    })()
         
     const tx = await txbuilder.complete()
     await signAndSubmitTx(tx, api)
@@ -75,15 +86,30 @@ const Tools = () => {
   const handleDelegateToAlwaysAbstain = async () => {
     const { _lucid, api, stakeAddress } = await setupLucid()
 
-    const txbuilder = _lucid.newTx()
+    // const txbuilder = _lucid.newTx()
+    //     .delegate.VoteToDRep(stakeAddress!, {
+    //       __typename: "AlwaysAbstain"
+    //     })
+    //     .attachMetadata(674, ["delegating to always abstain", "using the $computerman delegation tool"])
+    const txbuilder = (() => {
+      if (registerStake) {
+        return _lucid.newTx()
+          .registerStake(stakeAddress!)
+          .delegate.VoteToDRep(stakeAddress!, {
+            __typename: "AlwaysAbstain"
+          })
+          .attachMetadata(674, ["delegating to always abstain", "using the $computerman delegation tool"])
+      }
+      return _lucid.newTx()
         .delegate.VoteToDRep(stakeAddress!, {
           __typename: "AlwaysAbstain"
         })
         .attachMetadata(674, ["delegating to always abstain", "using the $computerman delegation tool"])
+    })()
 
-    if (registerStake) {
-      txbuilder.registerStake(stakeAddress!)
-    }
+    // if (registerStake) {
+    //   txbuilder.registerStake(stakeAddress!)
+    // }
 
     const tx = await txbuilder.complete()
     await signAndSubmitTx(tx, api)
@@ -137,8 +163,7 @@ const Tools = () => {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <Navbar />
-
+      <ConnectWallet />
       <main className="flex-grow container mx-auto px-4 py-12 flex items-center justify-center">
         <p>Register stake: {registerStake ? "true" : "false"}</p>
         <Button onClick={handleDeregisterStake}>Deregister stake</Button>
@@ -148,6 +173,7 @@ const Tools = () => {
         {/* a check box which when checked will add a step to the tx to register the stake */}
         <input type="checkbox" id="registerStake" checked={registerStake} onChange={() => setRegisterStake(!registerStake)} />
         <label htmlFor="registerStake">Register stake</label>
+
       </main>
 
     </div>

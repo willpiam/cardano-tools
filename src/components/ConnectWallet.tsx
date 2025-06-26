@@ -1,9 +1,6 @@
 import { CheckCircle2, Wallet } from 'lucide-react';
 import { setShowWalletSelect } from '../store/modalSlice';
-import { Button } from './ui/button';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
-import { Dialog, DialogContent } from './ui/dialog';
-import { Card } from './ui/card';
 import { useEffect, useState } from 'react';
 import {
   setPreviewAddress,
@@ -20,6 +17,7 @@ import {
 import { clearWalletError, setWalletError } from '../store/errorSlice';
 import { Emulator, Lucid } from '@lucid-evolution/lucid';
 import { setIsWalletConnected } from '../store/isWalletConnectedSlice';
+import { Button } from './Button';
 
 function ConnectWallet() {
   const [isConnectDialogOpen, setIsConnectDialogOpen] = useState(false);
@@ -94,7 +92,6 @@ function ConnectWallet() {
       <div className="container mx-auto px-4 py-6 flex flex-col space-y-4">
         {isWalletConnected && walletAddress ? (
           <Button
-            className="bg-green-600/20 text-green-500 hover:bg-green-600/30 border border-green-600/30 transition-colors font-medium w-full"
             onClick={disconnectWallet}
           >
             <CheckCircle2 className="mr-2 h-4 w-4" /> Wallet Connected
@@ -102,7 +99,6 @@ function ConnectWallet() {
         ) : (
           <div>
             <Button
-              className="gradient-bg text-black hover:opacity-90 transition-opacity font-medium"
               onClick={() => {
                 dispatch(setShowWalletSelect(true));
                 setIsConnectDialogOpen(true);
@@ -110,40 +106,45 @@ function ConnectWallet() {
             >
               <Wallet className="mr-2 h-4 w-4" /> Connect Wallet
             </Button>
-            <Dialog
-              open={isConnectDialogOpen}
-              onOpenChange={setIsConnectDialogOpen}
-            >
-              <DialogContent className="max-w-[300px] max-h-[550px] overflow-y-auto md:max-w-[59rem] rounded-lg border-2 border-[#ffa722] ">
-                {!selectedWallet && showWalletSelect && (
-                  <div className="w-full p-5 rounded-lg bg-[#1a1103]">
-                    <h3 className="font-semibold text-lg text-center md:text-left">
-                      Available Wallets
-                    </h3>
-                    {walletSelectList.length === 0 ? (
-                      <p>No wallets found. Please install a Cardano wallet.</p>
-                    ) : (
-                      <div className="wallet-list">
-                        {walletSelectList.map((wallet, index) => (
-                          <button
-                            key={index}
-                            onClick={() => {
-                              handleWalletSelect(wallet);
-                              dispatch(setIsWalletConnected(true));
-                            }}
-                            className={`wallet-select-button ${
-                              selectedWallet === wallet ? 'selected' : ''
-                            }`}
-                          >
-                            {wallet}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </DialogContent>
-            </Dialog>
+            {isConnectDialogOpen && (
+              <div
+                className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
+                onClick={() => setIsConnectDialogOpen(false)}
+              >
+                <div
+                  className="max-w-[300px] max-h-[550px] overflow-y-auto md:max-w-[59rem] rounded-lg border-2 border-[#ffa722]"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {!selectedWallet && showWalletSelect && (
+                    <div className="w-full p-5 rounded-lg bg-[#1a1103]">
+                      <h3 className="font-semibold text-lg text-center md:text-left">
+                        Available Wallets
+                      </h3>
+                      {walletSelectList.length === 0 ? (
+                        <p>No wallets found. Please install a Cardano wallet.</p>
+                      ) : (
+                        <div className="wallet-list">
+                          {walletSelectList.map((wallet, index) => (
+                            <button
+                              key={index}
+                              onClick={() => {
+                                handleWalletSelect(wallet);
+                                dispatch(setIsWalletConnected(true));
+                              }}
+                              className={`wallet-select-button ${
+                                selectedWallet === wallet ? 'selected' : ''
+                              }`}
+                            >
+                              {wallet}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
