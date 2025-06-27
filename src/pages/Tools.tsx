@@ -214,20 +214,20 @@ const Tools = () => {
               Address: {walletAddress}
             </code>
             {/* <p>Register stake: {registerStake ? "true" : "false"}</p> */}
-            <div style={{border: '1px solid #ccc'}}>
+            <div style={{border: '1px solid #ccc', padding: '1rem', borderRadius: '4px'}}>
               <p>
                 Delegate to $computerman, that's me! My campain is basically to ensure Cardano
                 lasts for generations to come. You can learn more about me <a href="https://github.com/willpiam/drep/tree/master" target="_blank" rel="noopener noreferrer">here</a>
               </p>
               <Button onClick={handleDelegateToComputerman}>Delegate to $computerman</Button>
             </div>
-            <div style={{border: '1px solid #ccc'}}>
+            <div style={{border: '1px solid #ccc', padding: '1rem', borderRadius: '4px'}}>
               <p>
                 Delegating to the Always Abstain DRep is useful in cases where you feel it is inappropiate for you to participate in the governance process.
               </p>
               <Button onClick={handleDelegateToAlwaysAbstain}>Delegate to AlwaysAbstain</Button>
             </div>
-            <div style={{border: '1px solid #ccc'}}>
+            <div style={{border: '1px solid #ccc', padding: '1rem', borderRadius: '4px'}}>
               <p>
                 Voting for a state of no confidence on Cardano signals that the community no longer trusts the current Constitutional Committee, triggering its removal and a pause on governance actions requiring its approval until a new committee is in place.
               </p>
