@@ -2,6 +2,7 @@ import React from 'react';
 import ConnectWallet from '../components/ConnectWallet';
 import { useAppSelector } from '../store/hooks';
 import ClearTextCommit from '../components/ClearTextCommit';
+import HashCommit from '../components/HashCommit';
 
 const Commit = () => {
   const isWalletConnected = useAppSelector(
@@ -23,6 +24,7 @@ const Commit = () => {
       <h1 className="text-3xl font-bold">Commitment Tools</h1>
       <code>Address: {walletAddress}</code>
       <ClearTextCommit />
+      <HashCommit />
     </div>
   );
 };

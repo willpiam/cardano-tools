@@ -1,5 +1,11 @@
-.clear-text-commit {
+.clear-text-commit
+, .hash-commit
+, .verify-hash
+ {
   border: 1px solid #ccc;
   padding: 1rem;
   border-radius: 0.5rem;
+  /* small space between top and bottom of the commit */
+  margin-top: 1rem;
+  margin-bottom: 1rem;
 }
