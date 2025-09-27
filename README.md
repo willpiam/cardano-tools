@@ -5,7 +5,9 @@
 
 ## Commitment tools
 
+## Style
 
+We are going for the "unstyled look". CSS is fine but only in very small amount. 
 
 
 <br/>

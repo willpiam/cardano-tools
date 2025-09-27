@@ -124,6 +124,9 @@ function ConnectWallet() {
                         <p>No wallets found. Please install a Cardano wallet.</p>
                       ) : (
                         <div className="wallet-list" style={{display: 'flex', flexDirection: 'column', gap: '1rem', alignItems: 'flex-start' }}>
+                          <div>
+                            There are {walletSelectList.length} wallets available.
+                          </div>
                           {walletSelectList.map((wallet, index) => (
                             <button
                               key={index}

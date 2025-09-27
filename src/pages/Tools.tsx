@@ -3,6 +3,8 @@ import { Button } from '../components/Button';
 import { useAppSelector } from '../store/hooks';
 import { CML, drepIDToCredential, Emulator, fromHex, Lucid, Transaction } from '@lucid-evolution/lucid';
 import ConnectWallet from '../components/ConnectWallet';
+import { signAndSubmitTx } from '../functions';
+import { setupLucid } from '../functions';
 
 const williamDetails = {
   drepId: "drep1yfpgzfymq6tt9c684e7vzata8r5pl4w84fmrjqeztdqw0sgpzw3nt",
@@ -27,70 +29,20 @@ const Tools = () => {
   const [includeTip, setIncludeTip] = useState(false);
   const [tipAmount, setTipAmount] = useState(1);
 
-  const signAndSubmitTx = async (tx: any, api: any) => {
-    const txbytes = tx.toCBOR()
-    const witnesses = await api.signTx(txbytes)
-    const witnessSet = CML.TransactionWitnessSet.from_cbor_hex(witnesses)
-    const witnessSetBuilder = CML.TransactionWitnessSetBuilder.new()
-    witnessSetBuilder.add_existing(witnessSet)
-
-    const txObj = CML.Transaction.from_cbor_hex(txbytes)
-    witnessSetBuilder.add_existing(txObj.witness_set())
-
-    const cborBody = tx.toTransaction().body().to_cbor_hex()
-    const txBody = CML.TransactionBody.from_cbor_hex(cborBody)
-
-    const auxiliaryData = txObj.auxiliary_data()
-
-    const signedTx = CML.Transaction.new(
-      txBody,
-      witnessSetBuilder.build(),
-      true,
-      auxiliaryData
-    );
-
-    const signedTxBytes = signedTx.to_cbor_hex()
-
-    const txSubmitResult = await api.submitTx(signedTxBytes)
-    console.log("txSubmitResult", txSubmitResult)
-  }
-
-  const setupLucid = async () => {
-    if (!walletName) {
-      throw new Error('No wallet selected');
-    }
-    const wallet = (window as any).cardano[walletName];
-    const api = await wallet.enable();
-
-    const _lucid = await Lucid(new Emulator([]), 'Mainnet');
-    _lucid.selectWallet.fromAPI(api);
-
-    const stakeAddress = await _lucid.wallet().rewardAddress()
-    // getDelegations seems to not work when using an Emulator in place of a provider
-    const delegation = await _lucid.wallet().getDelegation();
-
-    return {
-      _lucid,
-      api,
-      stakeAddress,
-      delegation
-    }
-  }
-
   React.useEffect(() => {
     if ((!isWalletConnected) || (null === walletName)) {
       return
     }
 
     (async () => {
-      const { delegation } = await setupLucid();
+      const { delegation } = await setupLucid(walletName);
       console.log("inside useEffect.. delegation is ", delegation)
       setIsStaking(null !== delegation?.poolId);
     })()
   }, [isWalletConnected, walletName])
 
   const handleDelegateToComputerman = async () => {
-    const { _lucid, api, stakeAddress } = await setupLucid()
+    const { _lucid, api, stakeAddress } = await setupLucid(walletName)
     const drepCredential = drepIDToCredential(williamDetails.drepId);
 
     const txbuilder = _lucid.newTx()
@@ -115,7 +67,7 @@ const Tools = () => {
   };
 
   const handleDelegateToAlwaysAbstain = async () => {
-    const { _lucid, api, stakeAddress } = await setupLucid()
+    const { _lucid, api, stakeAddress } = await setupLucid(walletName)
 
     const txbuilder = _lucid.newTx()
 
@@ -141,7 +93,7 @@ const Tools = () => {
   }
 
   const handleDelegateToAlwaysNoConfidence = async () => {
-    const { _lucid, api, stakeAddress } = await setupLucid()
+    const { _lucid, api, stakeAddress } = await setupLucid(walletName)
 
     const txbuilder = _lucid.newTx()
 
@@ -168,7 +120,7 @@ const Tools = () => {
 
   // handle deregister stake
   const handleDeregisterStake = async () => {
-    const { _lucid, api, stakeAddress } = await setupLucid()
+    const { _lucid, api, stakeAddress } = await setupLucid(walletName)
     const tx = await _lucid.newTx()
       .deRegisterStake(stakeAddress!)
       .attachMetadata(674, ["deregistering stake", "using the $computerman delegation tool"])
@@ -178,7 +130,7 @@ const Tools = () => {
   }
 
   const handleJustTheTip = async () => {
-    const { _lucid, api } = await setupLucid()
+    const { _lucid, api } = await setupLucid(walletName)
 
     const tx = await _lucid.newTx()
       .pay.ToAddress(williamDetails.paymentAddress, {
@@ -191,7 +143,7 @@ const Tools = () => {
   }
 
   const handleTreasuryDonation = async () => {
-    const { _lucid, api, stakeAddress } = await setupLucid()
+    const { _lucid, api, stakeAddress } = await setupLucid(walletName)
     const tx = await _lucid.newTx()
       .attachMetadata(674, ["donating to treasury", "using the $computerman delegation tool"])
       .complete()
