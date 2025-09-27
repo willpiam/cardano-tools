@@ -1,0 +1,5 @@
+export const williamDetails = {
+  drepId: "drep1yfpgzfymq6tt9c684e7vzata8r5pl4w84fmrjqeztdqw0sgpzw3nt",
+  // paymentAddress: "addr1qxvkgrnhfrrkgvck67u2ygjgz0j4k0zjrup85gtza5zqf43lt26kuqf2rylhgsdhsy63dxfnh8g723ax2r7zg9y35p9qkxnven", 
+  paymentAddress: "addr1qx52mlvjf93n77lsz79pn8kl80zw7pcmgqusfn747fe768g8y7a8ud59kv677q7metm2gwh9vkwnakyxwlwlkd5369xqtxleh7"
+};
