@@ -3,6 +3,9 @@
 , .verify-hash
 , .aes-commit
 , .aes-decrypt
+, .off-chain-tools
+, .file-hash-viewer
+, .file-hash-commit
  {
   border: 1px solid #ccc;
   padding: 1rem;
@@ -28,8 +31,12 @@
 .aes-decrypt {
   background-color:#FFE5B4;
 }
-
+.file-hash-viewer {
+  background-color:#b7f7bc;
+}
+.file-hash-commit {
+  background-color:#f7d0b7;
+}
 code {
     background-color: #f0f0f0;
-    padding: 0.5rem;
 }
