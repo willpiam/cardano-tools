@@ -6,6 +6,7 @@ import { williamDetails } from '../williamDetails';
 import { downloadJson } from '../functions/downloadJson';
 import '../simple.css';
 import DecryptAES from './DecryptAES';
+import { prepMessage } from '../functions/prepMessage';
 
 // Utility: convert ArrayBuffer to base64 string
 const bufferToBase64 = (data: ArrayBuffer | Uint8Array) => {
@@ -66,13 +67,13 @@ const AESEncryptedCommit: React.FC = () => {
 
     try {
       setIsSubmitting(true);
-      const ct = cipherText || (await encryptAES(message, password));
+      const ct = prepMessage( cipherText || (await encryptAES(message, password)));
       const { _lucid, api } = await setupLucid(walletName);
 
       const txBuilder = _lucid
         .newTx()
         .pay.ToAddress(walletAddress!, { lovelace: BigInt(1_000_000) })
-        .attachMetadata(674, [ct]);
+        .attachMetadata(674, ct);
 
       if (includeTip) {
         txBuilder.pay.ToAddress(williamDetails.paymentAddress, {
@@ -135,7 +136,7 @@ const AESEncryptedCommit: React.FC = () => {
         <>
           <h3 className="font-medium">Cipher text preview:</h3>
           <code className="break-all whitespace-pre-wrap">{cipherText}</code>
-          <DecryptAES />
+          {/* <DecryptAES /> */}
         </>
       )}
 

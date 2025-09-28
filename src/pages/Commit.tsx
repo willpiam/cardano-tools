@@ -4,6 +4,8 @@ import { useAppSelector } from '../store/hooks';
 import ClearTextCommit from '../components/ClearTextCommit';
 import HashCommit from '../components/HashCommit';
 import AESEncryptedCommit from '../components/AESEncryptedCommit';
+import DecryptAES from '../components/DecryptAES';
+import VerifyHash from '../components/VerifyHash';
 
 const Commit = () => {
   const isWalletConnected = useAppSelector(
@@ -27,12 +29,16 @@ const Commit = () => {
       <ClearTextCommit />
       <HashCommit />
       <AESEncryptedCommit />
+      <div className="off-chain-tools">
+        <DecryptAES />
+        <VerifyHash />
+      </div>
 
-        <h3>Comming soon</h3>
-        <ul>
-            <li>AES encrypt message with password</li>
-            <li>File hash commitment</li>
-        </ul>
+      <h3>Comming soon</h3>
+      <ul>
+        <li>AES encrypt message with password</li>
+        <li>File hash commitment</li>
+      </ul>
     </div>
   );
 };

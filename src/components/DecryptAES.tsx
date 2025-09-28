@@ -36,6 +36,8 @@ const DecryptAES: React.FC = () => {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isDecrypting, setIsDecrypting] = useState(false);
+  // When enabled, the cipher text input is interpreted as a JSON array of strings which will be concatenated.
+  const [isArrayMode, setIsArrayMode] = useState(false);
 
   const handleDecrypt = async () => {
     setError(null);
@@ -44,9 +46,24 @@ const DecryptAES: React.FC = () => {
       setError('Please enter both cipher text and password.');
       return;
     }
+
+    // Prepare cipher string depending on the selected mode
+    let preparedCipher = cipherText.trim();
+    if (isArrayMode) {
+      try {
+        const parsed = JSON.parse(preparedCipher);
+        if (!Array.isArray(parsed) || !parsed.every((s) => typeof s === 'string')) {
+          throw new Error('Parsed value is not an array of strings');
+        }
+        preparedCipher = parsed.join('');
+      } catch (_e) {
+        setError('Invalid JSON array of strings provided.');
+        return;
+      }
+    }
     try {
       setIsDecrypting(true);
-      const msg = await decryptAES(cipherText.trim(), password.trim());
+      const msg = await decryptAES(preparedCipher, password.trim());
       setMessage(msg);
     } catch (err: any) {
       console.error(err);
@@ -62,10 +79,18 @@ const DecryptAES: React.FC = () => {
       <textarea
         className="w-full p-2 border rounded-md"
         rows={3}
-        placeholder="Cipher text (iv:cipher)"
+        placeholder={isArrayMode ? 'Cipher text JSON array ["iv", "cipher"]' : 'Cipher text (iv:cipher)'}
         value={cipherText}
         onChange={(e) => setCipherText(e.target.value)}
       />
+      <label className="flex items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          checked={isArrayMode}
+          onChange={(e) => setIsArrayMode(e.target.checked)}
+        />
+        Input is JSON array of strings
+      </label>
       <input
         type="password"
         className="w-full p-2 border rounded-md"
