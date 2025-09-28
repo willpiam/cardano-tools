@@ -1,6 +1,8 @@
 .clear-text-commit
 , .hash-commit
 , .verify-hash
+, .aes-commit
+, .aes-decrypt
  {
   border: 1px solid #ccc;
   padding: 1rem;
@@ -19,6 +21,12 @@
 }
 .verify-hash {
   background-color:#E6E6FA;
+}
+.aes-commit {
+  background-color:#FFFACD;
+}
+.aes-decrypt {
+  background-color:#FFE5B4;
 }
 
 code {

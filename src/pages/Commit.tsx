@@ -3,6 +3,7 @@ import ConnectWallet from '../components/ConnectWallet';
 import { useAppSelector } from '../store/hooks';
 import ClearTextCommit from '../components/ClearTextCommit';
 import HashCommit from '../components/HashCommit';
+import AESEncryptedCommit from '../components/AESEncryptedCommit';
 
 const Commit = () => {
   const isWalletConnected = useAppSelector(
@@ -25,6 +26,7 @@ const Commit = () => {
       <code>Address: {walletAddress}</code>
       <ClearTextCommit />
       <HashCommit />
+      <AESEncryptedCommit />
 
         <h3>Comming soon</h3>
         <ul>
