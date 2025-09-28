@@ -25,6 +25,12 @@ const Commit = () => {
       <code>Address: {walletAddress}</code>
       <ClearTextCommit />
       <HashCommit />
+
+        <h3>Comming soon</h3>
+        <ul>
+            <li>AES encrypt message with password</li>
+            <li>File hash commitment</li>
+        </ul>
     </div>
   );
 };

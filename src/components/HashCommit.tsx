@@ -112,7 +112,7 @@ const HashCommit: React.FC = () => {
       <h3>Message to use:</h3>
       <code>{messageToUse}</code>
       {/* Hash preview */}
-      {message && <VerifyHash message={messageToUse} />}
+      {messageToUse && <VerifyHash message={messageToUse} />}
       <Button disabled={isSubmitting} onClick={handleCommit}>
         {isSubmitting ? 'Submitting...' : 'Commit Hash'}
       </Button>
