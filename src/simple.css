@@ -9,3 +9,19 @@
   margin-top: 1rem;
   margin-bottom: 1rem;
 }
+
+/* make the background color of each of the above a unique light pastel color */
+.clear-text-commit {
+  background-color:   #FFD1DC;
+}
+.hash-commit {
+  background-color:#AAF0D1;
+}
+.verify-hash {
+  background-color:#E6E6FA;
+}
+
+code {
+    background-color: #f0f0f0;
+    padding: 0.5rem;
+}

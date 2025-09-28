@@ -81,6 +81,12 @@ const ClearTextCommit: React.FC = () => {
   return (
     <div className="clear-text-commit flex flex-col gap-4 w-full max-w-xl border border-gray-300 p-4 rounded-md">
       <h2 className="text-xl font-semibold">Commit Plain Text To Chain</h2>
+      {/* description of how this works */}
+      <p>
+        This tool allows you to post text to the Cardano blockchain with a timestamp.
+        This text will be publicly visible forever. Everyone will always be able to
+        know that this text was posted by your account at this moment. 
+      </p>
       <textarea
         className="w-full p-2 border rounded-md"
         rows={4}
