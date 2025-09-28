@@ -1,49 +1,72 @@
-
-// Utility: convert ArrayBuffer to base64 string
-const bufferToBase64 = (data: ArrayBuffer | Uint8Array) => {
-  const bytes = data instanceof Uint8Array ? data : new Uint8Array(data);
-  let binary = '';
-  for (let i = 0; i < bytes.byteLength; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-  return btoa(binary);
+const b64e = (bytes: ArrayBuffer | Uint8Array) => {
+  const b = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+  let s = "";
+  for (let i = 0; i < b.length; i++) s += String.fromCharCode(b[i]);
+  return btoa(s);
+};
+const b64d = (b64: string): Uint8Array => {
+  const s = atob(b64);
+  const out = new Uint8Array(s.length);
+  for (let i = 0; i < s.length; i++) out[i] = s.charCodeAt(i);
+  return out;
 };
 
-// Encrypt text with password using AES-GCM. Returns "iv:cipherText" (both base64 encoded)
+const deriveAesKey = async (password: string, salt: Uint8Array, iterations: number) => {
+  const enc = new TextEncoder();
+  const pwKey = await crypto.subtle.importKey(
+    "raw",
+    enc.encode(password),
+    { name: "PBKDF2" },
+    false,
+    ["deriveKey"]
+  );
+  return crypto.subtle.deriveKey(
+    { name: "PBKDF2", salt, iterations, hash: "SHA-256" },
+    pwKey,
+    { name: "AES-GCM", length: 256 },
+    false,
+    ["encrypt", "decrypt"]
+  );
+};
+
 export const encryptAES = async (plainText: string, password: string): Promise<string> => {
   const enc = new TextEncoder();
-  const pwBytes = enc.encode(password);
-  const pwHash = await crypto.subtle.digest('SHA-256', pwBytes); // derives 256-bit key
-  const key = await crypto.subtle.importKey('raw', pwHash, { name: 'AES-GCM' }, false, ['encrypt']);
+  const iterations = 210_000; 
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const key = await deriveAesKey(password, salt, iterations);
   const iv = crypto.getRandomValues(new Uint8Array(12));
-  const cipherBuffer = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, enc.encode(plainText));
-  return `${bufferToBase64(iv)}:${bufferToBase64(cipherBuffer)}`;
+  const ctBuf = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, enc.encode(plainText));
+
+  const parts = [
+    "v1",
+    "pbkdf2",
+    String(iterations),
+    b64e(salt),
+    b64e(iv),
+    b64e(ctBuf),
+  ];
+  return parts.join(":");
 };
 
-// Utility to convert base64 to ArrayBuffer
-const base64ToBuffer = (b64: string): ArrayBuffer => {
-  const binary = atob(b64);
-  const len = binary.length;
-  const bytes = new Uint8Array(len);
-  for (let i = 0; i < len; i++) {
-    bytes[i] = binary.charCodeAt(i);
+export const decryptAES = async (payload: string, password: string): Promise<string> => {
+  const parts = payload.split(":");
+  if (parts.length !== 6) throw new Error("Invalid payload format.");
+
+  const [v, kdf, iterStr, saltB64, ivB64, ctB64] = parts;
+  if (v !== "v1" || kdf !== "pbkdf2") throw new Error("Unsupported format.");
+
+  const iterations = Number(iterStr);
+  if (!Number.isFinite(iterations) || iterations <= 0) throw new Error("Bad KDF params.");
+
+  const salt = b64d(saltB64);
+  const iv = b64d(ivB64);
+  const ct = b64d(ctB64);
+
+  const key = await deriveAesKey(password, salt, iterations);
+  try {
+    const ptBuf = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ct);
+    return new TextDecoder().decode(ptBuf);
+  } catch {
+    throw new Error("Decryption failed (wrong password or corrupted data).");
   }
-  return bytes.buffer;
-};
-
-// Decrypt cipher text formatted as "iv:cipher" with AES-GCM and password
-export const decryptAES = async (cipherText: string, password: string): Promise<string> => {
-  const [ivB64, cipherB64] = cipherText.split(':');
-  if (!ivB64 || !cipherB64) throw new Error('Cipher text format invalid. Expected iv:cipher format.');
-
-  const enc = new TextEncoder();
-  const pwHash = await crypto.subtle.digest('SHA-256', enc.encode(password));
-  const key = await crypto.subtle.importKey('raw', pwHash, { name: 'AES-GCM' }, false, ['decrypt']);
-
-  const iv = new Uint8Array(base64ToBuffer(ivB64));
-  const cipherBuf = base64ToBuffer(cipherB64);
-
-  const plainBuf = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, cipherBuf);
-  const dec = new TextDecoder();
-  return dec.decode(plainBuf);
 };

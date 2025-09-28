@@ -67,8 +67,6 @@ const DecryptAES: React.FC = () => {
         </label>
       </div>
       <div>
-
-
         <input
           type="password"
           className="w-full p-2 border rounded-md"
