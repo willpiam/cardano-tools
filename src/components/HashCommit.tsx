@@ -4,7 +4,6 @@ import { useAppSelector } from '../store/hooks';
 import { signAndSubmitTx, setupLucid } from '../functions';
 import { williamDetails } from '../williamDetails';
 import { downloadJson } from '../functions/downloadJson';
-import '../simple.css';
 import VerifyHash from './VerifyHash';
 import { sha256 } from '../functions/hashFunctions';
 
@@ -113,9 +112,6 @@ const HashCommit: React.FC = () => {
       <code>{messageToUse}</code>
       {/* Hash preview */}
       {messageToUse && <VerifyHash message={messageToUse} />}
-      <Button disabled={isSubmitting} onClick={handleCommit}>
-        {isSubmitting ? 'Submitting...' : 'Commit Hash'}
-      </Button>
 
       {/* Optional salt */}
       <div>
@@ -143,6 +139,9 @@ const HashCommit: React.FC = () => {
           />
         </div>
       )}
+      <Button disabled={isSubmitting} onClick={handleCommit}>
+        {isSubmitting ? 'Submitting...' : 'Commit Hash'}
+      </Button>
     </div>
   );
 };

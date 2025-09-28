@@ -5,29 +5,8 @@ import { signAndSubmitTx, setupLucid } from '../functions';
 import { williamDetails } from '../williamDetails';
 import { downloadJson } from '../functions/downloadJson';
 import '../simple.css';
-import DecryptAES from './DecryptAES';
 import { prepMessage } from '../functions/prepMessage';
-
-// Utility: convert ArrayBuffer to base64 string
-const bufferToBase64 = (data: ArrayBuffer | Uint8Array) => {
-  const bytes = data instanceof Uint8Array ? data : new Uint8Array(data);
-  let binary = '';
-  for (let i = 0; i < bytes.byteLength; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-  return btoa(binary);
-};
-
-// Encrypt text with password using AES-GCM. Returns "iv:cipherText" (both base64 encoded)
-const encryptAES = async (plainText: string, password: string): Promise<string> => {
-  const enc = new TextEncoder();
-  const pwBytes = enc.encode(password);
-  const pwHash = await crypto.subtle.digest('SHA-256', pwBytes); // derives 256-bit key
-  const key = await crypto.subtle.importKey('raw', pwHash, { name: 'AES-GCM' }, false, ['encrypt']);
-  const iv = crypto.getRandomValues(new Uint8Array(12));
-  const cipherBuffer = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, enc.encode(plainText));
-  return `${bufferToBase64(iv)}:${bufferToBase64(cipherBuffer)}`;
-};
+import { encryptAES } from '../QuickAES';
 
 const AESEncryptedCommit: React.FC = () => {
   const [message, setMessage] = useState('');
@@ -67,7 +46,7 @@ const AESEncryptedCommit: React.FC = () => {
 
     try {
       setIsSubmitting(true);
-      const ct = prepMessage( cipherText || (await encryptAES(message, password)));
+      const ct = prepMessage(cipherText || (await encryptAES(message, password)));
       const { _lucid, api } = await setupLucid(walletName);
 
       const txBuilder = _lucid
@@ -124,25 +103,23 @@ const AESEncryptedCommit: React.FC = () => {
         onChange={(e) => setMessage(e.target.value)}
       />
 
-      <input
-        type="password"
-        className="w-full p-2 border rounded-md"
-        placeholder="Password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-      />
+      <div>
+        <input
+          type="password"
+          className="w-full p-2 border rounded-md"
+          placeholder="Password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
+      </div>
 
       {cipherText && (
         <>
           <h3 className="font-medium">Cipher text preview:</h3>
           <code className="break-all whitespace-pre-wrap">{cipherText}</code>
-          {/* <DecryptAES /> */}
         </>
       )}
 
-      <Button disabled={isSubmitting} onClick={handleCommit}>
-        {isSubmitting ? 'Submitting...' : 'Commit Encrypted Text'}
-      </Button>
 
       {/* Optional tip section */}
       <div>
@@ -164,6 +141,9 @@ const AESEncryptedCommit: React.FC = () => {
           />
         </div>
       )}
+      <Button disabled={isSubmitting} onClick={handleCommit}>
+        {isSubmitting ? 'Submitting...' : 'Commit Encrypted Text'}
+      </Button>
     </div>
   );
 };

@@ -1,34 +1,7 @@
 import React, { useState } from 'react';
 import { Button } from './Button';
 import '../simple.css';
-
-// Utility to convert base64 to ArrayBuffer
-const base64ToBuffer = (b64: string): ArrayBuffer => {
-  const binary = atob(b64);
-  const len = binary.length;
-  const bytes = new Uint8Array(len);
-  for (let i = 0; i < len; i++) {
-    bytes[i] = binary.charCodeAt(i);
-  }
-  return bytes.buffer;
-};
-
-// Decrypt cipher text formatted as "iv:cipher" with AES-GCM and password
-const decryptAES = async (cipherText: string, password: string): Promise<string> => {
-  const [ivB64, cipherB64] = cipherText.split(':');
-  if (!ivB64 || !cipherB64) throw new Error('Cipher text format invalid. Expected iv:cipher format.');
-
-  const enc = new TextEncoder();
-  const pwHash = await crypto.subtle.digest('SHA-256', enc.encode(password));
-  const key = await crypto.subtle.importKey('raw', pwHash, { name: 'AES-GCM' }, false, ['decrypt']);
-
-  const iv = new Uint8Array(base64ToBuffer(ivB64));
-  const cipherBuf = base64ToBuffer(cipherB64);
-
-  const plainBuf = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, cipherBuf);
-  const dec = new TextDecoder();
-  return dec.decode(plainBuf);
-};
+import { decryptAES } from '../QuickAES';
 
 const DecryptAES: React.FC = () => {
   const [cipherText, setCipherText] = useState('');
@@ -83,21 +56,27 @@ const DecryptAES: React.FC = () => {
         value={cipherText}
         onChange={(e) => setCipherText(e.target.value)}
       />
-      <label className="flex items-center gap-2 text-sm">
+      <div>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={isArrayMode}
+            onChange={(e) => setIsArrayMode(e.target.checked)}
+          />
+          Input is JSON array of strings
+        </label>
+      </div>
+      <div>
+
+
         <input
-          type="checkbox"
-          checked={isArrayMode}
-          onChange={(e) => setIsArrayMode(e.target.checked)}
+          type="password"
+          className="w-full p-2 border rounded-md"
+          placeholder="Password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
         />
-        Input is JSON array of strings
-      </label>
-      <input
-        type="password"
-        className="w-full p-2 border rounded-md"
-        placeholder="Password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-      />
+      </div>
       <Button disabled={isDecrypting} onClick={handleDecrypt}>
         {isDecrypting ? 'Decrypting...' : 'Decrypt'}
       </Button>

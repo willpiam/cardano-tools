@@ -94,9 +94,6 @@ const ClearTextCommit: React.FC = () => {
         value={message}
         onChange={(e) => setMessage(e.target.value)}
       />
-      <Button disabled={isSubmitting} onClick={handleCommit}>
-        {isSubmitting ? 'Submitting...' : 'Commit Text'}
-      </Button>
 
       {/* a check box which when checked indicates that the user wants to include a tip to $computerman. It opens an input box for them to enter a number of ada with a default setting of 5 */}
       <div>
@@ -108,6 +105,9 @@ const ClearTextCommit: React.FC = () => {
           <input type="number" id="tipAmount" value={tipAmount} onChange={(e) => setTipAmount(parseFloat(e.target.value) || 0)} />
         </div>
       )}
+      <Button disabled={isSubmitting} onClick={handleCommit}>
+        {isSubmitting ? 'Submitting...' : 'Commit Text'}
+      </Button>
     </div>
   );
 };
