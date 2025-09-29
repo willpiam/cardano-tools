@@ -12,6 +12,8 @@ import VerifyHash from './VerifyHash';
 export type CommitKind = 'plain' | 'hash' | 'aes' | 'filehash';
 
 const UnifiedCommit: React.FC = () => {
+  const lucid = useAppSelector((state) => state.wallet.lucid);
+  const isWalletConnected = useAppSelector((state) => state.walletConnected.isWalletConnected);
   const [commitType, setCommitType] = useState<CommitKind>('plain');
 
   const [message, setMessage] = useState('');
@@ -27,11 +29,69 @@ const UnifiedCommit: React.FC = () => {
   const [includeTip, setIncludeTip] = useState(false);
   const [tipAmount, setTipAmount] = useState(5);
 
+  /* ---------- Token attachment state ---------- */
+  const [attachToken, setAttachToken] = useState(false);
+  const [tokens, setTokens] = useState<{ unit: string; name: string; quantity: bigint }[]>([]);
+  const [selectedTokenUnit, setSelectedTokenUnit] = useState('');
+  const [tokenLoading, setTokenLoading] = useState(false);
+  const [tokenError, setTokenError] = useState<string | null>(null);
+
+  // helper to decode asset name from unit
+  const decodeAssetName = (unit: string): string => {
+    if (unit.length <= 56) return '';
+    const hex = unit.slice(56);
+    if (!hex) return '';
+    try {
+      const bytes: number[] = [];
+      for (let i = 0; i < hex.length; i += 2) {
+        bytes.push(parseInt(hex.slice(i, i + 2), 16));
+      }
+      const decoder = new TextDecoder();
+      return decoder.decode(new Uint8Array(bytes));
+    } catch {
+      return hex;
+    }
+  };
+
+  // fetch tokens when wallet connected and UI enabled
+  useEffect(() => {
+    const fetchTokens = async () => {
+      if (!attachToken || !isWalletConnected || !lucid) return;
+      setTokenLoading(true);
+      setTokenError(null);
+      try {
+        const utxos = await lucid.wallet().getUtxos();
+        const aggregate: Record<string, bigint> = {};
+        for (const utxo of utxos) {
+          for (const [unit, quantity] of Object.entries(utxo.assets)) {
+            if (unit === 'lovelace') continue;
+            aggregate[unit] = (aggregate[unit] || BigInt(0)) + BigInt(quantity as any);
+          }
+        }
+        const list = Object.entries(aggregate)
+          .map(([unit, quantity]) => ({
+            unit,
+            quantity,
+            name: decodeAssetName(unit),
+          }))
+          .sort((a, b) => (a.name || a.unit).localeCompare(b.name || b.unit));
+        setTokens(list);
+        if (list.length > 0) setSelectedTokenUnit(list[0].unit);
+      } catch (err) {
+        console.error('Failed to fetch tokens', err);
+        setTokenError('Failed to fetch tokens');
+      } finally {
+        setTokenLoading(false);
+      }
+    };
+    fetchTokens();
+  }, [attachToken, isWalletConnected, lucid]);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const walletName = useAppSelector(state => state.wallet.selectedWallet);
   const walletAddress = useAppSelector(state => state.wallet.address);
-  const isWalletConnected = useAppSelector(state => state.walletConnected.isWalletConnected);
+  // const isWalletConnected = useAppSelector(state => state.walletConnected.isWalletConnected);
 
   /* ---------- Derived / helper effects ---------- */
   // Salt generation
@@ -93,9 +153,21 @@ const UnifiedCommit: React.FC = () => {
     try {
       setIsSubmitting(true);
       const { _lucid, api } = await setupLucid(walletName);
-      const txBuilder = _lucid.newTx().pay.ToAddress(walletAddress!, { lovelace: BigInt(1_000_000) });
 
-      let record: any = { tip: includeTip ? tipAmount : 'None' };
+      // Build the primary output (always lovelace, optionally token)
+      const primaryAssets: Record<string, bigint> = {
+        lovelace: BigInt(1_000_000),
+      };
+      if (attachToken && selectedTokenUnit) {
+        primaryAssets[selectedTokenUnit] = BigInt(1);
+      }
+
+      const txBuilder = _lucid.newTx().pay.ToAddress(walletAddress!, primaryAssets);
+
+      let record: any = {
+        tip: includeTip ? tipAmount : 'None',
+        attachedToken: attachToken && selectedTokenUnit ? selectedTokenUnit : 'None',
+      };
 
       switch (commitType) {
         case 'plain': {
@@ -275,6 +347,41 @@ const UnifiedCommit: React.FC = () => {
             </div>
           )}
         </>
+      )}
+
+      {/* Attach token */}
+      <div>
+        <input
+          type="checkbox"
+          id="attachToken"
+          checked={attachToken}
+          onChange={() => setAttachToken(!attachToken)}
+        />
+        <label htmlFor="attachToken">Attach a token</label>
+      </div>
+      {attachToken && (
+        <div>
+          {tokenLoading && <p>Loading tokens...</p>}
+          {tokenError && <p className="text-red-500">{tokenError}</p>}
+          {!tokenLoading && tokens.length === 0 && <p>No tokens found.</p>}
+          {tokens.length > 0 && (
+            <div className="flex flex-col gap-1">
+              <label htmlFor="tokenSelect" className="font-medium">Pointer (Conch) token:</label>
+              <select
+                id="tokenSelect"
+                value={selectedTokenUnit}
+                onChange={e => setSelectedTokenUnit(e.target.value)}
+                className="w-full p-2 border rounded-md"
+              >
+                {tokens.map(t => (
+                  <option key={t.unit} value={t.unit}>
+                    {t.name || '(no name)'}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
       )}
 
       {/* Optional tip */}

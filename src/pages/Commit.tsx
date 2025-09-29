@@ -47,7 +47,7 @@ const Commit = () => {
               <AESEncryptedCommit />
               <FileHashCommit /> */}
               <UnifiedCommit />
-              <TokenList />
+              {/* <TokenList /> */}
             </>
           )
         }
