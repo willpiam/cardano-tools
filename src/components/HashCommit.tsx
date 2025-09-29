@@ -6,6 +6,7 @@ import { williamDetails } from '../williamDetails';
 import { downloadJson } from '../functions/downloadJson';
 import VerifyHash from './VerifyHash';
 import { sha256 } from '../functions/hashFunctions';
+import { WrappedTextBlock } from './WrappedTextBlock';
 
 
 /**
@@ -109,7 +110,9 @@ const HashCommit: React.FC = () => {
       />
       {/* display mesage to use */}
       <h3>Message to use:</h3>
-      <code>{messageToUse}</code>
+      <WrappedTextBlock 
+      text={messageToUse} 
+      width={500} />
       {/* Hash preview */}
       {messageToUse && <VerifyHash message={messageToUse} />}
 

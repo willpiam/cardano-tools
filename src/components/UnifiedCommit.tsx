@@ -8,6 +8,7 @@ import { prepMessage } from '../functions/prepMessage';
 import { encryptAES } from '../QuickAES';
 import { sha256 } from '../functions/hashFunctions';
 import VerifyHash from './VerifyHash';
+import { WrappedTextBlock } from './WrappedTextBlock';
 
 export type CommitKind = 'plain' | 'hash' | 'aes' | 'filehash';
 
@@ -306,10 +307,12 @@ const UnifiedCommit: React.FC = () => {
           </div>
           <div>
             <h3 className="font-medium">Message to use:</h3>
-            <code>{messageToUse}</code>
+            <WrappedTextBlock
+              text={messageToUse}
+              width={500} />
           </div>
           <VerifyHash message={messageToUse} />
-         
+
         </>
       )}
 
@@ -317,17 +320,20 @@ const UnifiedCommit: React.FC = () => {
         <>
           <div>
             <input
-                type="password"
-                className="w-full p-2 border rounded-md"
-                placeholder="Password"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
+              type="password"
+              className="w-full p-2 border rounded-md"
+              placeholder="Password"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
             />
           </div>
           {cipherText && (
             <div>
               <h3 className="font-medium">Cipher text preview:</h3>
-              <code className="break-all whitespace-pre-wrap">{cipherText}</code>
+              <WrappedTextBlock
+                text={cipherText}
+                width={500}
+              />
             </div>
           )}
         </>

@@ -7,6 +7,7 @@ import { downloadJson } from '../functions/downloadJson';
 import '../simple.css';
 import { prepMessage } from '../functions/prepMessage';
 import { encryptAES } from '../QuickAES';
+import { WrappedTextBlock } from './WrappedTextBlock';
 
 const AESEncryptedCommit: React.FC = () => {
   const [message, setMessage] = useState('');
@@ -116,7 +117,7 @@ const AESEncryptedCommit: React.FC = () => {
       {cipherText && (
         <>
           <h3 className="font-medium">Cipher text preview:</h3>
-          <code className="break-all whitespace-pre-wrap">{cipherText}</code>
+          <WrappedTextBlock text={cipherText} width={500} />
         </>
       )}
 

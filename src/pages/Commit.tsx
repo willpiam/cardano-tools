@@ -36,7 +36,6 @@ const Commit = () => {
         {
           isWalletConnected && (
             <>
-              {/* <h1 className="text-3xl font-bold">Commitment Tools</h1> */}
               <div className="connection-info">
                 <h3>
                   Connected to
@@ -68,7 +67,6 @@ const Commit = () => {
           <FileHashViewer />
         </div>
       </div>
-
     </>
   );
 };
