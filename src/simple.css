@@ -7,6 +7,7 @@
 , .file-hash-viewer
 , .file-hash-commit
 , .unified-commit
+, .connection-info
  {
   border: 1px solid #ccc;
   padding: 1rem;
@@ -43,4 +44,10 @@
 }
 code {
     background-color: #f0f0f0;
+}
+
+.connection-info {
+  /* fun background color */
+  background-color: lightgreen;
+
 }

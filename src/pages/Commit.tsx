@@ -10,21 +10,14 @@ import FileHashViewer from '../components/FileHashViewer';
 import FileHashCommit from '../components/FileHashCommit';
 import UnifiedCommit from '../components/UnifiedCommit';
 import TokenList from '../components/TokenList';
+import { AddressDisplay } from '../components/AddressDisplay';
+import '../simple.css';
 
 const Commit = () => {
   const isWalletConnected = useAppSelector(
     (state) => state.walletConnected.isWalletConnected
   );
   const walletAddress = useAppSelector((state) => state.wallet.address);
-
-  // if (!isWalletConnected) {
-  //   return (
-  //     <div className="min-h-screen flex flex-col items-center justify-center">
-  //       <div className="mb-4 text-lg">Connect With A Cardano Wallet To Continue</div>
-  //       <ConnectWallet />
-  //     </div>
-  //   );
-  // }
 
   return (
     <>
@@ -41,7 +34,19 @@ const Commit = () => {
           isWalletConnected && (
             <>
               <h1 className="text-3xl font-bold">Commitment Tools</h1>
-              <code>Address: {walletAddress}</code>
+              <div className="connection-info">
+                <h3>
+                  Connected to
+                </h3>
+                  <AddressDisplay
+                    address={walletAddress || ''}
+                    width={390} 
+                    style={{
+                      marginLeft: 'auto',
+                      marginRight: 'auto',
+                    }}
+                    />
+              </div>
               {/* <ClearTextCommit />
               <HashCommit />
               <AESEncryptedCommit />
@@ -60,9 +65,7 @@ const Commit = () => {
           <FileHashViewer />
         </div>
       </div>
-      todo: add the ability to add specific tokens to the transaction (sent back to self). 
-      This token can be used to index transactions with notes. 
-      
+
     </>
   );
 };
