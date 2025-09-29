@@ -52,7 +52,7 @@ const DecryptAES: React.FC = () => {
       <textarea
         className="w-full p-2 border rounded-md"
         rows={3}
-        placeholder={isArrayMode ? 'Cipher text JSON array ["iv", "cipher"]' : 'Cipher text (iv:cipher)'}
+        placeholder={isArrayMode ? 'Cipher text JSON array' : 'Cipher text'}
         value={cipherText}
         onChange={(e) => setCipherText(e.target.value)}
       />
