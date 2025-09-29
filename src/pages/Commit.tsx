@@ -9,6 +9,7 @@ import VerifyHash from '../components/VerifyHash';
 import FileHashViewer from '../components/FileHashViewer';
 import FileHashCommit from '../components/FileHashCommit';
 import UnifiedCommit from '../components/UnifiedCommit';
+import TokenList from '../components/TokenList';
 
 const Commit = () => {
   const isWalletConnected = useAppSelector(
@@ -46,6 +47,7 @@ const Commit = () => {
               <AESEncryptedCommit />
               <FileHashCommit /> */}
               <UnifiedCommit />
+              <TokenList />
             </>
           )
         }
