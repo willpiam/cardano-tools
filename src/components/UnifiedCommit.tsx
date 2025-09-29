@@ -130,7 +130,7 @@ const UnifiedCommit: React.FC = () => {
   }, [commitType, message, password]);
 
   // File hash compute
-  const computeHash = async (file: File) => {
+  const computeHashOfFile = async (file: File) => {
     const buffer = await file.arrayBuffer();
     const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
     const hashArray = Array.from(new Uint8Array(hashBuffer));
@@ -145,7 +145,7 @@ const UnifiedCommit: React.FC = () => {
       return;
     }
     setSelectedFile(file);
-    const h = await computeHash(file);
+    const h = await computeHashOfFile(file);
     setFileHash(h);
   };
 
@@ -313,7 +313,7 @@ const UnifiedCommit: React.FC = () => {
             <h3 className="font-medium">Message to use:</h3>
             <WrappedTextBlock
               text={messageToUse}
-              width={500} />
+              width={300} />
           </div>
           <VerifyHash message={messageToUse} />
 
@@ -336,7 +336,7 @@ const UnifiedCommit: React.FC = () => {
               <h3 className="font-medium">Cipher text preview:</h3>
               <WrappedTextBlock
                 text={cipherText}
-                width={500}
+                width={300}
               />
             </div>
           )}

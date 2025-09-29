@@ -112,7 +112,7 @@ const HashCommit: React.FC = () => {
       <h3>Message to use:</h3>
       <WrappedTextBlock 
       text={messageToUse} 
-      width={500} />
+      width={300} />
       {/* Hash preview */}
       {messageToUse && <VerifyHash message={messageToUse} />}
 

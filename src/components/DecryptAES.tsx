@@ -85,7 +85,7 @@ const DecryptAES: React.FC = () => {
           <h4 className="font-medium">Decrypted Message:</h4>
           <WrappedTextBlock
             text={message}
-            width={500}
+            width={300}
           />
         </>
       )}

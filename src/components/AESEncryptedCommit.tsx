@@ -117,7 +117,7 @@ const AESEncryptedCommit: React.FC = () => {
       {cipherText && (
         <>
           <h3 className="font-medium">Cipher text preview:</h3>
-          <WrappedTextBlock text={cipherText} width={500} />
+          <WrappedTextBlock text={cipherText} width={300} />
         </>
       )}
 

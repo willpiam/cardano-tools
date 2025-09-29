@@ -1,15 +1,10 @@
 import React from 'react';
 import ConnectWallet from '../components/ConnectWallet';
 import { useAppSelector } from '../store/hooks';
-import ClearTextCommit from '../components/ClearTextCommit';
-import HashCommit from '../components/HashCommit';
-import AESEncryptedCommit from '../components/AESEncryptedCommit';
 import DecryptAES from '../components/DecryptAES';
 import VerifyHash from '../components/VerifyHash';
 import FileHashViewer from '../components/FileHashViewer';
-import FileHashCommit from '../components/FileHashCommit';
 import UnifiedCommit from '../components/UnifiedCommit';
-import TokenList from '../components/TokenList';
 import { AddressDisplay } from '../components/AddressDisplay';
 import '../simple.css';
 
@@ -42,7 +37,7 @@ const Commit = () => {
                 </h3>
                 <AddressDisplay
                   address={walletAddress || ''}
-                  width={390}
+                  width={256}
                   style={{
                     marginLeft: 'auto',
                     marginRight: 'auto',

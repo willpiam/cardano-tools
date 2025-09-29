@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { sha256 } from '../functions/hashFunctions';
 import { Button } from './Button';
+import { WrappedTextBlock } from './WrappedTextBlock';
 
 /**
  * VerifyHash component
@@ -45,11 +46,9 @@ const VerifyHash: React.FC<VerifyHashProps> = ({ message }) => {
           onChange={(e) => setInput(e.target.value)}
         />
       )}
-      {hash && (
-        <div className="break-all border p-2 bg-gray-50 rounded-md font-mono text-sm">
-          {hash}
-        </div>
-      )}
+      {hash && ( <WrappedTextBlock text={hash} 
+      width={512} // todo make this dynamic then wrap that logic in a componet called DynamicWidthWrappedTextBlock
+       />)}
     </div>
   );
 };
