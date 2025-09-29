@@ -8,6 +8,7 @@
 , .file-hash-commit
 , .unified-commit
 , .connection-info
+, .copy-record-button
  {
   border: 1px solid #ccc;
   padding: 1rem;

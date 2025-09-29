@@ -89,6 +89,7 @@ const UnifiedCommit: React.FC = () => {
   }, [attachToken, isWalletConnected, lucid]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [downloadedRecord, setDownloadedRecord] = useState<any>(null);
 
   const walletName = useAppSelector(state => state.wallet.selectedWallet);
   const walletAddress = useAppSelector(state => state.wallet.address);
@@ -246,6 +247,9 @@ const UnifiedCommit: React.FC = () => {
       record.cardanoscan = `https://cardanoscan.io/transaction/${tx.toHash()}?tab=metadata`;
 
       downloadJson(record, `${commitType}_commit_${Date.now()}.json`);
+      setDownloadedRecord(record);
+      // copy record to clipboard
+      // navigator.clipboard.writeText(JSON.stringify(record, null, 2));
       await signAndSubmitTx(tx, api);
       alert('Transaction submitted!');
 
@@ -414,6 +418,20 @@ const UnifiedCommit: React.FC = () => {
       <Button disabled={isSubmitting} onClick={handleCommit}>
         {isSubmitting ? 'Submitting...' : 'Commit'}
       </Button>
+
+      {downloadedRecord && (
+        <div className="copy-record-button">
+          <p>
+            In some cases (such as on mobile devices), the commitment data may not be downloaded automatically. In this case you can copy the commitment data with the button below.
+          </p>
+          <Button
+            onClick={() => navigator.clipboard.writeText(JSON.stringify(downloadedRecord, null, 2))}
+          >
+            Copy commitment record to clipboard
+          </Button>
+        </div>
+      )}
+
     </div>
   );
 };
