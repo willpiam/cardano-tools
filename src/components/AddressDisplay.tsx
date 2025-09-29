@@ -1,4 +1,5 @@
 import React from 'react';
+import { WrappedTextBlock } from './WrappedTextBlock';
 
 interface AddressDisplayProps {
   /** The address string to render */
@@ -30,21 +31,11 @@ export const AddressDisplay: React.FC<AddressDisplayProps> = ({
   width = 240,
   className = '',
   style = {},
-}) => {
-  const computedWidth = typeof width === 'number' ? `${width}px` : width;
-
-  const combinedStyle: React.CSSProperties = {
-    width: computedWidth,
-    wordWrap: 'break-word', // Legacy
-    overflowWrap: 'break-word', // Modern browsers
-    whiteSpace: 'pre-wrap', // Preserve potential whitespace and allow wrapping
-    fontFamily: 'monospace',
-    ...style,
-  };
-
-  return (
-    <div className={className} style={combinedStyle} data-testid="address-display">
-      {address}
-    </div>
-  );
-};
+}) => (
+  <WrappedTextBlock
+    text={address}
+    width={width}
+    className={className}
+    style={style}
+  />
+);

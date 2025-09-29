@@ -22,6 +22,9 @@ const Commit = () => {
   return (
     <>
       <div className="min-h-screen flex flex-col items-center justify-center p-10 gap-4">
+        <h1 className="text-3xl font-bold">
+          Commitment Tools
+        </h1>
         {
           !isWalletConnected && (
             <>
@@ -33,19 +36,19 @@ const Commit = () => {
         {
           isWalletConnected && (
             <>
-              <h1 className="text-3xl font-bold">Commitment Tools</h1>
+              {/* <h1 className="text-3xl font-bold">Commitment Tools</h1> */}
               <div className="connection-info">
                 <h3>
                   Connected to
                 </h3>
-                  <AddressDisplay
-                    address={walletAddress || ''}
-                    width={390} 
-                    style={{
-                      marginLeft: 'auto',
-                      marginRight: 'auto',
-                    }}
-                    />
+                <AddressDisplay
+                  address={walletAddress || ''}
+                  width={390}
+                  style={{
+                    marginLeft: 'auto',
+                    marginRight: 'auto',
+                  }}
+                />
               </div>
               {/* <ClearTextCommit />
               <HashCommit />

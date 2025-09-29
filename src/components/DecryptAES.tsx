@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Button } from './Button';
 import '../simple.css';
 import { decryptAES } from '../QuickAES';
+import { WrappedTextBlock } from './WrappedTextBlock';
 
 const DecryptAES: React.FC = () => {
   const [cipherText, setCipherText] = useState('');
@@ -82,7 +83,10 @@ const DecryptAES: React.FC = () => {
       {message !== null && (
         <>
           <h4 className="font-medium">Decrypted Message:</h4>
-          <code className="break-all whitespace-pre-wrap">{message}</code>
+          <WrappedTextBlock
+            text={message}
+            width={500}
+          />
         </>
       )}
     </div>
