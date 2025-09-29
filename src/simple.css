@@ -6,6 +6,7 @@
 , .off-chain-tools
 , .file-hash-viewer
 , .file-hash-commit
+, .unified-commit
  {
   border: 1px solid #ccc;
   padding: 1rem;
@@ -36,6 +37,9 @@
 }
 .file-hash-commit {
   background-color:#f7d0b7;
+}
+.unified-commit > * + * {
+  margin-top: 1rem;
 }
 code {
     background-color: #f0f0f0;

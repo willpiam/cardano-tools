@@ -8,6 +8,7 @@ import DecryptAES from '../components/DecryptAES';
 import VerifyHash from '../components/VerifyHash';
 import FileHashViewer from '../components/FileHashViewer';
 import FileHashCommit from '../components/FileHashCommit';
+import UnifiedCommit from '../components/UnifiedCommit';
 
 const Commit = () => {
   const isWalletConnected = useAppSelector(
@@ -40,10 +41,11 @@ const Commit = () => {
             <>
               <h1 className="text-3xl font-bold">Commitment Tools</h1>
               <code>Address: {walletAddress}</code>
-              <ClearTextCommit />
+              {/* <ClearTextCommit />
               <HashCommit />
               <AESEncryptedCommit />
-              <FileHashCommit />
+              <FileHashCommit /> */}
+              <UnifiedCommit />
             </>
           )
         }
@@ -56,6 +58,9 @@ const Commit = () => {
           <FileHashViewer />
         </div>
       </div>
+      todo: add the ability to add specific tokens to the transaction (sent back to self). 
+      This token can be used to index transactions with notes. 
+      
     </>
   );
 };
