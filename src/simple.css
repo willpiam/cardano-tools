@@ -86,3 +86,20 @@ textarea {
   max-width: 380px;
   /* background-color: #f0f0f0; */
 }
+
+.subtext {
+  margin-top: 0.1rem;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #666;
+}
+
+.title {
+  font-size: 3rem;
+  font-weight: 600;
+  color: #666;
+}
+
+.description {
+  margin: 1rem;
+}

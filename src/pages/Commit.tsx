@@ -17,12 +17,19 @@ const Commit = () => {
   return (
     <>
       <div className="min-h-screen flex flex-col items-center justify-center p-10 gap-4">
-        <h1 className="text-3xl font-bold">
-          Commitment Tools
-        </h1>
-        <p>
-          This is a free tool that lets anyone anchor their words, files, or proofs directly on the Cardano blockchain. You can record plain text, commit a hash, encrypt a secret, or timestamp a file; with nothing more than your wallet and normal network fees. Each action creates a receipt with a Cardanoscan link and other relevant details. The tool is free to use, and if you'd like, you can include an optional tip to support ongoing development and other activities within the Cardano ecosystem.
-        </p>
+        <div className="title-container">
+          <div className="title">
+            Written in Stone
+          </div>
+          <div className="subtext">
+            a commitment tool from the $computerman 
+          </div>
+        </div>
+        <div className="description">
+          <p>
+            This is a free tool that lets anyone anchor their words, files, or proofs directly on the Cardano blockchain. You can record plain text, commit a hash, encrypt a secret, or timestamp a file; with nothing more than your wallet and normal network fees. Each action creates a receipt with a Cardanoscan link and other relevant details. The tool is free to use, and if you'd like, you can include an optional tip to support ongoing development and other activities within the Cardano ecosystem.
+          </p>
+        </div>
         {
           !isWalletConnected && (
             <div className="connect-to-wallet-container">
