@@ -52,12 +52,7 @@ const Commit = () => {
                   }}
                 />
               </div>
-              {/* <ClearTextCommit />
-              <HashCommit />
-              <AESEncryptedCommit />
-              <FileHashCommit /> */}
               <UnifiedCommit />
-              {/* <TokenList /> */}
             </>
           )
         }
