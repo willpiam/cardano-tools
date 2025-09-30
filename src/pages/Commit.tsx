@@ -20,6 +20,9 @@ const Commit = () => {
         <h1 className="text-3xl font-bold">
           Commitment Tools
         </h1>
+        <p>
+          This is a free tool that lets anyone anchor their words, files, or proofs directly on the Cardano blockchain. You can record plain text, commit a hash, encrypt a secret, or timestamp a file; with nothing more than your wallet and normal network fees. Each action creates a receipt with a Cardanoscan link and other relevant details. The tool is free to use, and if you'd like, you can include an optional tip to support ongoing development and other activities within the Cardano ecosystem.
+        </p>
         {
           !isWalletConnected && (
             <div className="connect-to-wallet-container">
