@@ -22,10 +22,18 @@ const Commit = () => {
         </h1>
         {
           !isWalletConnected && (
-            <>
-              <div className="mb-4 text-lg">Connect With A Cardano Wallet To Continue</div>
+            <div className="connect-to-wallet-container">
+              <div >
+                <h2>
+                  Connect With A Cardano Wallet To Continue
+                </h2>
+                <p>
+                  You will need a Cardano wallet to use this tool. Lace and Eternl are two great options. You will also need a small amount of ADA to cover transaction fees.
+                  Ada can be purchased from most exchanges such as Coinbase, Binance, Kraken, etc.
+                </p>
+              </div>
               <ConnectWallet />
-            </>
+            </div>
           )
         }
         {

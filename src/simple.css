@@ -9,6 +9,7 @@
 , .unified-commit
 , .connection-info
 , .copy-record-button
+, .connect-to-wallet-container
  {
   border: 1px solid #ccc;
   padding: 1rem;
@@ -51,4 +52,18 @@ code {
   /* fun background color */
   background-color: lightgreen;
 
+}
+
+.connect-to-wallet-container {
+  background-color: #f0f0f0;
+  /* center the content */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.connect-to-wallet-container button {
+  width: 100%;
+  /* margin-top: 1rem; */
 }
