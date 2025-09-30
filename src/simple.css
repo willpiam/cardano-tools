@@ -67,3 +67,22 @@ code {
   width: 100%;
   /* margin-top: 1rem; */
 }
+
+.aes-decrypt div {
+  /* padding-top: 1rem; */
+  padding: 0.5rem;
+}
+
+textarea {
+  width: 100%;
+}
+
+.password-input-section {
+  display: flex;
+  flex-direction: row;
+  gap: 1rem;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 380px;
+  /* background-color: #f0f0f0; */
+}

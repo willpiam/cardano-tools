@@ -322,7 +322,8 @@ const UnifiedCommit: React.FC = () => {
 
       {commitType === 'aes' && (
         <>
-          <div>
+          <div className="password-input-section">
+            <label htmlFor="password" className="block text-sm font-medium mb-2">Enter Password</label>
             <input
               type="password"
               className="w-full p-2 border rounded-md"

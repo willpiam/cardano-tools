@@ -50,13 +50,15 @@ const DecryptAES: React.FC = () => {
   return (
     <div className="aes-decrypt flex flex-col gap-4 border border-gray-300 p-4 rounded-md">
       <h3 className="text-lg font-semibold">Decrypt Cipher Text</h3>
-      <textarea
-        className="w-full p-2 border rounded-md"
-        rows={3}
-        placeholder={isArrayMode ? 'Cipher text JSON array' : 'Cipher text'}
-        value={cipherText}
-        onChange={(e) => setCipherText(e.target.value)}
-      />
+      <div>
+        <textarea
+          className="w-full p-2 border rounded-md"
+          rows={3}
+          placeholder={isArrayMode ? 'Cipher text JSON array' : 'Cipher text'}
+          value={cipherText}
+          onChange={(e) => setCipherText(e.target.value)}
+        />
+      </div>
       <div>
         <label className="flex items-center gap-2 text-sm">
           <input
@@ -67,8 +69,10 @@ const DecryptAES: React.FC = () => {
           Input is JSON array of strings
         </label>
       </div>
-      <div>
+      <div className="password-input-section">
+        <label htmlFor="password" className="block text-sm font-medium mb-2">Enter Password</label>
         <input
+          id="password"
           type="password"
           className="w-full p-2 border rounded-md"
           placeholder="Password"
@@ -76,18 +80,20 @@ const DecryptAES: React.FC = () => {
           onChange={(e) => setPassword(e.target.value)}
         />
       </div>
-      <Button disabled={isDecrypting} onClick={handleDecrypt}>
-        {isDecrypting ? 'Decrypting...' : 'Decrypt'}
-      </Button>
+      <div>
+        <Button disabled={isDecrypting} onClick={handleDecrypt}>
+          {isDecrypting ? 'Decrypting...' : 'Decrypt'}
+        </Button>
+      </div>
       {error && <p className="text-red-600">{error}</p>}
       {message !== null && (
-        <>
+        <div>
           <h4 className="font-medium">Decrypted Message:</h4>
           <WrappedTextBlock
             text={message}
             width={300}
           />
-        </>
+        </div>
       )}
     </div>
   );
