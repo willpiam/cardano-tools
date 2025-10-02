@@ -44,6 +44,9 @@
 .unified-commit > * + * {
   margin-top: 1rem;
 }
+.off-chain-tools {
+  background-color: antiquewhite;
+}
 code {
     background-color: #f0f0f0;
 }
