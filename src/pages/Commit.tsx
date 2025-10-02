@@ -27,7 +27,16 @@ const Commit = () => {
         </div>
         <div className="description">
           <p>
-            This is a free tool that lets anyone anchor their words, files, or proofs directly on the Cardano blockchain. You can record plain text, commit a hash, encrypt a secret, or timestamp a file; with nothing more than your wallet and normal network fees. Each action creates a receipt with a Cardanoscan link and other relevant details. The tool is free to use, and if you'd like, you can include an optional tip to support ongoing development and other activities within the Cardano ecosystem.
+            This is a free tool that lets anyone anchor their words, 
+            files, or proofs directly on the Cardano blockchain. You 
+            can record plain text, commit a hash, encrypt a secret, 
+            or timestamp a file. Each action creates a receipt with 
+            a Cardanoscan link and other relevant details. The tool 
+            is free to use, and if you'd like, you can include an 
+            optional tip to support ongoing development of this tool 
+            and my other activities within the Cardano ecosystem.
+            <br/>
+            Write something down <strong>forever</strong>. 
           </p>
         </div>
         {
@@ -73,6 +82,20 @@ const Commit = () => {
           <DecryptAES />
           <VerifyHash />
           <FileHashViewer />
+        </div>
+      </div>
+      {/* <footer> */}
+      <div className="bottom-area">
+        {/* link to https://github.com/willpiam/cardano-tools */}
+        <div className="bottom-area-item">
+          <a href="https://github.com/willpiam/cardano-tools" target="_blank" rel="noopener noreferrer">
+            Source Code
+          </a>
+        </div>
+        <div className="bottom-area-item">
+          <a href="https://projects.williamdoyle.ca" target="_blank" rel="noopener noreferrer">
+            My Other Projects
+          </a>
         </div>
       </div>
     </>

@@ -103,3 +103,13 @@ textarea {
 .description {
   margin: 1rem;
 }
+
+.bottom-area {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-around;
+  align-items: center;
+  margin-top: 7rem;
+  margin-bottom: 2rem;
+  font-size: 0.8rem;
+}
