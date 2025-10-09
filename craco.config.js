@@ -12,7 +12,7 @@ module.exports = {
       webpackConfig.output = {
         ...webpackConfig.output,
         environment: {
-          ...webpackConfig.output?.environment,
+          ...(webpackConfig.output && webpackConfig.output.environment),
           asyncFunction: true,
         },
       };

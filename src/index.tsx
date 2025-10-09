@@ -9,6 +9,7 @@ import { BrowserRouter, Route, Routes } from 'react-router';
 import NotFound from './pages/NotFound';
 import Tools from './pages/Tools';
 import Commit from './pages/Commit';
+import Playground from './pages/Playground';
 
 
 const root = ReactDOM.createRoot(
@@ -23,6 +24,7 @@ root.render(
             <Route path="/" element={<App />}>
               <Route index element={<Tools />} />
               <Route path="commit" element={<Commit />} />
+              <Route path="playground" element={<Playground />} />
               {/* <Route path="/old-app" element={<OldApp />} /> */}
               <Route path="*" element={<NotFound />} />
             </Route>
