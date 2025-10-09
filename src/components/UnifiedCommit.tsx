@@ -12,6 +12,18 @@ import { WrappedTextBlock } from './WrappedTextBlock';
 
 export type CommitKind = 'plain' | 'hash' | 'aes' | 'filehash';
 
+interface CommitInfo {
+  sha: string;
+  commit: {
+    message: string;
+    author: {
+      name: string;
+      date: string;
+    };
+  };
+  html_url: string;
+}
+
 const UnifiedCommit: React.FC = () => {
   const lucid = useAppSelector((state) => state.wallet.lucid);
   const isWalletConnected = useAppSelector((state) => state.walletConnected.isWalletConnected);
@@ -37,6 +49,13 @@ const UnifiedCommit: React.FC = () => {
   const [tokenLoading, setTokenLoading] = useState(false);
   const [tokenError, setTokenError] = useState<string | null>(null);
 
+  // Git commit information state
+  const [commitInfo, setCommitInfo] = useState<CommitInfo | null>(null);
+  const [gitInfoLoaded, setGitInfoLoaded] = useState(false);
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [downloadedRecord, setDownloadedRecord] = useState<any>(null);
+
   // helper to decode asset name from unit
   const decodeAssetName = (unit: string): string => {
     if (unit.length <= 56) return '';
@@ -53,6 +72,42 @@ const UnifiedCommit: React.FC = () => {
       return hex;
     }
   };
+
+  // fetch git commit information on component load
+  useEffect(() => {
+    const fetchLatestCommit = async () => {
+      if (gitInfoLoaded) return;
+      
+      try {
+        const response = await fetch('https://api.github.com/repos/willpiam/cardano-tools/commits/master');
+        
+        if (!response.ok) {
+          throw new Error(`GitHub API error: ${response.status}`);
+        }
+        
+        const commit: CommitInfo = await response.json();
+        setCommitInfo(commit);
+      } catch (err) {
+        console.error('Failed to fetch commit information', err);
+        // Set fallback values for failed fetch
+        setCommitInfo({
+          sha: 'FAILED_TO_LOAD',
+          commit: {
+            message: 'FAILED_TO_LOAD',
+            author: {
+              name: 'FAILED_TO_LOAD',
+              date: new Date().toISOString()
+            }
+          },
+          html_url: 'https://github.com/willpiam/cardano-tools'
+        });
+      } finally {
+        setGitInfoLoaded(true);
+      }
+    };
+    
+    fetchLatestCommit();
+  }, [gitInfoLoaded]);
 
   // fetch tokens when wallet connected and UI enabled
   useEffect(() => {
@@ -87,9 +142,6 @@ const UnifiedCommit: React.FC = () => {
     };
     fetchTokens();
   }, [attachToken, isWalletConnected, lucid]);
-
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [downloadedRecord, setDownloadedRecord] = useState<any>(null);
 
   const walletName = useAppSelector(state => state.wallet.selectedWallet);
   const walletAddress = useAppSelector(state => state.wallet.address);
@@ -166,9 +218,23 @@ const UnifiedCommit: React.FC = () => {
 
       const txBuilder = _lucid.newTx().pay.ToAddress(walletAddress!, primaryAssets);
 
+      // Build codeVersion section
+      const currentTime = new Date().toISOString();
+      const codeVersion = {
+        shortHash: commitInfo?.sha ? commitInfo.sha.substring(0, 7) : 'FAILED_TO_LOAD',
+        fullHash: commitInfo?.sha || 'FAILED_TO_LOAD',
+        commitMessage: commitInfo?.commit.message || 'FAILED_TO_LOAD',
+        commitAuthor: commitInfo?.commit.author.name || 'FAILED_TO_LOAD',
+        commitDate: commitInfo?.commit.author.date || currentTime,
+        currentTime: currentTime,
+        commitLink: commitInfo?.sha ? `https://github.com/willpiam/cardano-tools/tree/${commitInfo.sha}` : 'https://github.com/willpiam/cardano-tools',
+        masterBranchLink: 'https://github.com/willpiam/cardano-tools'
+      };
+
       let record: any = {
         tip: includeTip ? tipAmount : 'None',
         attachedToken: attachToken && selectedTokenUnit ? selectedTokenUnit : 'None',
+        codeVersion: codeVersion,
       };
 
       switch (commitType) {
