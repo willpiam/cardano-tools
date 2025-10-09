@@ -1,6 +1,9 @@
 
 this code base contains code for several similar projects. The first is some simple cardano governance tools. The second project is a commitment tool for writing on-chain messages.
 
+## problems
+
+- [ ] validTo seems to fail probably because of how i set up lucid
 
 ## Gov tools
 

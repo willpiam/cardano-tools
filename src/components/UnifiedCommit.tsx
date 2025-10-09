@@ -308,6 +308,8 @@ const UnifiedCommit: React.FC = () => {
         });
       }
 
+      // let the transaction be valid for 20 minutes
+      // txBuilder.validTo(Date.now() + (20 * 60 * 1000));
       const tx = await txBuilder.complete();
       record.txHash = tx.toHash();
       record.cardanoscan = `https://cardanoscan.io/transaction/${tx.toHash()}?tab=metadata`;

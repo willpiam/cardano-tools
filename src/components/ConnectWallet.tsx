@@ -51,6 +51,7 @@ function ConnectWallet() {
 
       // Initialize Lucid
       const _lucid = await Lucid(new Emulator([]), 'Preview');
+      // const _lucid = await Lucid(new Emulator([]), 'Mainnet');
 
       _lucid.selectWallet.fromAPI(api);
       dispatch(setLucid(_lucid));
