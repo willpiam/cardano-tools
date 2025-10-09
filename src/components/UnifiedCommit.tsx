@@ -50,7 +50,7 @@ const UnifiedCommit: React.FC = () => {
   const [tokenError, setTokenError] = useState<string | null>(null);
 
   // Git commit information state
-  const [commitInfo, setCommitInfo] = useState<CommitInfo | null>(null);
+  const [gitInfo, setGitInfo] = useState<CommitInfo | null>(null);
   const [gitInfoLoaded, setGitInfoLoaded] = useState(false);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -86,11 +86,11 @@ const UnifiedCommit: React.FC = () => {
         }
         
         const commit: CommitInfo = await response.json();
-        setCommitInfo(commit);
+        setGitInfo(commit);
       } catch (err) {
         console.error('Failed to fetch commit information', err);
         // Set fallback values for failed fetch
-        setCommitInfo({
+        setGitInfo({
           sha: 'FAILED_TO_LOAD',
           commit: {
             message: 'FAILED_TO_LOAD',
@@ -221,13 +221,13 @@ const UnifiedCommit: React.FC = () => {
       // Build codeVersion section
       const currentTime = new Date().toISOString();
       const codeVersion = {
-        shortHash: commitInfo?.sha ? commitInfo.sha.substring(0, 7) : 'FAILED_TO_LOAD',
-        fullHash: commitInfo?.sha || 'FAILED_TO_LOAD',
-        commitMessage: commitInfo?.commit.message || 'FAILED_TO_LOAD',
-        commitAuthor: commitInfo?.commit.author.name || 'FAILED_TO_LOAD',
-        commitDate: commitInfo?.commit.author.date || currentTime,
+        shortHash: gitInfo?.sha ? gitInfo.sha.substring(0, 7) : 'FAILED_TO_LOAD',
+        fullHash: gitInfo?.sha || 'FAILED_TO_LOAD',
+        //commitMessage: commitInfo?.commit.message || 'FAILED_TO_LOAD',
+        //commitAuthor: commitInfo?.commit.author.name || 'FAILED_TO_LOAD',
+        commitDate: gitInfo?.commit.author.date || currentTime,
         currentTime: currentTime,
-        commitLink: commitInfo?.sha ? `https://github.com/willpiam/cardano-tools/tree/${commitInfo.sha}` : 'https://github.com/willpiam/cardano-tools',
+        commitLink: gitInfo?.sha ? `https://github.com/willpiam/cardano-tools/tree/${gitInfo.sha}` : 'https://github.com/willpiam/cardano-tools',
         masterBranchLink: 'https://github.com/willpiam/cardano-tools'
       };
 
