@@ -15,6 +15,12 @@ this code base contains code for several similar projects. The first is some sim
 
 We are going for the "unstyled look". CSS is fine but only in very small amount. 
 
+## Todo
+
+- [ ] support everywhere we support sha256
+- [ ] add support for other chains including Ethereum
+
+
 
 <br/>
 <br/>
