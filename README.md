@@ -17,6 +17,7 @@ We are going for the "unstyled look". CSS is fine but only in very small amount.
 
 ## Todo
 
+- [ ] get validTo to work
 - [ ] support everywhere we support sha256
 - [ ] add support for other chains including Ethereum
 

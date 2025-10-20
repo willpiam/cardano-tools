@@ -21,6 +21,7 @@ const Tools = () => {
   const walletName = useAppSelector((state) => state.wallet.selectedWallet);
   const walletAddress = useAppSelector(state => state.wallet.address);
   const walletBalance = useAppSelector(state => state.wallet.balance)
+  const { useBlockfrost, apiKey } = useAppSelector((state) => state.blockfrost);
   const [registerStake, setRegisterStake] = useState(false);
   const [showExtraItems, setShowExtraItems] = useState(false);
   const [isStaking, setIsStaking] = useState(false)
@@ -36,14 +37,14 @@ const Tools = () => {
     }
 
     (async () => {
-      const { delegation } = await setupLucid(walletName);
+      const { delegation } = await setupLucid(walletName, useBlockfrost, apiKey);
       console.log("inside useEffect.. delegation is ", delegation)
       setIsStaking(null !== delegation?.poolId);
     })()
   }, [isWalletConnected, walletName])
 
   const handleDelegateToComputerman = async () => {
-    const { _lucid, api, stakeAddress } = await setupLucid(walletName)
+    const { _lucid, api, stakeAddress } = await setupLucid(walletName, useBlockfrost, apiKey)
     const drepCredential = drepIDToCredential(williamDetails.drepId);
 
     const txbuilder = _lucid.newTx()
@@ -68,7 +69,7 @@ const Tools = () => {
   };
 
   const handleDelegateToAlwaysAbstain = async () => {
-    const { _lucid, api, stakeAddress } = await setupLucid(walletName)
+    const { _lucid, api, stakeAddress } = await setupLucid(walletName, useBlockfrost, apiKey)
 
     const txbuilder = _lucid.newTx()
 
@@ -94,7 +95,7 @@ const Tools = () => {
   }
 
   const handleDelegateToAlwaysNoConfidence = async () => {
-    const { _lucid, api, stakeAddress } = await setupLucid(walletName)
+    const { _lucid, api, stakeAddress } = await setupLucid(walletName, useBlockfrost, apiKey)
 
     const txbuilder = _lucid.newTx()
 
@@ -121,7 +122,7 @@ const Tools = () => {
 
   // handle deregister stake
   const handleDeregisterStake = async () => {
-    const { _lucid, api, stakeAddress } = await setupLucid(walletName)
+    const { _lucid, api, stakeAddress } = await setupLucid(walletName, useBlockfrost, apiKey)
     const tx = await _lucid.newTx()
       .deRegisterStake(stakeAddress!)
       .attachMetadata(674, ["deregistering stake", "using the $computerman delegation tool"])
@@ -131,7 +132,7 @@ const Tools = () => {
   }
 
   const handleJustTheTip = async () => {
-    const { _lucid, api } = await setupLucid(walletName)
+    const { _lucid, api } = await setupLucid(walletName, useBlockfrost, apiKey)
 
     const tx = await _lucid.newTx()
       .pay.ToAddress(williamDetails.paymentAddress, {
@@ -144,7 +145,7 @@ const Tools = () => {
   }
 
   const handleTreasuryDonation = async () => {
-    const { _lucid, api, stakeAddress } = await setupLucid(walletName)
+    const { _lucid, api, stakeAddress } = await setupLucid(walletName, useBlockfrost, apiKey)
     const tx = await _lucid.newTx()
       .attachMetadata(674, ["donating to treasury", "using the $computerman delegation tool"])
       .complete()

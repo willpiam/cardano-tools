@@ -27,6 +27,7 @@ interface CommitInfo {
 const UnifiedCommit: React.FC = () => {
   const lucid = useAppSelector((state) => state.wallet.lucid);
   const isWalletConnected = useAppSelector((state) => state.walletConnected.isWalletConnected);
+  const { useBlockfrost, apiKey } = useAppSelector((state) => state.blockfrost);
   const [commitType, setCommitType] = useState<CommitKind>('plain');
 
   const [message, setMessage] = useState('');
@@ -205,9 +206,11 @@ const UnifiedCommit: React.FC = () => {
   const handleCommit = async () => {
     if (!isWalletConnected) return;
     try {
+      console.log(`STUB about to setIsSubmitting(true)`)
       setIsSubmitting(true);
-      const { _lucid, api } = await setupLucid(walletName);
-
+      // const { _lucid, api } = await setupLucid(walletName);
+      const {  api } = await setupLucid(walletName, useBlockfrost, apiKey);
+      console.log(`STUB called setupLucid`)
       // Build the primary output (always lovelace, optionally token)
       const primaryAssets: Record<string, bigint> = {
         lovelace: BigInt(1_000_000),
@@ -215,8 +218,9 @@ const UnifiedCommit: React.FC = () => {
       if (attachToken && selectedTokenUnit) {
         primaryAssets[selectedTokenUnit] = BigInt(1);
       }
-
-      const txBuilder = _lucid.newTx().pay.ToAddress(walletAddress!, primaryAssets);
+      console.log(`STUB about to build txBuilder`)
+      // const txBuilder = _lucid.newTx().pay.ToAddress(walletAddress!, primaryAssets);
+      const txBuilder = lucid.newTx().pay.ToAddress(walletAddress!, primaryAssets);
 
       // Build codeVersion section
       const currentTime = new Date().toISOString();
@@ -307,13 +311,18 @@ const UnifiedCommit: React.FC = () => {
           lovelace: BigInt(tipAmount * 1_000_000),
         });
       }
-
-      // let the transaction be valid for 20 minutes
-      // txBuilder.validTo(Date.now() + (20 * 60 * 1000));
+      console.log(`STUB about to add validTo (maybe)`)
+      // let the transaction be valid for 20 minutes (only works with real network providers like Blockfrost)
+      if (useBlockfrost && apiKey) {
+        txBuilder.validTo(Date.now() + (20 * 60 * 1000));
+        console.log('Added validTo with Blockfrost provider');
+      } else {
+        console.log('Skipping validTo with Emulator provider');
+      }
       const tx = await txBuilder.complete();
       record.txHash = tx.toHash();
       record.cardanoscan = `https://cardanoscan.io/transaction/${tx.toHash()}?tab=metadata`;
-
+      console.log(`STUB about to call downloadJson`)
       downloadJson(record, `${commitType}_commit_${Date.now()}.json`);
       setDownloadedRecord(record);
       // copy record to clipboard

@@ -4,6 +4,7 @@ import errorReducer from './errorSlice';
 import walletReducer from './walletSlice';
 import modalReducer from './modalSlice';
 import walletConnectedReducer from './isWalletConnectedSlice';
+import blockfrostReducer from './blockfrostSlice';
 
 export const store = configureStore({
   reducer: {
@@ -12,6 +13,7 @@ export const store = configureStore({
     wallet: walletReducer,
     modal: modalReducer,
     walletConnected: walletConnectedReducer,
+    blockfrost: blockfrostReducer,
   },
 });
 
