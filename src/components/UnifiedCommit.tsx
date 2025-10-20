@@ -350,6 +350,7 @@ const UnifiedCommit: React.FC = () => {
   return (
     <div className="unified-commit flex flex-col gap-4 w-full max-w-xl border border-gray-300 p-4 rounded-md">
       <h2 className="text-xl font-semibold">Commit Data To Chain</h2>
+     
 
       <div>
         <label htmlFor="commitType">Commit type:</label>{' '}
@@ -364,6 +365,48 @@ const UnifiedCommit: React.FC = () => {
           <option value="filehash">File hash</option>
         </select>
       </div>
+
+      {/* descriptions */}
+      {/* if plan */}
+      {commitType === 'plain' && (
+        <p>
+        This flow allows you to post a message directly to the Cardano blockchain. It will be easily 
+        visible on a block explorer like Cardanoscan. Everyone will be able to see your text and verify that 
+        it was created by your wallet at this time. You will be prompted to download a JSON file with the 
+        relevant details for your records. 
+      </p>
+      )}
+
+      {commitType === 'hash' && (
+        <p>
+          This flow allows you to post only the sha256 hash of a message on the Cardano blockchain. People with 
+          your message will be able to recompute its hash and verify it against the hash you commit to the blockchain.
+          Without your message people will see that you have committed to <i>something</i> but will not know what unless they correctly 
+          guess the exact message. To prevent guessing you can opt to include a salt with your message. Verifiers will need the origial 
+          message and your salt (should you include one) to verify the hash. Verifiers with the message and the salt will 
+          be able to verify that the message was committed to from your wallet at this time. You will be prompted to download a JSON file with the
+          relevant details for your records. This file will include the original message and the salt (if you included one).  
+        </p>
+      )}
+
+      {commitType === 'aes' && (
+        <p>
+          This flow allows you to post an AES-encrypted message on the Cardano blockchain. People with 
+          the correct password will be able to decrypt the message and verify that it was created by your wallet at this time.
+          Everyone else will see that you have committed to <i>some message</i> and they will know approximately how long it is.
+          You will be prompted to download a JSON file with the relevant details for your records. This file will include the 
+          raw unencrypted message and the password. Make sure to choose a strong password which cannot easily be guessed.  
+        </p>
+      )}
+
+      {commitType === 'filehash' && (
+        <p>
+          This flow allows you to post the sha256 hash of a file on the Cardano blockchain. Everyone will see that your
+          wallet has commited to something but they will not know what. Anyone with the exact same file will be able to 
+          recompute the hash and verify it against the hash you committed to the blockchain. You will be prompted to download
+           a JSON file with the relevant details for your records. 
+        </p>
+      )}
 
       {(commitType === 'plain' || commitType === 'hash' || commitType === 'aes') && (
         <textarea
