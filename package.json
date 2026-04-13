@@ -86,6 +86,9 @@
       "last 1 safari version"
     ]
   },
+  "overrides": {
+    "node-datachannel": "npm:empty-npm-package@1.0.0"
+  },
   "devDependencies": {
     "@babel/plugin-proposal-private-property-in-object": "^7.21.11",
     "autoprefixer": "^10.4.21",
