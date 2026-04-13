@@ -10,6 +10,7 @@ import NotFound from './pages/NotFound';
 import Tools from './pages/Tools';
 import Commit from './pages/Commit';
 import Playground from './pages/Playground';
+import DRepVotingHistory from './pages/DRepVotingHistory';
 
 
 const root = ReactDOM.createRoot(
@@ -25,6 +26,8 @@ root.render(
               <Route index element={<Tools />} />
               <Route path="commit" element={<Commit />} />
               <Route path="playground" element={<Playground />} />
+              <Route path="drep/:drepId" element={<DRepVotingHistory />} />
+              <Route path="drep" element={<DRepVotingHistory />} />
               {/* <Route path="/old-app" element={<OldApp />} /> */}
               <Route path="*" element={<NotFound />} />
             </Route>
