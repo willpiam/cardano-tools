@@ -158,7 +158,7 @@ const DRepVotingHistory = () => {
 
   const handleLookup = () => {
     if (!drepInput.trim()) return;
-    navigate(`/drep/${encodeURIComponent(drepInput.trim())}`);
+    navigate(`/drephistory/${encodeURIComponent(drepInput.trim())}`);
   };
 
   const votedCount = mergedData.filter(m => m.vote !== null).length;

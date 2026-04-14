@@ -26,8 +26,20 @@ root.render(
               <Route index element={<Tools />} />
               <Route path="commit" element={<Commit />} />
               <Route path="playground" element={<Playground />} />
+              <Route path="drephistory/:drepId" element={<DRepVotingHistory />} />
               <Route path="drep/:drepId" element={<DRepVotingHistory />} />
+              <Route path="drep-history/:drepId" element={<DRepVotingHistory />} />
+              <Route path="vote-history/:drepId" element={<DRepVotingHistory />} />
+              <Route path="votehistory/:drepId" element={<DRepVotingHistory />} />
+              <Route path="voter-history/:drepId" element={<DRepVotingHistory />} />
+              <Route path="voterhistory/:drepId" element={<DRepVotingHistory />} />
+              <Route path="drephistory" element={<DRepVotingHistory />} />
               <Route path="drep" element={<DRepVotingHistory />} />
+              <Route path="drep-history" element={<DRepVotingHistory />} />
+              <Route path="vote-history" element={<DRepVotingHistory />} />
+              <Route path="votehistory" element={<DRepVotingHistory />} />
+              <Route path="voter-history" element={<DRepVotingHistory />} />
+              <Route path="voterhistory" element={<DRepVotingHistory />} />
               {/* <Route path="/old-app" element={<OldApp />} /> */}
               <Route path="*" element={<NotFound />} />
             </Route>
