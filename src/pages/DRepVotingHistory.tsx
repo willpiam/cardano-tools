@@ -297,6 +297,17 @@ const DRepVotingHistory = () => {
           {!loading && !error && drepId && apiKey && mergedData.length === 0 && (
             <p>No governance proposals found.</p>
           )}
+
+          <div style={{ width: '100%', marginTop: '2rem', textAlign: 'center' }}>
+            <a
+              href="https://projects.williamdoyle.ca"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: '#0066cc', textDecoration: 'underline' }}
+            >
+              Other work projects
+            </a>
+          </div>
         </div>
       </div>
     </div>
