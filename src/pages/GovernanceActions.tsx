@@ -45,6 +45,7 @@ interface LiveGovernanceAction {
   ratifiedEpoch: number | null;
   enactedEpoch: number | null;
   treasuryWithdrawalTotalLovelace: number | null;
+  title: string | null;
   summary: string;
   detailJson: string | null;
 }
@@ -282,6 +283,58 @@ function parseSummary(
   return { summary: 'Governance action', treasuryTotalLovelace: null };
 }
 
+function extractGovernanceTitle(rawDescription: unknown): string | null {
+  const visited = new Set<unknown>();
+  const candidateKeys = ['title', 'action_title', 'proposal_title', 'name'] as const;
+
+  const walk = (value: unknown, depth: number): string | null => {
+    if (depth > 4 || value === null || value === undefined) return null;
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      if (!trimmed) return null;
+      try {
+        return walk(JSON.parse(trimmed), depth + 1);
+      } catch {
+        return null;
+      }
+    }
+    if (typeof value !== 'object') return null;
+    if (visited.has(value)) return null;
+    visited.add(value);
+
+    if (Array.isArray(value)) {
+      for (const item of value) {
+        const match = walk(item, depth + 1);
+        if (match) return match;
+      }
+      return null;
+    }
+
+    const obj = value as Record<string, unknown>;
+    for (const key of candidateKeys) {
+      const candidate = obj[key];
+      if (typeof candidate === 'string' && candidate.trim()) {
+        return candidate.trim();
+      }
+    }
+
+    const priorityContainers = [obj.metadata, obj.action, obj.contents, obj.proposal];
+    for (const container of priorityContainers) {
+      const match = walk(container, depth + 1);
+      if (match) return match;
+    }
+
+    for (const nested of Object.values(obj)) {
+      const match = walk(nested, depth + 1);
+      if (match) return match;
+    }
+
+    return null;
+  };
+
+  return walk(rawDescription, 0);
+}
+
 const GovernanceActions = () => {
   const dispatch = useAppDispatch();
   const { apiKey } = useAppSelector((state) => state.blockfrost);
@@ -349,6 +402,7 @@ const GovernanceActions = () => {
           detail.governance_description,
           withdrawals
         );
+        const title = extractGovernanceTitle(detail.governance_description);
         return {
           id: proposal.id,
           txHash: proposal.tx_hash,
@@ -359,6 +413,7 @@ const GovernanceActions = () => {
           ratifiedEpoch: detail.ratified_epoch,
           enactedEpoch: detail.enacted_epoch,
           treasuryWithdrawalTotalLovelace: treasuryTotalLovelace,
+          title,
           summary,
           detailJson: detail.governance_description ? JSON.stringify(detail.governance_description, null, 2) : null,
         } satisfies LiveGovernanceAction;
@@ -533,6 +588,11 @@ const GovernanceActions = () => {
                         </span>
                       </div>
 
+                      {action.title && (
+                        <div style={{ color: '#f8fafc', fontWeight: 700, fontSize: '0.95rem' }}>
+                          {action.title}
+                        </div>
+                      )}
                       <div style={{ color: '#e5e7eb' }}>{action.summary}</div>
 
                       {(action.ratifiedEpoch !== null || action.enactedEpoch !== null) && (

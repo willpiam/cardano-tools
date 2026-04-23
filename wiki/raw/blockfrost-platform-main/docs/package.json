@@ -1,0 +1,41 @@
+{
+  "name": "@blockfrost/blockfrost-platform-docs",
+  "version": "1.0.0",
+  "description": "Blockfrost Platform Documentation",
+  "type": "module",
+  "scripts": {
+    "dev": "next --turbopack",
+    "build": "next build && pagefind --site out --output-path public/_pagefind && next build",
+    "pagefind-local": "pagefind --site out --output-path public/_pagefind",
+    "start": "next start",
+    "lint": "eslint ."
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/blockfrost/blockfrost-platform.git"
+  },
+  "author": "Blockfrost",
+  "license": "Apache-2.0",
+  "homepage": "https://platform.blockfrost.io",
+  "dependencies": {
+    "@theguild/remark-mermaid": "^0.3.0",
+    "next": "16.2.4",
+    "next-themes": "^0.4.6",
+    "nextra": "4.6.1",
+    "nextra-theme-docs": "4.6.1",
+    "react": "19.2.5",
+    "react-dom": "19.2.5"
+  },
+  "devDependencies": {
+    "@pagefind/linux-arm64": "^1.5.2",
+    "@pagefind/linux-x64": "^1.5.2",
+    "@types/node": "25.2.3",
+    "@types/react": "19.2.14",
+    "eslint": "^9.28.0",
+    "eslint-config-next": "^16.2.2",
+    "eslint-config-prettier": "^10.1.8",
+    "pagefind": "1.5.2",
+    "typescript": "5.8.3"
+  },
+  "packageManager": "pnpm@10.28.2+sha512.41872f037ad22f7348e3b1debbaf7e867cfd448f2726d9cf74c08f19507c31d2c8e7a11525b983febc2df640b5438dee6023ebb1f84ed43cc2d654d2bc326264"
+}

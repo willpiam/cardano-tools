@@ -1,0 +1,229 @@
+{
+  inputs = {
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-25.11";
+    flake-parts.url = "github:hercules-ci/flake-parts";
+    treefmt-nix = {
+      url = "github:numtide/treefmt-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    crane.url = "github:ipetkov/crane";
+    fenix = {
+      url = "github:nix-community/fenix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    flake-compat = {
+      url = "github:edolstra/flake-compat";
+      flake = false;
+    };
+    cardano-node = {
+      url = "github:IntersectMBO/cardano-node/10.6.3";
+      flake = false; # otherwise, +2k dependencies we don’t really use
+    };
+    dolos = {
+      url = "github:txpipe/dolos/v1.0.3";
+      flake = false;
+    };
+    blockfrost-tests = {
+      url = "github:blockfrost/blockfrost-tests";
+      flake = false;
+    };
+    mithril.url = "github:input-output-hk/mithril/2524.0";
+    testgen-hs = {
+      url = "github:input-output-hk/testgen-hs/10.6.3.0"; # make sure it follows cardano-node
+      flake = false; # otherwise, +2k dependencies we don’t really use
+    };
+    hydra = {
+      url = "github:cardano-scaling/hydra/1.0.0";
+      flake = false;
+    };
+    devshell = {
+      url = "github:numtide/devshell";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    cardano-playground = {
+      url = "github:input-output-hk/cardano-playground/419fcc2150552930944624e7a19aad6420539df0";
+      flake = false; # otherwise, +9k dependencies in flake.lock…
+    };
+    advisory-db = {
+      url = "github:rustsec/advisory-db";
+      flake = false;
+    };
+    nix-bundle-exe = {
+      url = "github:3noch/nix-bundle-exe";
+      flake = false;
+    };
+  };
+
+  outputs = inputs: let
+    inherit (inputs.nixpkgs) lib;
+  in
+    inputs.flake-parts.lib.mkFlake {inherit inputs;} ({config, ...}: {
+      imports = [
+        inputs.devshell.flakeModule
+        inputs.treefmt-nix.flakeModule
+      ];
+
+      systems = [
+        "x86_64-linux"
+        "aarch64-linux"
+        "aarch64-darwin"
+        "x86_64-darwin"
+      ];
+      perSystem = {
+        system,
+        pkgs,
+        ...
+      }: let
+        internal = inputs.self.internal.${system};
+      in {
+        packages =
+          {
+            default = internal.blockfrost-platform;
+            inherit (internal) blockfrost-platform blockfrost-gateway blockfrost-sdk-bridge;
+            inherit (internal) tx-build cardano-address testgen-hs;
+          }
+          // (lib.optionalAttrs (system == "x86_64-linux") {
+            blockfrost-platform-x86_64-windows = inputs.self.internal.x86_64-windows.blockfrost-platform;
+            blockfrost-gateway-x86_64-windows = inputs.self.internal.x86_64-windows.blockfrost-gateway;
+            blockfrost-sdk-bridge-x86_64-windows = inputs.self.internal.x86_64-windows.blockfrost-sdk-bridge;
+          });
+
+        devshells.default = import ./nix/devshells.nix {inherit inputs;};
+
+        checks = let
+          checks' = internal.cargoChecks // internal.nixChecks // internal.dockerChecks;
+        in
+          checks'
+          // {
+            # Since `nix flake check` also tries to run all `hydraJobs`:
+            all = pkgs.runCommand "all-checks" {} ''
+              ${lib.concatStringsSep "\n" (map (drv: "echo ${drv}") (builtins.attrValues checks'))}
+              touch $out
+            '';
+          };
+
+        treefmt = {pkgs, ...}: {
+          projectRootFile = "flake.nix";
+          programs = {
+            alejandra.enable = true; # Nix
+            prettier.enable = true;
+            rufo.enable = true; # Ruby
+            rustfmt.enable = true;
+            rustfmt.package = internal.rustPackages.rustfmt;
+            shfmt.enable = true;
+            taplo.enable = true; # TOML
+            yamlfmt.enable = pkgs.stdenv.hostPlatform.system != "x86_64-darwin"; # a treefmt-nix+yamlfmt bug on Intel Macs
+            yamllint.enable = true;
+          };
+          settings.global.excludes = [
+            "**/.eslintignore"
+            "**/.gitignore"
+            "**/.gitkeep"
+            "**/.prettierrc"
+            "**/tsconfig.json"
+            "**/pnpm-lock.yaml"
+            "*.diff"
+            "*.nsi"
+            "*.png"
+            "*.svg"
+            "*.xml"
+            "*.zip"
+            ".editorconfig"
+            "Dockerfile"
+            "LICENSE"
+            "target/**/*"
+          ];
+          settings.formatter = {
+            prettier.options = [
+              "--config"
+              (builtins.path {
+                path = ./docs/.prettierrc;
+                name = "prettierrc.json";
+              })
+            ];
+            rustfmt.options = [
+              "--config-path"
+              (builtins.path {
+                name = "rustfmt.toml";
+                path = ./rustfmt.toml;
+              })
+            ];
+          };
+        };
+      };
+
+      flake = {
+        internal =
+          lib.genAttrs config.systems (
+            targetSystem: import ./nix/internal/unix.nix {inherit inputs targetSystem;}
+          )
+          // lib.genAttrs ["x86_64-windows"] (
+            targetSystem: import ./nix/internal/windows.nix {inherit inputs targetSystem;}
+          );
+
+        nixosModule.default = {
+          pkgs,
+          lib,
+          ...
+        }: {
+          imports = [./nix/nixos];
+          services.blockfrost-platform.package = lib.mkDefault inputs.self.packages.${pkgs.stdenv.hostPlatform.system}.blockfrost-platform;
+        };
+
+        hydraJobs = let
+          crossSystems = ["x86_64-windows"];
+          allJobs = {
+            blockfrost-platform = lib.genAttrs (config.systems ++ crossSystems) (
+              targetSystem: inputs.self.internal.${targetSystem}.blockfrost-platform
+            );
+            blockfrost-gateway = lib.genAttrs (config.systems ++ crossSystems) (
+              targetSystem: inputs.self.internal.${targetSystem}.blockfrost-gateway
+            );
+            blockfrost-sdk-bridge = lib.genAttrs (config.systems ++ crossSystems) (
+              targetSystem: inputs.self.internal.${targetSystem}.blockfrost-sdk-bridge
+            );
+            devshell = lib.genAttrs config.systems (
+              targetSystem: inputs.self.devShells.${targetSystem}.default
+            );
+            archive = lib.genAttrs (config.systems ++ crossSystems) (
+              targetSystem: inputs.self.internal.${targetSystem}.archive
+            );
+            archive-bridge = lib.genAttrs config.systems (
+              targetSystem: inputs.self.internal.${targetSystem}.archive-bridge
+            );
+            installer = {
+              x86_64-windows = inputs.self.internal.x86_64-windows.installer;
+              x86_64-darwin = inputs.self.internal.x86_64-darwin.installer;
+              aarch64-darwin = inputs.self.internal.aarch64-darwin.installer;
+            };
+            homebrew-tap = {
+              aarch64-darwin = inputs.self.internal.aarch64-darwin.homebrew-tap;
+            };
+            curl-bash-install = {
+              x86_64-linux = inputs.self.internal.x86_64-linux.curl-bash-install;
+            };
+            tests = lib.genAttrs config.systems (
+              targetSystem: {
+                inherit (inputs.self.internal.${targetSystem}) blockfrost-tests-preview;
+              }
+            );
+            inherit (inputs.self) checks;
+          };
+        in
+          allJobs
+          // {
+            required = inputs.nixpkgs.legacyPackages.x86_64-linux.releaseTools.aggregate {
+              name = "github-required";
+              meta.description = "All jobs required to pass CI";
+              constituents = lib.collect lib.isDerivation allJobs;
+            };
+          };
+
+        nixConfig = {
+          extra-substituters = ["https://cache.iog.io"];
+          extra-trusted-public-keys = ["hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ="];
+          allow-import-from-derivation = "true";
+        };
+      };
+    });
+}
