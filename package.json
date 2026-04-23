@@ -67,7 +67,12 @@
   },
   "scripts": {
     "start": "craco start",
-    "build": "CI=false craco build"
+    "build": "CI=false craco build",
+    "wiki:init": "node scripts/wiki.js init",
+    "wiki:start": "node scripts/wiki.js start",
+    "wiki:ingest": "node scripts/wiki.js ingest",
+    "wiki:query": "node scripts/wiki.js query",
+    "wiki:lint": "node scripts/wiki.js lint"
   },
   "eslintConfig": {
     "extends": [

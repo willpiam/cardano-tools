@@ -21,6 +21,18 @@ We are going for the "unstyled look". CSS is fine but only in very small amount.
 - [ ] support everywhere we support sha256
 - [ ] add support for other chains including Ethereum
 
+## LLM Wiki
+
+The project now includes a local wiki workflow under `wiki/` with raw sources nested at `wiki/raw/`.
+
+Commands:
+
+- `npm run wiki:start` - initialize and print wiki locations
+- `npm run wiki:init` - initialize scaffold only
+- `npm run wiki:ingest -- <path-to-source-file>` - copy source into `wiki/raw/` and log it
+- `npm run wiki:query -- <question>` - log a query against the wiki
+- `npm run wiki:lint` - check required wiki files/folders and log lint pass
+
 
 
 <br/>

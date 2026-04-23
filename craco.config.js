@@ -35,6 +35,40 @@ module.exports = {
         type: 'webassembly/async',
       });
 
+      // Exclude node_modules from source-map-loader to silence "Failed to parse
+      // source map" warnings from packages (e.g. @cardano-sdk, @biglup, ...)
+      // that ship source maps referencing files not included in their dist.
+      const excludeFromSourceMapLoader = /node_modules/;
+      const extendExclude = (rule) => {
+        const existing = rule.exclude;
+        const list = Array.isArray(existing) ? existing : existing ? [existing] : [];
+        rule.exclude = [...list, excludeFromSourceMapLoader];
+      };
+      const patchRule = (rule) => {
+        if (!rule) return;
+        const loader = rule.loader;
+        if (typeof loader === 'string' && loader.includes('source-map-loader')) {
+          extendExclude(rule);
+        }
+        if (Array.isArray(rule.use)) {
+          rule.use.forEach((use) => {
+            const l = typeof use === 'string' ? use : use && use.loader;
+            if (l && l.includes('source-map-loader')) extendExclude(rule);
+          });
+        }
+        if (Array.isArray(rule.oneOf)) rule.oneOf.forEach(patchRule);
+      };
+      (webpackConfig.module.rules || []).forEach(patchRule);
+
+      // Belt-and-braces: also filter these specific warnings if the loader
+      // config in future CRA versions changes shape.
+      webpackConfig.ignoreWarnings = [
+        ...(webpackConfig.ignoreWarnings || []),
+        (warning) =>
+          /Failed to parse source map/.test(warning.message || '') &&
+          excludeFromSourceMapLoader.test((warning.module && warning.module.resource) || ''),
+      ];
+
       // Add this for CSS modules support
       webpackConfig.module.rules.forEach(rule => {
         if (rule.oneOf) {
