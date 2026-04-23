@@ -100,6 +100,78 @@ function formatGovActionType(type: string): string {
     .replace(/\b\w/g, c => c.toUpperCase());
 }
 
+function parseNumericValue(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (/^\d+(\.\d+)?$/.test(trimmed)) {
+      const parsed = Number(trimmed);
+      return Number.isFinite(parsed) ? parsed : null;
+    }
+
+    try {
+      const parsed = JSON.parse(trimmed);
+      return parseNumericValue(parsed);
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
+function summarizeWithdrawals(rawWithdrawals: unknown): { totalLovelace: number; recipientCount: number } {
+  if (!rawWithdrawals) return { totalLovelace: 0, recipientCount: 0 };
+
+  // Handles [{coin}], [[address, amount]], and deeply nested variants.
+  if (Array.isArray(rawWithdrawals)) {
+    let total = 0;
+    let recipients = 0;
+    for (const entry of rawWithdrawals) {
+      if (Array.isArray(entry) && entry.length > 1) {
+        const amount = parseNumericValue(entry[1]);
+        if (amount !== null) {
+          total += amount;
+          recipients += 1;
+          continue;
+        }
+      }
+
+      if (entry && typeof entry === 'object') {
+        const obj = entry as Record<string, unknown>;
+        const directAmount =
+          parseNumericValue(obj.coin) ??
+          parseNumericValue(obj.amount) ??
+          parseNumericValue(obj.lovelace) ??
+          parseNumericValue(obj.value);
+
+        if (directAmount !== null) {
+          total += directAmount;
+          recipients += 1;
+          continue;
+        }
+      }
+    }
+    return { totalLovelace: total, recipientCount: recipients };
+  }
+
+  // Handles map-shaped forms: { "<reward_address>": "<lovelace>" }.
+  if (rawWithdrawals && typeof rawWithdrawals === 'object') {
+    const entries = Object.entries(rawWithdrawals as Record<string, unknown>);
+    let total = 0;
+    let recipients = 0;
+    for (const [, value] of entries) {
+      const amount = parseNumericValue(value);
+      if (amount !== null) {
+        total += amount;
+        recipients += 1;
+      }
+    }
+    return { totalLovelace: total, recipientCount: recipients };
+  }
+
+  return { totalLovelace: 0, recipientCount: 0 };
+}
+
 function typeColor(type: GovernanceType): { bg: string; fg: string } {
   switch (type) {
     case 'treasury_withdrawals':
@@ -125,23 +197,16 @@ function parseSummary(type: GovernanceType, rawDescription: unknown): { summary:
   const desc = rawDescription as Record<string, unknown> | null;
 
   if (type === 'treasury_withdrawals') {
-    const withdrawals = (desc?.withdrawals as unknown[]) ?? [];
-    let total = 0;
+    const rawWithdrawals =
+      desc?.withdrawals ??
+      desc?.treasury_withdrawals ??
+      ((desc?.action as Record<string, unknown> | undefined)?.withdrawals) ??
+      ((desc?.contents as Record<string, unknown> | undefined)?.withdrawals);
+    const { totalLovelace, recipientCount } = summarizeWithdrawals(rawWithdrawals);
 
-    for (const entry of withdrawals) {
-      if (Array.isArray(entry) && entry.length > 1) {
-        const amount = Number(entry[1]);
-        if (Number.isFinite(amount)) total += amount;
-      } else if (entry && typeof entry === 'object') {
-        const amount = Number((entry as Record<string, unknown>).coin ?? (entry as Record<string, unknown>).amount);
-        if (Number.isFinite(amount)) total += amount;
-      }
-    }
-
-    const recipientCount = withdrawals.length;
     return {
-      summary: `${recipientCount} recipient${recipientCount === 1 ? '' : 's'} · ${(total / 1_000_000).toLocaleString()} ADA`,
-      treasuryTotalLovelace: total
+      summary: `${recipientCount} recipient${recipientCount === 1 ? '' : 's'} · ${(totalLovelace / 1_000_000).toLocaleString()} ADA`,
+      treasuryTotalLovelace: totalLovelace
     };
   }
 
