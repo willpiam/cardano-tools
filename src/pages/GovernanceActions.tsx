@@ -10,7 +10,7 @@ const GOVERNANCE_TYPES = [
   'new_committee',
   'new_constitution',
   'no_confidence',
-  'parameter_change_action',
+  'parameter_change',
   'treasury_withdrawals',
 ] as const;
 
@@ -176,7 +176,7 @@ function typeColor(type: GovernanceType): { bg: string; fg: string } {
   switch (type) {
     case 'treasury_withdrawals':
       return { bg: '#022c22', fg: '#34d399' };
-    case 'parameter_change_action':
+    case 'parameter_change':
       return { bg: '#1e1b4b', fg: '#a5b4fc' };
     case 'hard_fork_initiation':
       return { bg: '#3f1d2e', fg: '#f9a8d4' };
@@ -193,16 +193,35 @@ function typeColor(type: GovernanceType): { bg: string; fg: string } {
   }
 }
 
-function parseSummary(type: GovernanceType, rawDescription: unknown): { summary: string; treasuryTotalLovelace: number | null } {
+function parseSummary(
+  type: GovernanceType,
+  rawDescription: unknown,
+  preloadedWithdrawals?: { stake_address: string; amount: string }[] | null
+): { summary: string; treasuryTotalLovelace: number | null } {
   const desc = rawDescription as Record<string, unknown> | null;
 
   if (type === 'treasury_withdrawals') {
-    const rawWithdrawals =
-      desc?.withdrawals ??
-      desc?.treasury_withdrawals ??
-      ((desc?.action as Record<string, unknown> | undefined)?.withdrawals) ??
-      ((desc?.contents as Record<string, unknown> | undefined)?.withdrawals);
-    const { totalLovelace, recipientCount } = summarizeWithdrawals(rawWithdrawals);
+    let totalLovelace = 0;
+    let recipientCount = 0;
+
+    if (preloadedWithdrawals && preloadedWithdrawals.length > 0) {
+      for (const w of preloadedWithdrawals) {
+        const amount = parseNumericValue(w.amount);
+        if (amount !== null) {
+          totalLovelace += amount;
+          recipientCount += 1;
+        }
+      }
+    } else {
+      const rawWithdrawals =
+        desc?.withdrawals ??
+        desc?.treasury_withdrawals ??
+        ((desc?.action as Record<string, unknown> | undefined)?.withdrawals) ??
+        ((desc?.contents as Record<string, unknown> | undefined)?.withdrawals);
+      const summary = summarizeWithdrawals(rawWithdrawals);
+      totalLovelace = summary.totalLovelace;
+      recipientCount = summary.recipientCount;
+    }
 
     return {
       summary: `${recipientCount} recipient${recipientCount === 1 ? '' : 's'} · ${(totalLovelace / 1_000_000).toLocaleString()} ADA`,
@@ -210,7 +229,7 @@ function parseSummary(type: GovernanceType, rawDescription: unknown): { summary:
     };
   }
 
-  if (type === 'parameter_change_action') {
+  if (type === 'parameter_change') {
     const paramChanges =
       ((desc?.protocol_param_update as Record<string, unknown> | undefined) ??
         (desc?.parameter_changes as Record<string, unknown> | undefined) ??
@@ -309,7 +328,27 @@ const GovernanceActions = () => {
           throw new Error(`Blockfrost ${res.status}: ${body}`);
         }
         const detail: BlockfrostProposalDetail = await res.json();
-        const { summary, treasuryTotalLovelace } = parseSummary(proposal.governance_type, detail.governance_description);
+
+        let withdrawals: { stake_address: string; amount: string }[] | null = null;
+        if (proposal.governance_type === 'treasury_withdrawals') {
+          try {
+            const wRes = await fetch(
+              `${BLOCKFROST_BASE}/governance/proposals/${proposal.tx_hash}/${proposal.cert_index}/withdrawals?count=100`,
+              { headers: { project_id: key } }
+            );
+            if (wRes.ok) {
+              withdrawals = await wRes.json();
+            }
+          } catch (wErr) {
+            console.warn('Failed to fetch treasury withdrawal amounts', wErr);
+          }
+        }
+
+        const { summary, treasuryTotalLovelace } = parseSummary(
+          proposal.governance_type,
+          detail.governance_description,
+          withdrawals
+        );
         return {
           id: proposal.id,
           txHash: proposal.tx_hash,
@@ -363,7 +402,7 @@ const GovernanceActions = () => {
       new_committee: 0,
       new_constitution: 0,
       no_confidence: 0,
-      parameter_change_action: 0,
+      parameter_change: 0,
       treasury_withdrawals: 0,
     };
     for (const action of actions) counts[action.governanceType] += 1;
