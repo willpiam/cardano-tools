@@ -260,7 +260,12 @@ const GovernanceActions = () => {
         } satisfies LiveGovernanceAction;
       });
 
-      const liveActions = details.filter(action => action.droppedEpoch === null && action.expiredEpoch === null);
+      const liveActions = details.filter(action =>
+        action.droppedEpoch === null &&
+        action.expiredEpoch === null &&
+        action.ratifiedEpoch === null &&
+        action.enactedEpoch === null
+      );
       setActions(liveActions);
     } catch (err) {
       console.error('Failed to fetch live governance actions', err);
