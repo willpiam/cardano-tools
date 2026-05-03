@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { sha256 } from '../functions/hashFunctions';
-import { Button } from './Button';
 import { WrappedTextBlock } from './WrappedTextBlock';
 
 /**
@@ -35,20 +34,17 @@ const VerifyHash: React.FC<VerifyHashProps> = ({ message }) => {
   }, [message, input]);
 
   return (
-    <div className="verify-hash flex flex-col gap-4 w-full max-w-xl border border-gray-300 p-4 rounded-md">
-      <h3 className="text-lg font-medium">Hash Preview (SHA-256)</h3>
+    <div className="verify-hash">
+      <h3>Hash Preview (SHA-256)</h3>
       {message === undefined && (
         <textarea
-          className="w-full p-2 border rounded-md"
           rows={4}
           placeholder="Enter the message to hash..."
           value={input}
           onChange={(e) => setInput(e.target.value)}
         />
       )}
-      {hash && ( <WrappedTextBlock text={hash} 
-      width={512} // todo make this dynamic then wrap that logic in a componet called DynamicWidthWrappedTextBlock
-       />)}
+      {hash && <WrappedTextBlock text={hash} width="100%" />}
     </div>
   );
 };

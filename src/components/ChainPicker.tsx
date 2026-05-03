@@ -36,11 +36,6 @@ const ChainPicker = ({ chain, onChange }: ChainPickerProps) => {
           </div>
         </button>
       </div>
-      {chain === 'ethereum' && (
-        <p className="pw-muted" style={{ color: '#7c5d10' }}>
-          Heads up: Ethereum commitments cost real gas at current mainnet rates.
-        </p>
-      )}
     </>
   );
 };

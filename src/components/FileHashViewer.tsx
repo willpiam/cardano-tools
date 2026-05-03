@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { WrappedTextBlock } from './WrappedTextBlock';
 
 const FileHashViewer: React.FC = () => {
   const [fileName, setFileName] = useState<string>('');
@@ -24,16 +25,14 @@ const FileHashViewer: React.FC = () => {
   };
 
   return (
-    <div className="file-hash-viewer flex flex-col gap-4 w-full max-w-xl border border-gray-300 p-4 rounded-md">
-      <h3 className="text-lg font-medium">File SHA-256 Hash</h3>
+    <div className="file-hash-viewer">
+      <h3>File SHA-256 Hash</h3>
       <input type="file" onChange={handleFileChange} />
 
       {fileName && <div>File: {fileName}</div>}
 
       {hash && (
-        <div className="break-all border p-2 bg-gray-50 rounded-md font-mono text-sm">
-          {hash}
-        </div>
+        <WrappedTextBlock text={hash} width="100%" />
       )}
     </div>
   );

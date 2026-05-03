@@ -48,11 +48,10 @@ const DecryptAES: React.FC = () => {
   };
 
   return (
-    <div className="aes-decrypt flex flex-col gap-4 border border-gray-300 p-4 rounded-md">
-      <h3 className="text-lg font-semibold">Decrypt Cipher Text</h3>
+    <div className="aes-decrypt">
+      <h3>Decrypt Cipher Text</h3>
       <div>
         <textarea
-          className="w-full p-2 border rounded-md"
           rows={3}
           placeholder={isArrayMode ? 'Cipher text JSON array' : 'Cipher text'}
           value={cipherText}
@@ -60,7 +59,7 @@ const DecryptAES: React.FC = () => {
         />
       </div>
       <div>
-        <label className="flex items-center gap-2 text-sm">
+        <label className="pw-row">
           <input
             type="checkbox"
             checked={isArrayMode}
@@ -70,11 +69,10 @@ const DecryptAES: React.FC = () => {
         </label>
       </div>
       <div className="password-input-section">
-        <label htmlFor="password" className="block text-sm font-medium mb-2">Enter Password</label>
+        <label htmlFor="password" className="pw-label">Enter Password</label>
         <input
           id="password"
           type="password"
-          className="w-full p-2 border rounded-md"
           placeholder="Password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
@@ -85,13 +83,13 @@ const DecryptAES: React.FC = () => {
           {isDecrypting ? 'Decrypting...' : 'Decrypt'}
         </Button>
       </div>
-      {error && <p className="text-red-600">{error}</p>}
+      {error && <p style={{ color: '#b91c1c' }}>{error}</p>}
       {message !== null && (
         <div>
-          <h4 className="font-medium">Decrypted Message:</h4>
+          <h4>Decrypted Message:</h4>
           <WrappedTextBlock
             text={message}
-            width={300}
+            width="100%"
           />
         </div>
       )}

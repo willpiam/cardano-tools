@@ -26,6 +26,8 @@ export const WrappedTextBlock: React.FC<WrappedTextBlockProps> = ({
 
   const combinedStyle: React.CSSProperties = {
     width: computedWidth,
+    maxWidth: '100%',
+    minWidth: 0,
     wordWrap: 'break-word',
     overflowWrap: 'break-word',
     whiteSpace: 'pre-wrap',
