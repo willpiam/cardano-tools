@@ -26,8 +26,18 @@ const normalizeChainId = (chainId: unknown): string | null => {
   return typeof chainId === 'string' ? chainId.toLowerCase() : null;
 };
 
+const normalizeEthereumTxHash = (txHash: string): string =>
+  txHash.startsWith('0x') || txHash.startsWith('0X') ? txHash : `0x${txHash}`;
+
+/** Standard Etherscan transaction page. */
 export const getEtherscanTxUrl = (txHash: string): string => {
-  return `https://etherscan.io/tx/${txHash}`;
+  return `https://etherscan.io/tx/${normalizeEthereumTxHash(txHash)}`;
+};
+
+/** Etherscan IDM view: decodes and shows calldata as the committed message. */
+export const getEtherscanIdmUrl = (txHash: string): string => {
+  const hash = normalizeEthereumTxHash(txHash);
+  return `https://etherscan.io/idm?tx=${encodeURIComponent(hash)}`;
 };
 
 export const toHexData = (input: string | Uint8Array): `0x${string}` => {
