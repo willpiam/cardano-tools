@@ -29,3 +29,10 @@ Created wiki scaffold with raw sources nested under wiki/.
 - Extended `wiki/pages/ctools-drep-voting-history-blockfrost.md` with `assetId` / `txLimit` URL behavior and `AssetCip20Messages.tsx` / `cip20AssetHistory.ts` references.
 - Updated `wiki/index.md` summary line and `wiki/pages/wiki-home.md` key pages link.
 
+## [2026-05-03] ingest | Asset CIP-14 fingerprint + Cardanoscan links
+- Added `@emurgo/cip14-js` and `src/utils/cip14AssetFingerprint.ts`; `AssetCip20Messages` shows CIP-14 fingerprint link to Cardanoscan; `cip20AssetHistory` tx URLs use Cardanoscan.
+- Updated `wiki/pages/ctools-drep-voting-history-blockfrost.md` and `wiki/log.md`.
+
+## [2026-05-03] ingest | Conch protocol naming and `/conch` route
+- Renamed user-facing copy to Conch protocol; primary route `/conch` with redirects from `/cip20-asset` and `/asset-cip20-messages`; Commit tool linked from Conch page; wiki/index/wiki-home/ctools-drep page updated.
+

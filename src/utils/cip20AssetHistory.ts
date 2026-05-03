@@ -133,7 +133,7 @@ export async function getAssetCip20History(
     const ts = row.block_time ?? 0;
     return {
       tx: row.tx,
-      url: `https://cexplorer.io/tx/${row.tx}`,
+      url: `https://cardanoscan.io/transaction/${row.tx}`,
       timestamp: new Date(ts * 1000).toLocaleString(),
       message,
     };

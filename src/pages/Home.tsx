@@ -12,9 +12,10 @@ const TOOL_LINKS = [
     to: '/drephistory',
   },
   {
-    title: 'Asset CIP-20 messages',
-    description: 'Scan an asset’s transaction history for CIP-20 (metadata 674) messages via Blockfrost.',
-    to: '/cip20-asset',
+    title: 'Conch protocol',
+    description:
+      'Read on-chain Conch messages: CIP-20 metadata (label 674) tied to a native asset’s transaction history (Blockfrost).',
+    to: '/conch',
   },
   {
     title: 'Governance Shortcuts',

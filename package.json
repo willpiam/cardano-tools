@@ -6,6 +6,7 @@
     "@cardano-foundation/cardano-connect-with-wallet": "0.2.9",
     "@cardano-foundation/cardano-connect-with-wallet-core": "0.2.5",
     "@craco/craco": "^7.1.0",
+    "@emurgo/cip14-js": "^3.0.1",
     "@harmoniclabs/bytestring": "^1.0.0",
     "@harmoniclabs/cbor": "^1.6.0",
     "@harmoniclabs/crypto": "^0.3.0-dev0",

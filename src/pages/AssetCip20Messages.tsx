@@ -1,8 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { setBlockfrostConfig } from '../store/blockfrostSlice';
 import { Button } from '../components/Button';
 import { getAssetCip20History, type Cip20MessageRow } from '../utils/cip20AssetHistory';
+import { assetFingerprintFromUnitHex } from '../utils/cip14AssetFingerprint';
 
 const DEFAULT_TX_LIMIT = 40;
 const MAX_TX_LIMIT = 500;
@@ -29,6 +31,11 @@ const AssetCip20Messages = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasLoaded, setHasLoaded] = useState(false);
+
+  const assetFingerprint = useMemo(
+    () => assetFingerprintFromUnitHex(localAssetId),
+    [localAssetId]
+  );
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -86,7 +93,7 @@ const AssetCip20Messages = () => {
       setRows(data);
       setHasLoaded(true);
     } catch (err) {
-      console.error('CIP-20 asset history', err);
+      console.error('Conch protocol history', err);
       setError(err instanceof Error ? err.message : 'Failed to load history');
     } finally {
       setLoading(false);
@@ -116,10 +123,19 @@ const AssetCip20Messages = () => {
             maxWidth: '960px',
           }}
         >
-          <h1>Asset CIP-20 messages</h1>
-          <p style={{ color: '#9ca3af', fontSize: '0.92rem', margin: 0 }}>
-            Load on-chain CIP-20 (metadata label 674) messages for a native asset by full asset id (policy + asset name hex).
-            API keys in the URL can leak via referrers and shared links; treat bookmarked URLs as sensitive.
+          <h1>Conch protocol</h1>
+          <p style={{ color: '#9ca3af', fontSize: '0.92rem', margin: 0, lineHeight: 1.55 }}>
+            <strong style={{ color: '#d1d5db' }}>Conch</strong> is a simple on-chain messaging pattern: short human-readable text is published as{' '}
+            <strong>CIP-20</strong> transaction metadata (label <code style={{ fontSize: '0.85rem' }}>674</code>) on transactions that move a chosen native
+            asset. This page scans that asset’s transaction history via Blockfrost and lists those messages in time order. Paste the asset’s full hex{' '}
+            <strong>unit</strong> (policy id + hex-encoded asset name), not the CIP-14 <code style={{ fontSize: '0.85rem' }}>asset1…</code> fingerprint.
+            Blockfrost API keys in the URL can leak via referrers and shared links; treat bookmarked URLs as sensitive.
+          </p>
+          <p style={{ margin: 0, fontSize: '0.92rem' }}>
+            <Link to="/commit" style={{ color: '#0066cc', textDecoration: 'underline', fontWeight: 600 }}>
+              Commit tool
+            </Link>
+            {' — '}attach new Conch-style (CIP-20 / 674) messages when you build and submit transactions.
           </p>
 
           <div
@@ -175,9 +191,23 @@ const AssetCip20Messages = () => {
                 border: '1px solid #ccc',
                 fontFamily: 'monospace',
                 fontSize: '0.8rem',
-                marginBottom: '0.75rem',
+                marginBottom: '0.35rem',
               }}
             />
+            {assetFingerprint && (
+              <p style={{ margin: '0 0 0.75rem', fontSize: '0.85rem', color: '#9ca3af' }}>
+                CIP-14 fingerprint:{' '}
+                <a
+                  href={`https://cardanoscan.io/token/${assetFingerprint}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ color: '#0066cc', textDecoration: 'underline', wordBreak: 'break-all' }}
+                >
+                  {assetFingerprint}
+                </a>{' '}
+                (Cardanoscan)
+              </p>
+            )}
 
             <label style={{ display: 'block', marginBottom: '0.35rem', fontWeight: 'bold' }}>
               Transaction limit (max {MAX_TX_LIMIT})
@@ -210,7 +240,7 @@ const AssetCip20Messages = () => {
             </div>
           </div>
 
-          {loading && <p>Loading CIP-20 messages…</p>}
+          {loading && <p>Loading Conch messages…</p>}
 
           {error && (
             <div
@@ -262,7 +292,7 @@ const AssetCip20Messages = () => {
           )}
 
           {!loading && !error && hasLoaded && rows.length === 0 && (
-            <p style={{ color: '#9ca3af' }}>No CIP-20 (label 674) messages found in the scanned transactions.</p>
+            <p style={{ color: '#9ca3af' }}>No Conch messages (CIP-20 / label 674) found in the scanned transactions.</p>
           )}
 
           <div style={{ width: '100%', marginTop: '2rem', textAlign: 'center' }}>

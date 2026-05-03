@@ -5,7 +5,7 @@ import ReactDOM from 'react-dom/client';
 import { Provider } from 'react-redux';
 import { store } from './store/store';
 import App from './App';
-import { BrowserRouter, Route, Routes } from 'react-router';
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router';
 import NotFound from './pages/NotFound';
 import Tools from './pages/Tools';
 import Commit from './pages/Commit';
@@ -15,6 +15,10 @@ import GovernanceActions from './pages/GovernanceActions';
 import AssetCip20Messages from './pages/AssetCip20Messages';
 import Home from './pages/Home';
 
+function ConchLegacyRedirect() {
+  const { search } = useLocation();
+  return <Navigate to={`/conch${search}`} replace />;
+}
 
 const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement
@@ -48,8 +52,9 @@ root.render(
               <Route path="governanceactions" element={<GovernanceActions />} />
               <Route path="gov-actions" element={<GovernanceActions />} />
               <Route path="live-actions" element={<GovernanceActions />} />
-              <Route path="cip20-asset" element={<AssetCip20Messages />} />
-              <Route path="asset-cip20-messages" element={<AssetCip20Messages />} />
+              <Route path="conch" element={<AssetCip20Messages />} />
+              <Route path="cip20-asset" element={<ConchLegacyRedirect />} />
+              <Route path="asset-cip20-messages" element={<ConchLegacyRedirect />} />
               {/* <Route path="/old-app" element={<OldApp />} /> */}
               <Route path="*" element={<NotFound />} />
             </Route>

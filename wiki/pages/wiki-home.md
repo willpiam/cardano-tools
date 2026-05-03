@@ -12,4 +12,4 @@ This wiki is maintained incrementally by an LLM.
 
 ## Key pages
 - [Blockfrost Icebreakers](blockfrost-icebreakers.md)
-- [DRep voting history: Blockfrost key and URL](ctools-drep-voting-history-blockfrost.md) (ctools app; includes asset CIP-20 query params)
+- [DRep voting history: Blockfrost key and URL](ctools-drep-voting-history-blockfrost.md) (ctools app; includes Conch `/conch` query params)

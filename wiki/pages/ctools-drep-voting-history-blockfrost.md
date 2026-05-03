@@ -29,9 +29,9 @@ Requests to Blockfrost use the HTTP header **`project_id`** set to the key (Bloc
 
 Putting API keys in query parameters can expose them in shared links, referrer headers, analytics, and server access logs. This behavior is intentional for shareable/bookmarkable sessions in this tool, but operators should treat shared URLs as sensitive.
 
-## Asset CIP-20 messages (same URL pattern)
+## Conch protocol (same URL pattern)
 
-The **Asset CIP-20 messages** page (`src/pages/AssetCip20Messages.tsx`, routes `/cip20-asset` and `/asset-cip20-messages`) reuses the same Blockfrost key flow:
+The **Conch protocol** reader (`src/pages/AssetCip20Messages.tsx`, route **`/conch`**; legacy paths `/cip20-asset` and `/asset-cip20-messages` redirect to `/conch` with query preserved) reuses the same Blockfrost key flow:
 
 - On mount, reads **`blockfrostApiKey`** from the query string and dispatches `setBlockfrostConfig` like the other tools.
 - **Apply settings (save to URL)** dispatches the trimmed key (or uses the key already in Redux), then `replaceState` with:
@@ -41,8 +41,11 @@ The **Asset CIP-20 messages** page (`src/pages/AssetCip20Messages.tsx`, routes `
 
 **Load history** runs the Blockfrost fetches (header `project_id` only) and does not add the secret to Blockfrost request URLs. Helpers live in `src/utils/cip20AssetHistory.ts`.
 
+The Conch reader derives the CIP-14 **`asset1…` fingerprint** from the hex unit via **`@emurgo/cip14-js`** (`AssetFingerprint.fromParts`) and shows it as a link to the token on **Cardanoscan**; per-transaction links in the results table use **Cardanoscan** (`/transaction/{hash}`), not cexplorer. To author new CIP-20 / 674 payloads in transactions, the app’s **Commit** page is linked from the Conch UI (`/commit`).
+
 ## Related code
 
 - Pages: `src/pages/DRepVotingHistory.tsx`, `src/pages/GovernanceActions.tsx`, `src/pages/AssetCip20Messages.tsx`
 - State: `src/store/blockfrostSlice.ts`
-- CIP-20 asset helpers: `src/utils/cip20AssetHistory.ts`
+- Conch / CIP-20 history helpers: `src/utils/cip20AssetHistory.ts`
+- CIP-14 fingerprint from unit hex: `src/utils/cip14AssetFingerprint.ts` (uses `@emurgo/cip14-js`)
