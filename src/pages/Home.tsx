@@ -12,6 +12,11 @@ const TOOL_LINKS = [
     to: '/drephistory',
   },
   {
+    title: 'Asset CIP-20 messages',
+    description: 'Scan an asset’s transaction history for CIP-20 (metadata 674) messages via Blockfrost.',
+    to: '/cip20-asset',
+  },
+  {
     title: 'Governance Shortcuts',
     description: 'Wallet-connected actions for delegating and other governance shortcuts.',
     to: '/tools',

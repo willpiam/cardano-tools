@@ -12,6 +12,7 @@ import Commit from './pages/Commit';
 import Playground from './pages/Playground';
 import DRepVotingHistory from './pages/DRepVotingHistory';
 import GovernanceActions from './pages/GovernanceActions';
+import AssetCip20Messages from './pages/AssetCip20Messages';
 import Home from './pages/Home';
 
 
@@ -47,6 +48,8 @@ root.render(
               <Route path="governanceactions" element={<GovernanceActions />} />
               <Route path="gov-actions" element={<GovernanceActions />} />
               <Route path="live-actions" element={<GovernanceActions />} />
+              <Route path="cip20-asset" element={<AssetCip20Messages />} />
+              <Route path="asset-cip20-messages" element={<AssetCip20Messages />} />
               {/* <Route path="/old-app" element={<OldApp />} /> */}
               <Route path="*" element={<NotFound />} />
             </Route>
