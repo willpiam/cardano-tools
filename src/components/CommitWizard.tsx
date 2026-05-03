@@ -1,11 +1,10 @@
-import { ChangeEvent, useEffect, useState } from 'react';
+import React, { ChangeEvent, useEffect, useState } from 'react';
 import ConnectWallet from './ConnectWallet';
 import DecryptAES from './DecryptAES';
 import EthereumConnectWallet from './EthereumConnectWallet';
 import FileHashViewer from './FileHashViewer';
 import VerifyHash from './VerifyHash';
 import ChainPicker, { CommitChain } from './ChainPicker';
-import { AddressDisplay } from './AddressDisplay';
 import { Button } from './Button';
 import { WrappedTextBlock } from './WrappedTextBlock';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
@@ -42,12 +41,62 @@ interface CommitInfo {
   html_url: string;
 }
 
-const commitTypeLabels: Record<CommitKind, string> = {
-  plain: 'Plain text',
-  hash: 'Hash of text',
-  aes: 'AES-encrypted text',
-  filehash: 'File hash',
+interface CommitTypeMeta {
+  label: string;
+  glyph: string;
+  theme: 'pink' | 'mint' | 'lemon' | 'apricot';
+  tagline: string;
+  description: string;
+}
+
+const commitTypeMeta: Record<CommitKind, CommitTypeMeta> = {
+  plain: {
+    label: 'Plain text',
+    glyph: 'Aa',
+    theme: 'pink',
+    tagline: 'Anyone can read it on the explorer.',
+    description:
+      'Post a readable message directly on chain. Everyone will be able to see your text and verify that your wallet committed it at this time.',
+  },
+  hash: {
+    label: 'Hash of text',
+    glyph: '#',
+    theme: 'mint',
+    tagline: 'Hide the words, prove the timing.',
+    description:
+      'Commit only the SHA-256 hash of a message. Anyone with the original message can verify it; everyone else just sees that you committed to something. An optional salt blocks brute-force guesses.',
+  },
+  aes: {
+    label: 'AES encrypted',
+    glyph: '⚿',
+    theme: 'lemon',
+    tagline: 'Only password holders can decrypt.',
+    description:
+      'Encrypt a message with a password, then commit the ciphertext. Anyone with the password can later decrypt and verify. Choose a strong password — it is the only key.',
+  },
+  filehash: {
+    label: 'File hash',
+    glyph: '⬢',
+    theme: 'apricot',
+    tagline: 'Timestamp a file without revealing it.',
+    description:
+      'Commit the SHA-256 hash of a file. Anyone with the exact same file can re-hash and verify. Optionally append a short note after the hash for context.',
+  },
 };
+
+const chainMeta: Record<CommitChain, { label: string; theme: 'cardano' | 'ethereum'; tagline: string }> = {
+  cardano:  { label: 'Cardano',  theme: 'cardano',  tagline: 'Low fees · metadata label 674' },
+  ethereum: { label: 'Ethereum', theme: 'ethereum', tagline: 'Mainnet · zero-value tx with input data' },
+};
+
+const wizardSteps: { id: WizardStep; label: string }[] = [
+  { id: 'type',     label: 'Type' },
+  { id: 'inputs',   label: 'Details' },
+  { id: 'chain',    label: 'Chain' },
+  { id: 'wallet',   label: 'Wallet' },
+  { id: 'finalize', label: 'Review' },
+  { id: 'done',     label: 'Done' },
+];
 
 const decodeAssetName = (unit: string): string => {
   if (unit.length <= 56) return '';
@@ -68,6 +117,11 @@ const decodeAssetName = (unit: string): string => {
 const truncateHash = (hash: string): string => {
   if (hash.length <= 18) return hash;
   return `${hash.slice(0, 10)}...${hash.slice(-8)}`;
+};
+
+const truncateAddress = (address: string): string => {
+  if (address.length <= 16) return address;
+  return `${address.slice(0, 8)}...${address.slice(-6)}`;
 };
 
 const CommitWizard = () => {
@@ -107,7 +161,6 @@ const CommitWizard = () => {
   const [tokenLoading, setTokenLoading] = useState(false);
   const [tokenError, setTokenError] = useState<string | null>(null);
 
-  const [detailsOpen, setDetailsOpen] = useState(true);
   const [gitInfo, setGitInfo] = useState<CommitInfo | null>(null);
   const [gitInfoLoaded, setGitInfoLoaded] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -243,7 +296,6 @@ const CommitWizard = () => {
     setTokens([]);
     setDownloadedRecord(null);
     setSubmitMessage('');
-    setDetailsOpen(true);
   };
 
   const handleChainChange = (nextChain: CommitChain) => {
@@ -460,85 +512,67 @@ const CommitWizard = () => {
       Boolean(fileHash) &&
       (!fileHashAppendEnabled || Boolean(fileHashAppendText.trim())));
 
+  const meta = commitTypeMeta[commitType];
+  const themeClass = `theme-${meta.theme}`;
+
+  const renderStepper = () => {
+    if (step === 'home' || step === 'verify') return null;
+    const currentIdx = wizardSteps.findIndex(s => s.id === step);
+    const currentPastel = `var(--pastel-${meta.theme})`;
+    return (
+      <div className="wizard-stepper" aria-label="Progress">
+        {wizardSteps.map((s, idx) => {
+          const isCurrent = idx === currentIdx;
+          const isDone = idx < currentIdx;
+          const stateClass = isCurrent ? 'is-current' : isDone ? 'is-done' : '';
+          const dotStyle = isCurrent
+            ? ({ ['--pastel-current' as any]: currentPastel } as React.CSSProperties)
+            : undefined;
+          return (
+            <React.Fragment key={s.id}>
+              <div
+                className={`wizard-step ${stateClass}`}
+                style={dotStyle}
+                aria-current={isCurrent ? 'step' : undefined}
+              >
+                <div className="wizard-step-dot">{idx + 1}</div>
+                <div className="wizard-step-label">{s.label}</div>
+              </div>
+              {idx < wizardSteps.length - 1 && (
+                <div className={`wizard-connector ${isDone ? 'is-done' : ''}`} />
+              )}
+            </React.Fragment>
+          );
+        })}
+      </div>
+    );
+  };
+
   const renderWizardNav = (next?: { label: string; onClick: () => void; disabled?: boolean }) => (
-    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', marginTop: '1rem' }}>
-      <Button onClick={handleBack}>Back</Button>
+    <div className="wizard-nav">
+      <button type="button" className="btn btn-ghost" onClick={handleBack}>
+        ← Back
+      </button>
       {next && (
         <Button disabled={next.disabled} onClick={next.onClick}>
-          {next.label}
+          {next.label} →
         </Button>
       )}
     </div>
   );
 
-  const renderCommitTypeDescription = () => (
-    <div className="border rounded-md">
-      <button
-        type="button"
-        className="w-full flex items-center justify-between px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-md"
-        onClick={() => setDetailsOpen(!detailsOpen)}
-        aria-expanded={detailsOpen}
-        aria-controls="commit-type-details"
-      >
-        <span className="text-sm text-gray-700">
-          {detailsOpen ? 'Hide description' : 'Show description'} <span aria-hidden="true">{detailsOpen ? '▾' : '▸'}</span>
-        </span>
-      </button>
-      {detailsOpen && (
-        <div id="commit-type-details" className="p-3 text-sm text-gray-800">
-          {commitType === 'plain' && (
-            <p>
-              This flow allows you to post a message directly to the selected blockchain. It will be easily
-              visible on a block explorer. Everyone will be able to see your text and verify that
-              it was created by your wallet at this time. You will be prompted to download a JSON file with the
-              relevant details for your records.
-            </p>
-          )}
-
-          {commitType === 'hash' && (
-            <p>
-              This flow allows you to post only the SHA-256 hash of a message on the selected blockchain. People with
-              your message will be able to recompute its hash and verify it against the hash you commit to the blockchain.
-              Without your message people will see that you have committed to <i>something</i> but will not know what unless they correctly
-              guess the exact message. To prevent guessing you can opt to include a salt with your message. Verifiers will need the original
-              message and your salt (should you include one) to verify the hash. Verifiers with the message and the salt will
-              be able to verify that the message was committed to from your wallet at this time. You will be prompted to download a JSON file with the
-              relevant details for your records. This file will include the original message and the salt (if you included one). The "off-chain tools"
-              section below includes an interface to compute the hash of a given string of text and can be used to verify your on-chain commitments.
-            </p>
-          )}
-
-          {commitType === 'aes' && (
-            <p>
-              This flow allows you to post an AES-encrypted message on the selected blockchain. People with
-              the correct password will be able to decrypt the message and verify that it was created by your wallet at this time.
-              Everyone else will see that you have committed to <i>some message</i> and they will know approximately how long it is.
-              You will be prompted to download a JSON file with the relevant details for your records. This file will include the
-              raw unencrypted message and the password. Make sure to choose a strong password which cannot easily be guessed.
-              The "off-chain tools" section below includes an interface to decrypt your AES-encrypted messages.
-            </p>
-          )}
-
-            {commitType === 'filehash' && (
-              <p>
-                This flow allows you to post the SHA-256 hash of a file on the selected blockchain. Everyone will see that your
-                wallet has committed to something but they will not know what. Anyone with the exact same file will be able to
-                recompute the hash and verify it against the hash you committed to the blockchain. You will be prompted to download
-                a JSON file with the relevant details for your records. The "off-chain tools" section below includes an interface to
-                compute the hash of a given file and can be used to verify your on-chain commitments.
-                You can optionally append a short note after the hash; on chain it is stored as the 64-character hex hash, a newline, then your note (UTF-8).
-              </p>
-            )}
-        </div>
-      )}
-    </div>
-  );
-
   const renderInputs = () => (
-    <>
+    <div className={`themed-surface ${themeClass}`}>
+      <div className="pw-row">
+        <span className={`pastel-badge theme-${meta.theme}`}>
+          <span aria-hidden="true">{meta.glyph}</span>
+          {meta.label}
+        </span>
+        <span className="pw-muted">{meta.tagline}</span>
+      </div>
+
       {(commitType === 'plain' || commitType === 'hash' || commitType === 'aes') && (
         <textarea
-          className="w-full p-2 border rounded-md"
           rows={4}
           placeholder="Enter your message..."
           value={message}
@@ -548,44 +582,43 @@ const CommitWizard = () => {
 
       {commitType === 'hash' && (
         <>
-          <div>
+          <label className="pw-row">
             <input
               type="checkbox"
               id="includeSalt"
               checked={includeSalt}
               onChange={() => setIncludeSalt(!includeSalt)}
             />
-            <label htmlFor="includeSalt">Include salt</label>
-          </div>
-          <div>
-            <h3 className="font-medium">Message to use:</h3>
-            <WrappedTextBlock
-              text={messageToUse}
-              width={300} />
-          </div>
+            <span>Include random salt (recommended for short messages)</span>
+          </label>
+          {messageToUse && (
+            <div>
+              <div className="pw-label">Message that will be hashed</div>
+              <WrappedTextBlock text={messageToUse} width="100%" />
+            </div>
+          )}
           <VerifyHash message={messageToUse} />
         </>
       )}
 
       {commitType === 'aes' && (
         <>
-          <div className="password-input-section">
-            <label htmlFor="password" className="block text-sm font-medium mb-2">Enter Password</label>
+          <div>
+            <label htmlFor="aes-password" className="pw-label">
+              Encryption password
+            </label>
             <input
+              id="aes-password"
               type="password"
-              className="w-full p-2 border rounded-md"
-              placeholder="Password"
+              placeholder="Choose a strong password"
               value={password}
               onChange={e => setPassword(e.target.value)}
             />
           </div>
           {cipherText && (
             <div>
-              <h3 className="font-medium">Cipher text preview:</h3>
-              <WrappedTextBlock
-                text={cipherText}
-                width={300}
-              />
+              <div className="pw-label">Cipher text preview</div>
+              <WrappedTextBlock text={cipherText} width="100%" />
             </div>
           )}
         </>
@@ -593,67 +626,76 @@ const CommitWizard = () => {
 
       {commitType === 'filehash' && (
         <>
-          <input type="file" onChange={onFileChange} />
+          <div>
+            <label className="pw-label">Choose a file to hash</label>
+            <input type="file" onChange={onFileChange} />
+          </div>
           {selectedFile && (
-            <div className="text-sm">
+            <div className="pw-muted">
               <strong>Selected:</strong> {selectedFile.name} ({(selectedFile.size / 1024).toFixed(2)} KB)
             </div>
           )}
           {fileHash && (
-            <div className="break-all border p-2 bg-gray-50 rounded-md font-mono text-sm">
-              {fileHash}
+            <div>
+              <div className="pw-label">SHA-256</div>
+              <WrappedTextBlock text={fileHash} width="100%" />
             </div>
           )}
-          <div>
+          <label className="pw-row">
             <input
               type="checkbox"
               id="fileHashAppend"
               checked={fileHashAppendEnabled}
               onChange={() => setFileHashAppendEnabled(!fileHashAppendEnabled)}
             />
-            <label htmlFor="fileHashAppend">Append additional text after the hash</label>
-          </div>
+            <span>Append a short note after the hash</span>
+          </label>
           {fileHashAppendEnabled && (
             <textarea
-              className="w-full p-2 border rounded-md"
               rows={3}
-              placeholder="Optional note or label (committed after the hash, separated by a newline)..."
+              placeholder="Optional note (committed after the hash, separated by a newline)..."
               value={fileHashAppendText}
               onChange={e => setFileHashAppendText(e.target.value)}
             />
           )}
         </>
       )}
-    </>
+
+      <p className="pw-muted">{meta.description}</p>
+    </div>
   );
 
   const renderCardanoExtras = () => (
-    <>
-      <div>
+    <div className="themed-surface theme-cream">
+      <div className="pw-label" style={{ marginBottom: 0 }}>Optional extras</div>
+
+      <label className="pw-row-start">
         <input
           type="checkbox"
           id="attachToken"
           checked={attachToken}
           onChange={() => setAttachToken(!attachToken)}
+          style={{ marginTop: 4 }}
         />
-        <label htmlFor="attachToken">Attach a token</label>
-        <p className="text-sm text-gray-700">
-          Send one token back to yourself as a pointer token, making related commitments easier to find later.
-        </p>
-      </div>
+        <span>
+          <strong>Attach a pointer token.</strong>
+          <span style={{ display: 'block', color: 'var(--ink-soft)' }}>
+            Sends one of your tokens back to yourself so related commitments are easy to find later.
+          </span>
+        </span>
+      </label>
       {attachToken && (
         <div>
-          {tokenLoading && <p>Loading tokens...</p>}
-          {tokenError && <p className="text-red-500">{tokenError}</p>}
-          {!tokenLoading && tokens.length === 0 && <p>No tokens found.</p>}
+          {tokenLoading && <p className="pw-muted">Loading tokens…</p>}
+          {tokenError && <p style={{ color: '#b91c1c', margin: 0 }}>{tokenError}</p>}
+          {!tokenLoading && tokens.length === 0 && <p className="pw-muted">No tokens found in your wallet.</p>}
           {tokens.length > 0 && (
-            <div className="flex flex-col gap-1">
-              <label htmlFor="tokenSelect" className="font-medium">Pointer (Conch) token:</label>
+            <div className="pw-col">
+              <label htmlFor="tokenSelect" className="pw-label">Pointer token</label>
               <select
                 id="tokenSelect"
                 value={selectedTokenUnit}
                 onChange={e => setSelectedTokenUnit(e.target.value)}
-                className="w-full p-2 border rounded-md"
               >
                 {tokens.map(t => (
                   <option key={t.unit} value={t.unit}>
@@ -666,53 +708,51 @@ const CommitWizard = () => {
         </div>
       )}
 
-      <div>
+      <label className="pw-row-start">
         <input
           type="checkbox"
           id="includeTipUnified"
           checked={includeTip}
           onChange={() => setIncludeTip(!includeTip)}
+          style={{ marginTop: 4 }}
         />
-        <label htmlFor="includeTipUnified">Include tip to $computerman</label>
-      </div>
+        <span>
+          <strong>Tip $computerman.</strong>
+          <span style={{ display: 'block', color: 'var(--ink-soft)' }}>
+            Optional. Helps fund continued development of this tool.
+          </span>
+        </span>
+      </label>
       {includeTip && (
-        <div>
+        <div className="pw-row">
+          <label htmlFor="tipAmountUnified" className="pw-muted" style={{ margin: 0 }}>Amount (ADA):</label>
           <input
             type="number"
             id="tipAmountUnified"
             value={tipAmount}
             onChange={e => setTipAmount(parseFloat(e.target.value) || 0)}
+            style={{ maxWidth: 120 }}
           />
         </div>
       )}
-    </>
+    </div>
   );
 
   const renderConnectedWallet = () => {
     if (!isActiveWalletConnected) return null;
     if (chain === 'cardano') {
       return (
-        <div className="connection-info">
-          <h3>Connected to</h3>
-          <AddressDisplay
-            address={walletAddress || ''}
-            width={256}
-            style={{
-              marginLeft: 'auto',
-              marginRight: 'auto',
-            }}
-          />
-        </div>
+        <span className="pastel-badge theme-cardano" title={walletAddress || ''}>
+          <span aria-hidden="true">●</span>
+          {truncateAddress(walletAddress || '')}
+        </span>
       );
     }
-
     return (
-      <div className="connection-info">
-        <h3>Connected to</h3>
-        <div className="font-mono" style={{ wordBreak: 'break-all', maxWidth: '256px', marginLeft: 'auto', marginRight: 'auto' }}>
-          {ethAddress}
-        </div>
-      </div>
+      <span className="pastel-badge theme-ethereum" title={ethAddress || ''}>
+        <span aria-hidden="true">●</span>
+        {truncateAddress(ethAddress || '')}
+      </span>
     );
   };
 
@@ -721,21 +761,36 @@ const CommitWizard = () => {
       case 'home':
         return (
           <>
-            <h2 className="text-xl font-semibold">What would you like to do?</h2>
-            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+            <div className="wizard-heading">
+              <h2>What would you like to do?</h2>
+              <p>Carve something into the chain — or use the off-chain tools to verify an existing commitment.</p>
+            </div>
+            <div className="choice-grid">
               <button
                 type="button"
-                className="wallet-select-button"
+                className="choice-card theme-cream"
                 onClick={() => setStep('type')}
               >
-                Make a commitment
+                <div className="choice-card-title">
+                  <span className="choice-glyph" aria-hidden="true">＋</span>
+                  Make a commitment
+                </div>
+                <div className="choice-card-desc">
+                  Anchor text, a hash, an encrypted message, or a file directly on Cardano or Ethereum.
+                </div>
               </button>
               <button
                 type="button"
-                className="wallet-select-button"
+                className="choice-card theme-lavender"
                 onClick={() => setStep('verify')}
               >
-                Verification tools
+                <div className="choice-card-title">
+                  <span className="choice-glyph" aria-hidden="true">✓</span>
+                  Verification tools
+                </div>
+                <div className="choice-card-desc">
+                  Recompute a hash, decrypt an AES message, or hash a file — all locally in your browser.
+                </div>
               </button>
             </div>
           </>
@@ -743,7 +798,10 @@ const CommitWizard = () => {
       case 'verify':
         return (
           <>
-            <h2 className="text-xl font-semibold">Off-chain verification tools</h2>
+            <div className="wizard-heading">
+              <h2>Off-chain verification tools</h2>
+              <p>Everything below runs locally in your browser — nothing is sent anywhere.</p>
+            </div>
             <DecryptAES />
             <VerifyHash />
             <FileHashViewer />
@@ -753,38 +811,46 @@ const CommitWizard = () => {
       case 'type':
         return (
           <>
-            <h2 className="text-xl font-semibold">What kind of commitment?</h2>
-            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-              {(Object.keys(commitTypeLabels) as CommitKind[]).map(type => (
-                <button
-                  key={type}
-                  type="button"
-                  onMouseEnter={() => setCommitType(type)}
-                  onFocus={() => setCommitType(type)}
-                  onClick={() => {
-                    setCommitType(type);
-                    setStep('inputs');
-                  }}
-                  className={commitType === type ? 'wallet-select-button selected' : 'wallet-select-button'}
-                >
-                  {commitTypeLabels[type]}
-                </button>
-              ))}
+            <div className="wizard-heading">
+              <h2>What are you committing?</h2>
+              <p>Pick the kind of commitment that fits what you want to prove.</p>
             </div>
-            <h3 className="text-lg font-semibold" style={{ marginTop: '0.75rem' }}>
-              Selected: {commitTypeLabels[commitType]}
-            </h3>
-            {renderCommitTypeDescription()}
+            <div className="choice-grid">
+              {(Object.keys(commitTypeMeta) as CommitKind[]).map(type => {
+                const m = commitTypeMeta[type];
+                const isSelected = commitType === type;
+                return (
+                  <button
+                    key={type}
+                    type="button"
+                    onClick={() => {
+                      setCommitType(type);
+                      setStep('inputs');
+                    }}
+                    className={`choice-card theme-${m.theme}${isSelected ? ' is-selected' : ''}`}
+                  >
+                    <div className="choice-card-title">
+                      <span className="choice-glyph" aria-hidden="true">{m.glyph}</span>
+                      {m.label}
+                    </div>
+                    <div className="choice-card-desc">{m.description}</div>
+                  </button>
+                );
+              })}
+            </div>
             {renderWizardNav()}
           </>
         );
       case 'inputs':
         return (
           <>
-            <h2 className="text-xl font-semibold">{commitTypeLabels[commitType]} inputs</h2>
+            <div className="wizard-heading">
+              <h2>Fill in the details</h2>
+              <p>{meta.tagline}</p>
+            </div>
             {renderInputs()}
             {renderWizardNav({
-              label: 'Next',
+              label: 'Choose chain',
               onClick: () => setStep('chain'),
               disabled: !inputStepReady,
             })}
@@ -793,9 +859,13 @@ const CommitWizard = () => {
       case 'chain':
         return (
           <>
+            <div className="wizard-heading">
+              <h2>Where should this be committed?</h2>
+              <p>Both chains store your commitment forever. Pick the one that suits your audience and budget.</p>
+            </div>
             <ChainPicker chain={chain} onChange={handleChainChange} />
             {renderWizardNav({
-              label: 'Next',
+              label: 'Connect wallet',
               onClick: () => setStep('wallet'),
             })}
           </>
@@ -803,130 +873,162 @@ const CommitWizard = () => {
       case 'wallet':
         return (
           <>
+            <div className="wizard-heading">
+              <h2>Connect your {chainMeta[chain].label} wallet</h2>
+              <p>{chainMeta[chain].tagline}</p>
+            </div>
             {chain === 'cardano' && (
               <div className="connect-to-wallet-container">
-                <div>
-                  <h2>Connect With A Cardano Wallet To Continue</h2>
-                  <p>
-                    You will need a Cardano wallet to use this tool. Lace and Eternl are two great options. You will also need a small amount of ADA to cover transaction fees.
-                    Ada can be purchased from most exchanges such as Coinbase, Binance, Kraken, etc.
-                  </p>
-                </div>
+                <p className="pw-muted" style={{ margin: 0, textAlign: 'center' }}>
+                  You will need a Cardano wallet (Lace and Eternl are great choices) and a small amount of ADA to cover transaction fees.
+                </p>
                 <ConnectWallet />
               </div>
             )}
             {chain === 'ethereum' && (
               <div className="connect-to-wallet-container">
-                <div>
-                  <h2>Connect With An Ethereum Wallet To Continue</h2>
-                  <p>
-                    You will need an Ethereum wallet such as MetaMask or Rabby, and a small amount of ETH on mainnet to cover gas. The commitment transaction sends zero ETH to {ETHEREUM_DEAD_ADDRESS} and writes your data in the transaction input.
-                  </p>
-                </div>
+                <p className="pw-muted" style={{ margin: 0, textAlign: 'center' }}>
+                  Connect MetaMask, Rabby, or another Ethereum wallet with a small amount of ETH on mainnet for gas. The transaction sends zero ETH to {ETHEREUM_DEAD_ADDRESS} and writes your data in the input.
+                </p>
                 <EthereumConnectWallet />
               </div>
             )}
             {renderWizardNav()}
           </>
         );
-      case 'finalize':
+      case 'finalize': {
+        const chainTheme = chainMeta[chain].theme;
         return (
           <>
-            <h2 className="text-xl font-semibold">Review and post</h2>
-            {renderConnectedWallet()}
-            <div className="border rounded-md p-3 text-sm">
-              <p><strong>Commitment:</strong> {commitTypeLabels[commitType]}</p>
-              <p><strong>Chain:</strong> {chain === 'ethereum' ? 'Ethereum' : 'Cardano'}</p>
-              {commitType === 'filehash' && fileHash && (
-                <p>
-                  <strong>File hash:</strong> {truncateHash(fileHash)}
-                  {fileHashAppendEnabled && fileHashAppendText.trim() && (
-                    <span>
-                      {' '}
-                      <strong>Note after hash:</strong>{' '}
-                      {fileHashAppendText.trim().slice(0, 80)}
-                      {fileHashAppendText.trim().length > 80 ? '...' : ''}
-                    </span>
-                  )}
-                </p>
-              )}
-              {commitType === 'hash' && messageToUse && <p><strong>Message to hash:</strong> {messageToUse.slice(0, 80)}{messageToUse.length > 80 ? '...' : ''}</p>}
-              {(commitType === 'plain' || commitType === 'aes') && message && <p><strong>Message:</strong> {message.slice(0, 80)}{message.length > 80 ? '...' : ''}</p>}
+            <div className="wizard-heading">
+              <h2>Ready to commit?</h2>
+              <p>This is the last chance to back out. Once submitted, the commitment is permanent.</p>
             </div>
+            <dl className="review-list">
+              <div className="review-row">
+                <dt>Type</dt>
+                <dd>
+                  <span className={`pastel-badge theme-${meta.theme}`}>
+                    <span aria-hidden="true">{meta.glyph}</span>
+                    {meta.label}
+                  </span>
+                </dd>
+              </div>
+              <div className="review-row">
+                <dt>Chain</dt>
+                <dd><span className={`pastel-badge theme-${chainTheme}`}>{chainMeta[chain].label}</span></dd>
+              </div>
+              {commitType === 'filehash' && fileHash && (
+                <div className="review-row">
+                  <dt>File hash</dt>
+                  <dd>
+                    <code>{truncateHash(fileHash)}</code>
+                    {fileHashAppendEnabled && fileHashAppendText.trim() && (
+                      <div style={{ marginTop: 4 }}>
+                        <strong>Note:</strong>{' '}
+                        {fileHashAppendText.trim().slice(0, 80)}
+                        {fileHashAppendText.trim().length > 80 ? '…' : ''}
+                      </div>
+                    )}
+                  </dd>
+                </div>
+              )}
+              {commitType === 'hash' && messageToUse && (
+                <div className="review-row">
+                  <dt>To hash</dt>
+                  <dd>{messageToUse.slice(0, 120)}{messageToUse.length > 120 ? '…' : ''}</dd>
+                </div>
+              )}
+              {(commitType === 'plain' || commitType === 'aes') && message && (
+                <div className="review-row">
+                  <dt>Message</dt>
+                  <dd>{message.slice(0, 120)}{message.length > 120 ? '…' : ''}</dd>
+                </div>
+              )}
+              <div className="review-row">
+                <dt>Wallet</dt>
+                <dd>{renderConnectedWallet()}</dd>
+              </div>
+            </dl>
+
             {chain === 'cardano' ? (
               renderCardanoExtras()
             ) : (
-              <p className="text-sm text-yellow-700">
+              <p className="pw-muted">
                 No optional extras on Ethereum. This will submit a zero-value mainnet transaction to {ETHEREUM_DEAD_ADDRESS}.
               </p>
             )}
+
             <Button disabled={isSubmitting} onClick={handleCommit}>
-              {isSubmitting ? 'Submitting...' : `Commit on ${chain === 'ethereum' ? 'Ethereum' : 'Cardano'}`}
+              {isSubmitting ? 'Submitting…' : `Commit on ${chainMeta[chain].label}`}
             </Button>
             {renderWizardNav()}
           </>
         );
+      }
       case 'done':
         return (
           <>
-            <h2 className="text-xl font-semibold">Commitment submitted</h2>
-            {submitMessage && <p>{submitMessage}</p>}
-            {downloadedRecord?.cardanoscan && (
-              <p>
-                <a
-                  href={downloadedRecord.cardanoscan}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ color: '#0066cc', textDecoration: 'underline' }}
-                >
-                  View transaction on Cardanoscan
-                </a>
-              </p>
-            )}
-            {downloadedRecord?.etherscanIdm && (
-              <p>
-                <a
-                  href={downloadedRecord.etherscanIdm}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ color: '#0066cc', textDecoration: 'underline' }}
-                >
-                  View committed message on Etherscan (IDM)
-                </a>
-              </p>
-            )}
-            {downloadedRecord?.etherscan && !downloadedRecord?.cardanoscan && (
-              <p>
-                <a
-                  href={downloadedRecord.etherscan}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ color: '#0066cc', textDecoration: 'underline' }}
-                >
-                  View transaction on Etherscan
-                </a>
-              </p>
-            )}
+            <div className="commit-success">
+              <div className="commit-success-eyebrow">Submitted</div>
+              <div className="commit-success-title">Written in stone.</div>
+              {submitMessage && (
+                <p style={{ margin: 0, color: 'var(--ink-soft)' }}>{submitMessage}</p>
+              )}
+              <div className="pw-col">
+                {downloadedRecord?.cardanoscan && (
+                  <a
+                    href={downloadedRecord.cardanoscan}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    View transaction on Cardanoscan →
+                  </a>
+                )}
+                {downloadedRecord?.etherscanIdm && (
+                  <a
+                    href={downloadedRecord.etherscanIdm}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    View committed message on Etherscan (IDM) →
+                  </a>
+                )}
+                {downloadedRecord?.etherscan && !downloadedRecord?.cardanoscan && (
+                  <a
+                    href={downloadedRecord.etherscan}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    View transaction on Etherscan →
+                  </a>
+                )}
+              </div>
+            </div>
+
             {downloadedRecord && (
-              <div className="copy-record-button">
-                <p>
-                  In some cases (such as on mobile devices), the commitment data may not be downloaded automatically. In this case you can copy the commitment data with the button below.
+              <div className="themed-surface theme-cream">
+                <p className="pw-muted">
+                  In some cases (such as on mobile devices) the receipt JSON may not download automatically. You can copy it instead.
                 </p>
                 <Button
                   onClick={() => navigator.clipboard.writeText(JSON.stringify(downloadedRecord, null, 2))}
                 >
-                  Copy commitment record to clipboard
+                  Copy receipt to clipboard
                 </Button>
               </div>
             )}
-            <Button
+
+            <button
+              type="button"
+              className="btn btn-ghost"
               onClick={() => {
                 resetCommitForm();
                 setStep('home');
               }}
             >
               Make another commitment
-            </Button>
+            </button>
           </>
         );
       default:
@@ -935,7 +1037,8 @@ const CommitWizard = () => {
   };
 
   return (
-    <div className="unified-commit flex flex-col gap-4 w-full max-w-xl border border-gray-300 p-4 rounded-md">
+    <div className="wizard-card" data-step={step}>
+      {renderStepper()}
       {renderStep()}
     </div>
   );

@@ -1,84 +1,86 @@
-.clear-text-commit
-, .hash-commit
-, .verify-hash
-, .aes-commit
-, .aes-decrypt
-, .off-chain-tools
-, .file-hash-viewer
-, .file-hash-commit
-, .unified-commit
-, .connection-info
-, .copy-record-button
-, .connect-to-wallet-container
- {
-  border: 1px solid #ccc;
-  padding: 1rem;
-  border-radius: 0.5rem;
-  /* small space between top and bottom of the commit */
+/* ============================================================
+   Pastel palette — shared between the on-chain commit wizard
+   and the off-chain verification tools.
+   ============================================================ */
+:root {
+  --pastel-pink:    #FFD1DC; /* plain text   */
+  --pastel-mint:    #AAF0D1; /* hash         */
+  --pastel-lavender:#E6E6FA; /* verify hash  */
+  --pastel-lemon:   #FFFACD; /* AES commit   */
+  --pastel-peach:   #FFE5B4; /* AES decrypt  */
+  --pastel-leaf:    #b7f7bc; /* file hash viewer */
+  --pastel-apricot: #f7d0b7; /* file hash commit */
+  --pastel-cream:   antiquewhite;
+  --pastel-success: #C8F0C8; /* connection / done */
+
+  --ink-strong:     #1f2937;
+  --ink:            #374151;
+  --ink-soft:       #4b5563;
+  --ink-faint:      #6b7280;
+
+  --line:           rgba(31, 41, 55, 0.18);
+  --line-soft:      rgba(31, 41, 55, 0.10);
+}
+
+/* ============================================================
+   Tool cards — pastel surface used by both flows.
+   ============================================================ */
+.clear-text-commit,
+.hash-commit,
+.verify-hash,
+.aes-commit,
+.aes-decrypt,
+.off-chain-tools,
+.file-hash-viewer,
+.file-hash-commit,
+.unified-commit,
+.connection-info,
+.copy-record-button,
+.connect-to-wallet-container {
+  border: 1px solid var(--line);
+  padding: 1.25rem;
+  border-radius: 16px;
   margin-top: 1rem;
   margin-bottom: 1rem;
+  color: var(--ink-strong);
+  box-shadow: 0 6px 20px -12px rgba(0, 0, 0, 0.35);
 }
 
-/* make the background color of each of the above a unique light pastel color */
-.clear-text-commit {
-  background-color:   #FFD1DC;
-}
-.hash-commit {
-  background-color:#AAF0D1;
-}
-.verify-hash {
-  background-color:#E6E6FA;
-}
-.aes-commit {
-  background-color:#FFFACD;
-}
-.aes-decrypt {
-  background-color:#FFE5B4;
-}
-.file-hash-viewer {
-  background-color:#b7f7bc;
-}
-.file-hash-commit {
-  background-color:#f7d0b7;
-}
-.unified-commit > * + * {
-  margin-top: 1rem;
-}
-.off-chain-tools {
-  background-color: antiquewhite;
-}
+.clear-text-commit  { background-color: var(--pastel-pink);    }
+.hash-commit        { background-color: var(--pastel-mint);    }
+.verify-hash        { background-color: var(--pastel-lavender);}
+.aes-commit         { background-color: var(--pastel-lemon);   }
+.aes-decrypt        { background-color: var(--pastel-peach);   }
+.file-hash-viewer   { background-color: var(--pastel-leaf);    }
+.file-hash-commit   { background-color: var(--pastel-apricot); }
+.off-chain-tools    { background-color: var(--pastel-cream);   }
+.connection-info    { background-color: var(--pastel-success); }
+
+.unified-commit > * + * { margin-top: 1rem; }
+
 code {
-    background-color: #f0f0f0;
-}
-
-.connection-info {
-  /* fun background color */
-  background-color: lightgreen;
-
+  background-color: #f0f0f0;
+  color: var(--ink-strong);
+  padding: 0 0.25rem;
+  border-radius: 4px;
 }
 
 .connect-to-wallet-container {
-  background-color: #f0f0f0;
-  /* center the content */
+  background-color: #f5efe6;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
+  gap: 1rem;
 }
 
 .connect-to-wallet-container button {
   width: 100%;
-  /* margin-top: 1rem; */
 }
 
-.aes-decrypt div {
-  /* padding-top: 1rem; */
-  padding: 0.5rem;
-}
+.aes-decrypt div { padding: 0.5rem; }
 
-textarea {
-  width: 100%;
-}
+textarea { width: 100%; }
 
 .password-input-section {
   display: flex;
@@ -87,25 +89,65 @@ textarea {
   align-items: center;
   justify-content: space-between;
   max-width: 380px;
-  /* background-color: #f0f0f0; */
 }
 
-.subtext {
-  margin-top: 0.1rem;
-  font-size: 1.2rem;
-  font-weight: 600;
-  color: #666;
+/* ============================================================
+   Commit page layout & hero.
+   ============================================================ */
+.commit-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(255, 209, 220, 0.12) 0%, transparent 55%),
+    radial-gradient(ellipse at 80% 30%, rgba(170, 240, 209, 0.10) 0%, transparent 55%),
+    radial-gradient(ellipse at 20% 60%, rgba(230, 230, 250, 0.10) 0%, transparent 55%),
+    var(--color-bg-black, #000);
+}
+
+.commit-page-inner {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 3rem 1.25rem 2rem;
+}
+
+.title-container {
+  text-align: center;
+  margin-bottom: 0.5rem;
 }
 
 .title {
-  font-size: 3rem;
-  font-weight: 600;
-  color: #666;
+  font-size: 3.25rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #f5e9d2;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.4);
+}
+
+.subtext {
+  margin-top: 0.25rem;
+  font-size: 1.05rem;
+  font-weight: 500;
+  color: #c9b88a;
+  letter-spacing: 0.02em;
 }
 
 .description {
-  margin: 1rem;
+  max-width: 640px;
+  margin: 0.75rem auto 0.5rem;
+  padding: 0 1rem;
+  text-align: center;
+  color: #d6d3cf;
+  line-height: 1.6;
+  font-size: 0.98rem;
 }
+
+.description strong { color: #f5e9d2; }
 
 .bottom-area {
   display: flex;
@@ -114,5 +156,442 @@ textarea {
   align-items: center;
   margin-top: 7rem;
   margin-bottom: 2rem;
+  font-size: 0.85rem;
+  opacity: 0.75;
+}
+
+/* ============================================================
+   Commit wizard layout.
+   ============================================================ */
+.wizard-card {
+  width: 100%;
+  max-width: 640px;
+  background-color: var(--pastel-cream);
+  color: var(--ink-strong);
+  border-radius: 22px;
+  border: 1px solid var(--line);
+  padding: 1.75rem 1.75rem 1.5rem;
+  box-shadow: 0 30px 60px -30px rgba(0, 0, 0, 0.55),
+              0 8px 20px -12px rgba(0, 0, 0, 0.35);
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.wizard-stepper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.25rem;
+  margin-bottom: 0.25rem;
+}
+
+.wizard-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.wizard-step-dot {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: rgba(31, 41, 55, 0.08);
+  color: var(--ink-soft);
   font-size: 0.8rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  transition: all 0.2s ease;
+}
+
+.wizard-step-label {
+  font-size: 0.7rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.wizard-step.is-current .wizard-step-dot {
+  background: var(--pastel-current, #1f2937);
+  color: var(--ink-strong);
+  border-color: var(--ink-strong);
+  box-shadow: 0 0 0 4px rgba(31, 41, 55, 0.08);
+}
+
+.wizard-step.is-current .wizard-step-label {
+  color: var(--ink-strong);
+  font-weight: 700;
+}
+
+.wizard-step.is-done .wizard-step-dot {
+  background: var(--ink-strong);
+  color: #fffaf0;
+  border-color: var(--ink-strong);
+}
+
+.wizard-step.is-done .wizard-step-label { color: var(--ink-soft); }
+
+.wizard-connector {
+  flex: 0 0 12px;
+  height: 2px;
+  background: var(--line);
+  margin-top: 14px; /* align with dot center */
+}
+
+.wizard-connector.is-done { background: var(--ink-strong); }
+
+@media (max-width: 520px) {
+  .wizard-step-label { display: none; }
+  .wizard-connector { flex-basis: 8px; }
+}
+
+.wizard-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.wizard-heading h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--ink-strong);
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.wizard-heading p {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+/* ============================================================
+   Choice cards (home, type, chain).
+   ============================================================ */
+.choice-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+@media (max-width: 520px) {
+  .choice-grid { grid-template-columns: 1fr; }
+}
+
+.choice-card {
+  appearance: none;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  color: var(--ink-strong);
+  padding: 1rem 1.1rem;
+  border-radius: 16px;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease,
+              border-color 0.15s ease, background-color 0.15s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  font: inherit;
+}
+
+.choice-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px -18px rgba(0, 0, 0, 0.45);
+  border-color: rgba(31, 41, 55, 0.4);
+}
+
+.choice-card.is-selected {
+  border-color: var(--ink-strong);
+  box-shadow: 0 0 0 2px rgba(31, 41, 55, 0.18);
+}
+
+.choice-card-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.choice-card-desc {
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: var(--ink-soft);
+}
+
+.choice-card.theme-pink     { background: var(--pastel-pink);    }
+.choice-card.theme-mint     { background: var(--pastel-mint);    }
+.choice-card.theme-lemon    { background: var(--pastel-lemon);   }
+.choice-card.theme-apricot  { background: var(--pastel-apricot); }
+.choice-card.theme-lavender { background: var(--pastel-lavender);}
+.choice-card.theme-cream    { background: var(--pastel-cream);   }
+.choice-card.theme-cardano  { background: #e6efff; }
+.choice-card.theme-ethereum { background: #ece9ff; }
+
+.choice-glyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(31, 41, 55, 0.15);
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--ink-strong);
+}
+
+/* ============================================================
+   Themed surface used during inputs and review.
+   ============================================================ */
+.themed-surface {
+  border-radius: 16px;
+  padding: 1.1rem;
+  border: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.themed-surface.theme-pink     { background: var(--pastel-pink);    }
+.themed-surface.theme-mint     { background: var(--pastel-mint);    }
+.themed-surface.theme-lemon    { background: var(--pastel-lemon);   }
+.themed-surface.theme-apricot  { background: var(--pastel-apricot); }
+.themed-surface.theme-lavender { background: var(--pastel-lavender);}
+.themed-surface.theme-cream    { background: #fff7e8; }
+
+.themed-surface .text-sm,
+.themed-surface label,
+.themed-surface p,
+.themed-surface h3,
+.themed-surface h4 { color: var(--ink-strong); }
+
+.themed-surface textarea,
+.themed-surface input[type="text"],
+.themed-surface input[type="password"],
+.themed-surface input[type="number"],
+.themed-surface select {
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(31, 41, 55, 0.2);
+  color: var(--ink-strong);
+  border-radius: 10px;
+  padding: 0.55rem 0.7rem;
+  font-size: 0.95rem;
+  width: 100%;
+}
+
+.themed-surface textarea:focus,
+.themed-surface input:focus,
+.themed-surface select:focus {
+  outline: none;
+  border-color: var(--ink-strong);
+  box-shadow: 0 0 0 3px rgba(31, 41, 55, 0.08);
+}
+
+.themed-surface input[type="file"] {
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px dashed rgba(31, 41, 55, 0.35);
+  border-radius: 10px;
+  padding: 0.6rem;
+  color: var(--ink-strong);
+  width: 100%;
+}
+
+.themed-surface input[type="checkbox"] { margin-right: 0.4rem; }
+
+/* ============================================================
+   Type / chain badge — small chip used across review etc.
+   ============================================================ */
+.pastel-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.2rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(31, 41, 55, 0.15);
+  color: var(--ink-strong);
+}
+
+.pastel-badge.theme-pink     { background: var(--pastel-pink);    }
+.pastel-badge.theme-mint     { background: var(--pastel-mint);    }
+.pastel-badge.theme-lemon    { background: var(--pastel-lemon);   }
+.pastel-badge.theme-apricot  { background: var(--pastel-apricot); }
+.pastel-badge.theme-lavender { background: var(--pastel-lavender);}
+.pastel-badge.theme-cardano  { background: #d8e7ff; }
+.pastel-badge.theme-ethereum { background: #ddd6ff; }
+
+/* ============================================================
+   Review summary list.
+   ============================================================ */
+.review-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 0.85rem 1rem;
+}
+
+.review-row {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  gap: 0.75rem;
+  align-items: baseline;
+  font-size: 0.92rem;
+}
+
+.review-row dt {
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin: 0;
+}
+
+.review-row dd {
+  margin: 0;
+  color: var(--ink-strong);
+  word-break: break-word;
+}
+
+.review-row dd code {
+  font-size: 0.82rem;
+}
+
+/* ============================================================
+   Buttons inside the wizard card (overrides global .btn).
+   ============================================================ */
+.wizard-card .btn {
+  background-color: var(--ink-strong);
+  color: #fffaf0;
+  border-radius: 999px;
+  padding: 0.6rem 1.4rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  border: 1px solid var(--ink-strong);
+  transition: transform 0.12s ease, background-color 0.15s ease,
+              box-shadow 0.15s ease;
+  box-shadow: 0 6px 18px -10px rgba(0, 0, 0, 0.4);
+}
+
+.wizard-card .btn:hover:not(:disabled) {
+  background-color: #0f172a;
+  transform: translateY(-1px);
+}
+
+.wizard-card .btn:disabled {
+  background-color: rgba(31, 41, 55, 0.35);
+  border-color: rgba(31, 41, 55, 0.35);
+  color: rgba(255, 250, 240, 0.85);
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.wizard-card .btn-ghost {
+  background-color: transparent;
+  color: var(--ink-strong);
+  border: 1px solid var(--line);
+  box-shadow: none;
+}
+
+.wizard-card .btn-ghost:hover:not(:disabled) {
+  background-color: rgba(31, 41, 55, 0.06);
+  transform: none;
+}
+
+.wizard-nav {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 0.25rem;
+}
+
+/* ============================================================
+   Wizard layout utilities (Tailwind utilities are not compiled
+   in this project — these are the small set we actually need).
+   ============================================================ */
+.pw-row        { display: flex; align-items: center;     gap: 0.5rem; flex-wrap: wrap; }
+.pw-row-start  { display: flex; align-items: flex-start; gap: 0.5rem; }
+.pw-col        { display: flex; flex-direction: column;  gap: 0.4rem; }
+.pw-col-tight  { display: flex; flex-direction: column;  gap: 0.25rem; }
+.pw-label      { font-size: 0.85rem; font-weight: 600; color: var(--ink-strong); display: block; margin-bottom: 0.25rem; }
+.pw-muted      { font-size: 0.88rem; color: var(--ink-soft); line-height: 1.5; margin: 0; }
+.pw-bold       { font-weight: 600; }
+.pw-mt-0       { margin-top: 0; }
+.pw-mb-0       { margin-bottom: 0; }
+
+/* ============================================================
+   Done card — celebrates a successful commit.
+   ============================================================ */
+.commit-success {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  background: var(--pastel-success);
+  border: 1px solid rgba(31, 41, 55, 0.18);
+  border-radius: 16px;
+  padding: 1.25rem;
+  color: var(--ink-strong);
+}
+
+.commit-success-eyebrow {
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.commit-success-title {
+  font-size: 1.6rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.commit-success a {
+  color: var(--ink-strong);
+  text-decoration: underline;
+  font-weight: 600;
+}
+
+.commit-success a:hover { color: #0f172a; }
+
+/* ============================================================
+   When the pastel sub-tools are rendered inside the cream
+   wizard card, the wizard already provides spacing via gap;
+   collapse the components' own margins.
+   ============================================================ */
+.wizard-card > .verify-hash,
+.wizard-card > .aes-decrypt,
+.wizard-card > .file-hash-viewer,
+.wizard-card > .clear-text-commit,
+.wizard-card > .hash-commit,
+.wizard-card > .aes-commit,
+.wizard-card > .file-hash-commit,
+.wizard-card > .connect-to-wallet-container,
+.wizard-card > .connection-info {
+  margin-top: 0;
+  margin-bottom: 0;
+  width: 100%;
+  max-width: 100%;
 }

@@ -7,30 +7,41 @@ interface ChainPickerProps {
 
 const ChainPicker = ({ chain, onChange }: ChainPickerProps) => {
   return (
-    <div className="border border-gray-300 rounded-md p-4 w-full max-w-xl">
-      <h2 className="text-xl font-semibold">Choose a chain</h2>
-      <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.75rem', flexWrap: 'wrap' }}>
+    <>
+      <div className="choice-grid">
         <button
           type="button"
           onClick={() => onChange('cardano')}
-          className={chain === 'cardano' ? 'wallet-select-button selected' : 'wallet-select-button'}
+          className={`choice-card theme-cardano${chain === 'cardano' ? ' is-selected' : ''}`}
         >
-          Cardano
+          <div className="choice-card-title">
+            <span className="choice-glyph" aria-hidden="true">₳</span>
+            Cardano
+          </div>
+          <div className="choice-card-desc">
+            Low fees, metadata label 674. Pay in ADA. Optional pointer-token and tip extras.
+          </div>
         </button>
         <button
           type="button"
           onClick={() => onChange('ethereum')}
-          className={chain === 'ethereum' ? 'wallet-select-button selected' : 'wallet-select-button'}
+          className={`choice-card theme-ethereum${chain === 'ethereum' ? ' is-selected' : ''}`}
         >
-          Ethereum
+          <div className="choice-card-title">
+            <span className="choice-glyph" aria-hidden="true">Ξ</span>
+            Ethereum
+          </div>
+          <div className="choice-card-desc">
+            Mainnet only. Sends a zero-value transaction with your data in the input. Costs real gas.
+          </div>
         </button>
       </div>
       {chain === 'ethereum' && (
-        <p className="text-sm text-yellow-700" style={{ marginTop: '0.75rem' }}>
-          Ethereum commitments are sent on mainnet and cost real gas. The transaction has zero ETH value and writes your commitment in input data.
+        <p className="pw-muted" style={{ color: '#7c5d10' }}>
+          Heads up: Ethereum commitments cost real gas at current mainnet rates.
         </p>
       )}
-    </div>
+    </>
   );
 };
 

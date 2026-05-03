@@ -3,35 +3,21 @@ import '../simple.css';
 
 const Commit = () => {
   return (
-    <>
-      <div className="min-h-screen flex flex-col items-center justify-center p-10 gap-4">
+    <div className="commit-page">
+      <div className="commit-page-inner">
         <div className="title-container">
-          <div className="title">
-            Written in Stone
-          </div>
-          <div className="subtext">
-            a commitment tool from the $computerman 
-          </div>
+          <div className="title">Written in Stone</div>
+          <div className="subtext">a commitment tool from $computerman</div>
         </div>
-        <div className="description">
-          <p>
-            This is a free tool that lets anyone anchor their words, 
-            files, or proofs directly on Cardano or Ethereum. You 
-            can record plain text, commit a hash, encrypt a secret, 
-            or timestamp a file. Each action creates a receipt with 
-            an explorer link and other relevant details. The tool 
-            is free to use, and if you'd like, you can include an 
-            optional Cardano tip to support ongoing development of this tool 
-            and my other activities within the ecosystem.
-            <br/>
-            Write something down <strong>forever</strong>. 
-          </p>
-        </div>
+        <p className="description">
+          Anchor your words, files, or proofs directly on <strong>Cardano</strong> or
+          <strong> Ethereum</strong>. Plain text, a hash, an encrypted secret, or a file
+          fingerprint &mdash; each commitment is permanent and comes with a downloadable
+          receipt. Free to use; an optional ADA tip helps fund the tool.
+        </p>
         <CommitWizard />
       </div>
-      {/* <footer> */}
       <div className="bottom-area">
-        {/* link to https://github.com/willpiam/cardano-tools */}
         <div className="bottom-area-item">
           <a href="https://github.com/willpiam/cardano-tools" target="_blank" rel="noopener noreferrer">
             Source Code
@@ -43,7 +29,7 @@ const Commit = () => {
           </a>
         </div>
       </div>
-    </>
+    </div>
   );
 };
 
