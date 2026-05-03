@@ -5,6 +5,7 @@ import walletReducer from './walletSlice';
 import modalReducer from './modalSlice';
 import walletConnectedReducer from './isWalletConnectedSlice';
 import blockfrostReducer from './blockfrostSlice';
+import ethWalletReducer from './ethWalletSlice';
 
 export const store = configureStore({
   reducer: {
@@ -14,6 +15,7 @@ export const store = configureStore({
     modal: modalReducer,
     walletConnected: walletConnectedReducer,
     blockfrost: blockfrostReducer,
+    ethWallet: ethWalletReducer,
   },
 });
 

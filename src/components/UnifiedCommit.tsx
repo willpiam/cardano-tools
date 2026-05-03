@@ -9,8 +9,14 @@ import { encryptAES } from '../QuickAES';
 import { sha256 } from '../functions/hashFunctions';
 import VerifyHash from './VerifyHash';
 import { WrappedTextBlock } from './WrappedTextBlock';
+import { ETHEREUM_DEAD_ADDRESS, ensureMainnet, getEtherscanTxUrl, sendIDM, toHexData } from '../functions/ethereum';
 
 export type CommitKind = 'plain' | 'hash' | 'aes' | 'filehash';
+type CommitChain = 'cardano' | 'ethereum';
+
+interface UnifiedCommitProps {
+  chain?: CommitChain;
+}
 
 interface CommitInfo {
   sha: string;
@@ -24,10 +30,12 @@ interface CommitInfo {
   html_url: string;
 }
 
-const UnifiedCommit: React.FC = () => {
+const UnifiedCommit: React.FC<UnifiedCommitProps> = ({ chain = 'cardano' }) => {
   const lucid = useAppSelector((state) => state.wallet.lucid);
   const isWalletConnected = useAppSelector((state) => state.walletConnected.isWalletConnected);
   const { useBlockfrost, apiKey } = useAppSelector((state) => state.blockfrost);
+  const ethAddress = useAppSelector((state) => state.ethWallet.address);
+  const ethProviderRdns = useAppSelector((state) => state.ethWallet.providerRdns);
   const [commitType, setCommitType] = useState<CommitKind>('plain');
 
   const [message, setMessage] = useState('');
@@ -113,10 +121,17 @@ const UnifiedCommit: React.FC = () => {
     fetchLatestCommit();
   }, [gitInfoLoaded]);
 
+  useEffect(() => {
+    if (chain === 'ethereum') {
+      setAttachToken(false);
+      setIncludeTip(false);
+    }
+  }, [chain]);
+
   // fetch tokens when wallet connected and UI enabled
   useEffect(() => {
     const fetchTokens = async () => {
-      if (!attachToken || !isWalletConnected || !lucid) return;
+      if (chain !== 'cardano' || !attachToken || !isWalletConnected || !lucid) return;
       setTokenLoading(true);
       setTokenError(null);
       try {
@@ -145,7 +160,7 @@ const UnifiedCommit: React.FC = () => {
       }
     };
     fetchTokens();
-  }, [attachToken, isWalletConnected, lucid]);
+  }, [attachToken, chain, isWalletConnected, lucid]);
 
   const walletName = useAppSelector(state => state.wallet.selectedWallet);
   const walletAddress = useAppSelector(state => state.wallet.address);
@@ -209,29 +224,13 @@ const UnifiedCommit: React.FC = () => {
   const handleCommit = async () => {
     if (!isWalletConnected) return;
     try {
-      console.log(`STUB about to setIsSubmitting(true)`)
       setIsSubmitting(true);
-      // const { _lucid, api } = await setupLucid(walletName);
-      const {  api } = await setupLucid(walletName, useBlockfrost, apiKey);
-      console.log(`STUB called setupLucid`)
-      // Build the primary output (always lovelace, optionally token)
-      const primaryAssets: Record<string, bigint> = {
-        lovelace: BigInt(1_000_000),
-      };
-      if (attachToken && selectedTokenUnit) {
-        primaryAssets[selectedTokenUnit] = BigInt(1);
-      }
-      console.log(`STUB about to build txBuilder`)
-      // const txBuilder = _lucid.newTx().pay.ToAddress(walletAddress!, primaryAssets);
-      const txBuilder = lucid.newTx().pay.ToAddress(walletAddress!, primaryAssets);
 
       // Build codeVersion section
       const currentTime = new Date().toISOString();
       const codeVersion = {
         shortHash: gitInfo?.sha ? gitInfo.sha.substring(0, 7) : 'FAILED_TO_LOAD',
         fullHash: gitInfo?.sha || 'FAILED_TO_LOAD',
-        //commitMessage: commitInfo?.commit.message || 'FAILED_TO_LOAD',
-        //commitAuthor: commitInfo?.commit.author.name || 'FAILED_TO_LOAD',
         commitDate: gitInfo?.commit.author.date || currentTime,
         currentTime: currentTime,
         commitLink: gitInfo?.sha ? `https://github.com/willpiam/cardano-tools/tree/${gitInfo.sha}` : 'https://github.com/willpiam/cardano-tools',
@@ -243,6 +242,8 @@ const UnifiedCommit: React.FC = () => {
         attachedToken: attachToken && selectedTokenUnit ? selectedTokenUnit : 'None',
         codeVersion: codeVersion,
       };
+      let cardanoMetadata: string[] = [];
+      let ethereumDataText = '';
 
       switch (commitType) {
         case 'plain': {
@@ -251,7 +252,8 @@ const UnifiedCommit: React.FC = () => {
             return;
           }
           const prepared = prepMessage(message);
-          txBuilder.attachMetadata(674, prepared);
+          cardanoMetadata = prepared;
+          ethereumDataText = message;
           record = {
             ...record,
             message,
@@ -265,7 +267,8 @@ const UnifiedCommit: React.FC = () => {
             return;
           }
           const hash = await sha256(messageToUse.trim());
-          txBuilder.attachMetadata(674, [hash]);
+          cardanoMetadata = [hash];
+          ethereumDataText = hash;
           record = {
             ...record,
             message,
@@ -280,8 +283,10 @@ const UnifiedCommit: React.FC = () => {
             alert('Provide message and password.');
             return;
           }
-          const ct = prepMessage(cipherText || (await encryptAES(message, password)));
-          txBuilder.attachMetadata(674, ct);
+          const encryptedMessage = cipherText || (await encryptAES(message, password));
+          const ct = prepMessage(encryptedMessage);
+          cardanoMetadata = ct;
+          ethereumDataText = encryptedMessage;
           record = {
             ...record,
             message,
@@ -295,7 +300,8 @@ const UnifiedCommit: React.FC = () => {
             alert('Select a file first.');
             return;
           }
-          txBuilder.attachMetadata(674, [fileHash]);
+          cardanoMetadata = [fileHash];
+          ethereumDataText = fileHash;
           record = {
             ...record,
             fileName: selectedFile.name,
@@ -309,27 +315,63 @@ const UnifiedCommit: React.FC = () => {
           return;
       }
 
+      if (chain === 'ethereum') {
+        if (!ethAddress || !ethProviderRdns) {
+          alert('Connect an Ethereum wallet first.');
+          return;
+        }
+        const dataHex = toHexData(ethereumDataText);
+        await ensureMainnet(ethProviderRdns);
+        const txHash = await sendIDM({
+          from: ethAddress,
+          dataHex,
+          providerRdns: ethProviderRdns,
+        });
+        record = {
+          ...record,
+          chain: 'ethereum',
+          to: ETHEREUM_DEAD_ADDRESS,
+          value: '0x0',
+          dataHex,
+          txHash,
+          etherscan: getEtherscanTxUrl(txHash),
+        };
+        downloadJson(record, `${commitType}_ethereum_commit_${Date.now()}.json`);
+        setDownloadedRecord(record);
+        alert(`Ethereum transaction submitted: ${txHash}`);
+        setMessage('');
+        setPassword('');
+        setCipherText('');
+        setSelectedFile(null);
+        setFileHash('');
+        setIncludeSalt(false);
+        return;
+      }
+
+      const { api } = await setupLucid(walletName, useBlockfrost, apiKey);
+      const primaryAssets: Record<string, bigint> = {
+        lovelace: BigInt(1_000_000),
+      };
+      if (attachToken && selectedTokenUnit) {
+        primaryAssets[selectedTokenUnit] = BigInt(1);
+      }
+      const txBuilder = lucid.newTx().pay.ToAddress(walletAddress!, primaryAssets);
+      txBuilder.attachMetadata(674, cardanoMetadata);
+
       if (includeTip) {
         txBuilder.pay.ToAddress(williamDetails.paymentAddress, {
           lovelace: BigInt(tipAmount * 1_000_000),
         });
       }
-      console.log(`STUB about to add validTo (maybe)`)
       // let the transaction be valid for 20 minutes (only works with real network providers like Blockfrost)
       if (useBlockfrost && apiKey) {
         txBuilder.validTo(Date.now() + (20 * 60 * 1000));
-        console.log('Added validTo with Blockfrost provider');
-      } else {
-        console.log('Skipping validTo with Emulator provider');
       }
       const tx = await txBuilder.complete();
       record.txHash = tx.toHash();
       record.cardanoscan = `https://cardanoscan.io/transaction/${tx.toHash()}?tab=metadata`;
-      console.log(`STUB about to call downloadJson`)
       downloadJson(record, `${commitType}_commit_${Date.now()}.json`);
       setDownloadedRecord(record);
-      // copy record to clipboard
-      // navigator.clipboard.writeText(JSON.stringify(record, null, 2));
       await signAndSubmitTx(tx, api);
       alert('Transaction submitted!');
 
@@ -353,6 +395,11 @@ const UnifiedCommit: React.FC = () => {
   return (
     <div className="unified-commit flex flex-col gap-4 w-full max-w-xl border border-gray-300 p-4 rounded-md">
       <h2 className="text-xl font-semibold">Commit Data To Chain</h2>
+      {chain === 'ethereum' && (
+        <p className="text-sm text-yellow-700">
+          Ethereum commits are zero-value mainnet transactions to {ETHEREUM_DEAD_ADDRESS}. Your message or proof is written as transaction input data.
+        </p>
+      )}
      
 
       <div>
@@ -387,8 +434,8 @@ const UnifiedCommit: React.FC = () => {
           <div id="commit-type-details" className="p-3 text-sm text-gray-800">
             {commitType === 'plain' && (
               <p>
-                This flow allows you to post a message directly to the Cardano blockchain. It will be easily
-                visible on a block explorer like Cardanoscan. Everyone will be able to see your text and verify that
+                This flow allows you to post a message directly to the selected blockchain. It will be easily
+                visible on a block explorer. Everyone will be able to see your text and verify that
                 it was created by your wallet at this time. You will be prompted to download a JSON file with the
                 relevant details for your records.
               </p>
@@ -396,7 +443,7 @@ const UnifiedCommit: React.FC = () => {
 
             {commitType === 'hash' && (
               <p>
-                This flow allows you to post only the SHA-256 hash of a message on the Cardano blockchain. People with
+                This flow allows you to post only the SHA-256 hash of a message on the selected blockchain. People with
                 your message will be able to recompute its hash and verify it against the hash you commit to the blockchain.
                 Without your message people will see that you have committed to <i>something</i> but will not know what unless they correctly
                 guess the exact message. To prevent guessing you can opt to include a salt with your message. Verifiers will need the original
@@ -409,7 +456,7 @@ const UnifiedCommit: React.FC = () => {
 
             {commitType === 'aes' && (
               <p>
-                This flow allows you to post an AES-encrypted message on the Cardano blockchain. People with
+                This flow allows you to post an AES-encrypted message on the selected blockchain. People with
                 the correct password will be able to decrypt the message and verify that it was created by your wallet at this time.
                 Everyone else will see that you have committed to <i>some message</i> and they will know approximately how long it is.
                 You will be prompted to download a JSON file with the relevant details for your records. This file will include the
@@ -420,7 +467,7 @@ const UnifiedCommit: React.FC = () => {
 
             {commitType === 'filehash' && (
               <p>
-                This flow allows you to post the SHA-256 hash of a file on the Cardano blockchain. Everyone will see that your
+                This flow allows you to post the SHA-256 hash of a file on the selected blockchain. Everyone will see that your
                 wallet has committed to something but they will not know what. Anyone with the exact same file will be able to
                 recompute the hash and verify it against the hash you committed to the blockchain. You will be prompted to download
                 a JSON file with the relevant details for your records. The "off-chain tools" section below includes an interface to
@@ -503,64 +550,68 @@ const UnifiedCommit: React.FC = () => {
         </>
       )}
 
-      {/* Attach token */}
-      <div>
-        <input
-          type="checkbox"
-          id="attachToken"
-          checked={attachToken}
-          onChange={() => setAttachToken(!attachToken)}
-        />
-        <label htmlFor="attachToken">Attach a token</label>
-      </div>
-      {attachToken && (
-        <div>
-          {tokenLoading && <p>Loading tokens...</p>}
-          {tokenError && <p className="text-red-500">{tokenError}</p>}
-          {!tokenLoading && tokens.length === 0 && <p>No tokens found.</p>}
-          {tokens.length > 0 && (
-            <div className="flex flex-col gap-1">
-              <label htmlFor="tokenSelect" className="font-medium">Pointer (Conch) token:</label>
-              <select
-                id="tokenSelect"
-                value={selectedTokenUnit}
-                onChange={e => setSelectedTokenUnit(e.target.value)}
-                className="w-full p-2 border rounded-md"
-              >
-                {tokens.map(t => (
-                  <option key={t.unit} value={t.unit}>
-                    {t.name || '(no name)'}
-                  </option>
-                ))}
-              </select>
+      {chain === 'cardano' && (
+        <>
+          {/* Attach token */}
+          <div>
+            <input
+              type="checkbox"
+              id="attachToken"
+              checked={attachToken}
+              onChange={() => setAttachToken(!attachToken)}
+            />
+            <label htmlFor="attachToken">Attach a token</label>
+          </div>
+          {attachToken && (
+            <div>
+              {tokenLoading && <p>Loading tokens...</p>}
+              {tokenError && <p className="text-red-500">{tokenError}</p>}
+              {!tokenLoading && tokens.length === 0 && <p>No tokens found.</p>}
+              {tokens.length > 0 && (
+                <div className="flex flex-col gap-1">
+                  <label htmlFor="tokenSelect" className="font-medium">Pointer (Conch) token:</label>
+                  <select
+                    id="tokenSelect"
+                    value={selectedTokenUnit}
+                    onChange={e => setSelectedTokenUnit(e.target.value)}
+                    className="w-full p-2 border rounded-md"
+                  >
+                    {tokens.map(t => (
+                      <option key={t.unit} value={t.unit}>
+                        {t.name || '(no name)'}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
           )}
-        </div>
-      )}
 
-      {/* Optional tip */}
-      <div>
-        <input
-          type="checkbox"
-          id="includeTipUnified"
-          checked={includeTip}
-          onChange={() => setIncludeTip(!includeTip)}
-        />
-        <label htmlFor="includeTipUnified">Include tip to $computerman</label>
-      </div>
-      {includeTip && (
-        <div>
-          <input
-            type="number"
-            id="tipAmountUnified"
-            value={tipAmount}
-            onChange={e => setTipAmount(parseFloat(e.target.value) || 0)}
-          />
-        </div>
+          {/* Optional tip */}
+          <div>
+            <input
+              type="checkbox"
+              id="includeTipUnified"
+              checked={includeTip}
+              onChange={() => setIncludeTip(!includeTip)}
+            />
+            <label htmlFor="includeTipUnified">Include tip to $computerman</label>
+          </div>
+          {includeTip && (
+            <div>
+              <input
+                type="number"
+                id="tipAmountUnified"
+                value={tipAmount}
+                onChange={e => setTipAmount(parseFloat(e.target.value) || 0)}
+              />
+            </div>
+          )}
+        </>
       )}
 
       <Button disabled={isSubmitting} onClick={handleCommit}>
-        {isSubmitting ? 'Submitting...' : 'Commit'}
+        {isSubmitting ? 'Submitting...' : `Commit on ${chain === 'ethereum' ? 'Ethereum' : 'Cardano'}`}
       </Button>
 
       {downloadedRecord && (
