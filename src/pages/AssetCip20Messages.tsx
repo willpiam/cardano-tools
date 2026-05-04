@@ -262,16 +262,16 @@ const AssetCip20Messages = () => {
               <table className="min-w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-[#1a1103]">
-                    <th className="px-4 py-2 border-b">Time</th>
-                    <th className="px-4 py-2 border-b">Tx</th>
-                    <th className="px-4 py-2 border-b">Message</th>
+                    <th className="px-4 py-2 border-b border-[#6b4a18]">Time</th>
+                    <th className="px-4 py-2 border-b border-[#6b4a18]">Tx</th>
+                    <th className="px-4 py-2 border-b border-[#6b4a18]">Message</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="[&>tr]:border-b [&>tr]:border-[#6b4a18]">
                   {rows.map((row) => (
-                    <tr key={row.tx} className="odd:bg-[#33240b] even:bg-[#1a1103]">
-                      <td className="px-4 py-2 border-b text-sm whitespace-nowrap">{row.timestamp}</td>
-                      <td className="px-4 py-2 border-b font-mono text-xs">
+                    <tr key={row.tx} className="odd:bg-[#33240b] even:bg-[#1a1103] hover:bg-[#3f2c0d]">
+                      <td className="px-4 py-2 text-sm whitespace-nowrap">{row.timestamp}</td>
+                      <td className="px-4 py-2 font-mono text-xs">
                         <a
                           href={row.url}
                           target="_blank"
@@ -281,7 +281,7 @@ const AssetCip20Messages = () => {
                           {truncateHash(row.tx)}
                         </a>
                       </td>
-                      <td className="px-4 py-2 border-b text-sm" style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                      <td className="px-4 py-2 text-sm" style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
                         {row.message}
                       </td>
                     </tr>
