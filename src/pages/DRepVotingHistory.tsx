@@ -86,6 +86,7 @@ const DRepVotingHistory = () => {
   const [mergedData, setMergedData] = useState<MergedProposal[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [copiedProposalId, setCopiedProposalId] = useState<string | null>(null);
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -159,6 +160,15 @@ const DRepVotingHistory = () => {
   const handleLookup = () => {
     if (!drepInput.trim()) return;
     navigate(`/drephistory/${encodeURIComponent(drepInput.trim())}`);
+  };
+
+  const copyGovActionId = (id: string) => {
+    void navigator.clipboard.writeText(id).then(() => {
+      setCopiedProposalId(id);
+      window.setTimeout(() => {
+        setCopiedProposalId((cur) => (cur === id ? null : cur));
+      }, 2000);
+    });
   };
 
   const votedCount = mergedData.filter(m => m.vote !== null).length;
@@ -240,6 +250,7 @@ const DRepVotingHistory = () => {
                   <thead>
                     <tr className="bg-[#1a1103]">
                       <th className="px-4 py-2 border-b">Governance Action</th>
+                      <th className="px-4 py-2 border-b w-0 whitespace-nowrap">Copy ID</th>
                       <th className="px-4 py-2 border-b">Action Type</th>
                       <th className="px-4 py-2 border-b">Vote</th>
                       <th className="px-4 py-2 border-b">Vote Tx</th>
@@ -257,6 +268,16 @@ const DRepVotingHistory = () => {
                           >
                             {truncateHash(row.proposalId)}
                           </a>
+                        </td>
+                        <td className="px-2 py-2 border-b w-0 whitespace-nowrap align-middle">
+                          <button
+                            type="button"
+                            onClick={() => copyGovActionId(row.proposalId)}
+                            className="btn text-xs py-1 px-2"
+                            title="Copy governance action ID"
+                          >
+                            {copiedProposalId === row.proposalId ? 'Copied' : 'Copy'}
+                          </button>
                         </td>
                         <td className="px-4 py-2 border-b">
                           {formatGovActionType(row.govActionType)}

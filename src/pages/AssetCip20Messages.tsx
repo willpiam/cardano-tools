@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router';
+import './AssetCip20Messages.css';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { setBlockfrostConfig } from '../store/blockfrostSlice';
 import { Button } from '../components/Button';
@@ -258,32 +259,25 @@ const AssetCip20Messages = () => {
           )}
 
           {!loading && !error && rows.length > 0 && (
-            <div className="overflow-x-auto" style={{ width: '100%' }}>
-              <table className="min-w-full text-left border-collapse">
+            <div className="conch-history-frame">
+              <table className="conch-history-table">
                 <thead>
-                  <tr className="bg-[#1a1103]">
-                    <th className="px-4 py-2 border-b border-[#6b4a18]">Time</th>
-                    <th className="px-4 py-2 border-b border-[#6b4a18]">Tx</th>
-                    <th className="px-4 py-2 border-b border-[#6b4a18]">Message</th>
+                  <tr>
+                    <th>Time</th>
+                    <th>Tx</th>
+                    <th>Message</th>
                   </tr>
                 </thead>
-                <tbody className="[&>tr]:border-b [&>tr]:border-[#6b4a18]">
+                <tbody>
                   {rows.map((row) => (
-                    <tr key={row.tx} className="odd:bg-[#33240b] even:bg-[#1a1103] hover:bg-[#3f2c0d]">
-                      <td className="px-4 py-2 text-sm whitespace-nowrap">{row.timestamp}</td>
-                      <td className="px-4 py-2 font-mono text-xs">
-                        <a
-                          href={row.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          style={{ color: '#0066cc', textDecoration: 'underline' }}
-                        >
+                    <tr key={row.tx}>
+                      <td>{row.timestamp}</td>
+                      <td>
+                        <a href={row.url} target="_blank" rel="noopener noreferrer">
                           {truncateHash(row.tx)}
                         </a>
                       </td>
-                      <td className="px-4 py-2 text-sm" style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-                        {row.message}
-                      </td>
+                      <td>{row.message}</td>
                     </tr>
                   ))}
                 </tbody>
