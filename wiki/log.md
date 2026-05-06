@@ -36,3 +36,43 @@ Created wiki scaffold with raw sources nested under wiki/.
 ## [2026-05-03] ingest | Conch protocol naming and `/conch` route
 - Renamed user-facing copy to Conch protocol; primary route `/conch` with redirects from `/cip20-asset` and `/asset-cip20-messages`; Commit tool linked from Conch page; wiki/index/wiki-home/ctools-drep page updated.
 
+## [2026-05-05] ingest | cip1694.md
+- Source(s) processed:
+  - `wiki/raw/cip1694.md`
+- Pages created/updated:
+  - created `wiki/pages/source-cip1694.md`
+  - created `wiki/pages/cardano-governance-cip1694.md`
+  - updated `wiki/index.md`
+  - updated `wiki/pages/wiki-home.md`
+  - updated `wiki/log.md`
+- Contradictions or open questions:
+  - no direct contradictions observed against existing wiki pages
+  - open question: final operational threshold values and governance parameter initializations are intentionally left to community/governance process
+
+## [2026-05-05] ingest | Voltaire DRep Campaign Module
+- Source(s) processed:
+  - `wiki/raw/Voltaire DRep Campaign Module.md`
+- Pages created/updated:
+  - created `wiki/pages/source-voltaire-drep-campaign-module.md`
+  - updated `wiki/pages/cardano-governance-cip1694.md`
+  - updated `wiki/pages/source-cip1694.md`
+  - updated `wiki/pages/wiki-home.md`
+  - updated `wiki/index.md`
+- Contradictions or open questions:
+  - no direct contradictions observed against `wiki/pages/source-cip1694.md`; content is largely a presentation-layer restatement
+  - open question: should governance workshop attendee rosters and acknowledgements be tracked as first-class entities/pages, or kept source-local only
+
+## [2026-05-05] ingest | cip108.md
+- Source(s) processed:
+  - `wiki/raw/cip108.md`
+- Pages created/updated:
+  - created `wiki/pages/source-cip108.md`
+  - created `wiki/pages/governance-action-metadata-cip108.md`
+  - updated `wiki/pages/cardano-governance-cip1694.md`
+  - updated `wiki/pages/source-cip1694.md`
+  - updated `wiki/pages/wiki-home.md`
+  - updated `wiki/index.md`
+- Contradictions or open questions:
+  - no direct contradictions observed with existing CIP-1694 pages; scope appears complementary (on-chain governance mechanics vs off-chain metadata vocabulary)
+  - open question: if CIP-108 advances to Active with field/schema changes, which pages should carry version/status drift tracking
+

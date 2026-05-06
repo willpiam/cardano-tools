@@ -48,6 +48,44 @@ interface LiveGovernanceAction {
   title: string | null;
   summary: string;
   detailJson: string | null;
+  metadataStep1Status: 'idle' | 'loading' | 'success' | 'error';
+  metadataStep2Status: 'idle' | 'loading' | 'loaded' | 'error' | 'skipped';
+  metadataUrl: string | null;
+  metadataHash: string | null;
+  metadata: GovernanceMetadata | null;
+  metadataError: MetadataError | null;
+}
+
+interface GovernanceMetadataReference {
+  label: string;
+  uri: string;
+  hashDigest?: string | null;
+  hashAlgorithm?: string | null;
+}
+
+interface GovernanceMetadata {
+  title: string | null;
+  abstract: string | null;
+  motivation: string | null;
+  rationale: string | null;
+  references: GovernanceMetadataReference[];
+}
+
+type MetadataErrorCode =
+  | 'anchor_discovery_failed'
+  | 'anchor_missing'
+  | 'network_error'
+  | 'http_error'
+  | 'invalid_json'
+  | 'schema_mismatch';
+
+interface MetadataError {
+  code: MetadataErrorCode;
+  message: string;
+  details?: string;
+  statusCode?: number;
+  source: 'step1' | 'step2';
+  retryable: boolean;
 }
 
 async function fetchAllPages<T>(endpoint: string, apiKey: string): Promise<T[]> {
@@ -335,6 +373,229 @@ function extractGovernanceTitle(rawDescription: unknown): string | null {
   return walk(rawDescription, 0);
 }
 
+function parseJsonIfString(value: unknown): unknown {
+  if (typeof value !== 'string') return value;
+  const trimmed = value.trim();
+  if (!trimmed) return value;
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    return value;
+  }
+}
+
+function asObject(value: unknown): Record<string, unknown> | null {
+  const parsed = parseJsonIfString(value);
+  return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+    ? (parsed as Record<string, unknown>)
+    : null;
+}
+
+function asText(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  return trimmed ? trimmed : null;
+}
+
+function discoverMetadataAnchor(rawDescription: unknown): {
+  step1Status: 'success' | 'error';
+  metadataUrl: string | null;
+  metadataHash: string | null;
+  metadataError: MetadataError | null;
+} {
+  const visited = new Set<unknown>();
+
+  const walk = (value: unknown, depth: number): { url: string | null; hash: string | null } | null => {
+    if (depth > 6 || value === null || value === undefined) return null;
+    const parsed = parseJsonIfString(value);
+    if (parsed === null || parsed === undefined) return null;
+    if (typeof parsed !== 'object') return null;
+    if (visited.has(parsed)) return null;
+    visited.add(parsed);
+
+    if (Array.isArray(parsed)) {
+      for (const item of parsed) {
+        const found = walk(item, depth + 1);
+        if (found?.url) return found;
+      }
+      return null;
+    }
+
+    const obj = parsed as Record<string, unknown>;
+    const directUrl = asText(obj.uri) ?? asText(obj.url);
+    const directHash =
+      asText(obj.hash) ??
+      asText(obj.data_hash) ??
+      asText(obj.hashDigest) ??
+      asText(obj.referenceHash);
+
+    if (directUrl) {
+      return { url: directUrl, hash: directHash };
+    }
+
+    const prioritized = [
+      obj.anchor,
+      obj.metadata_anchor,
+      obj.governance_metadata_anchor,
+      obj.metadata,
+      obj.body,
+      obj.action,
+      obj.contents,
+      obj.constitution,
+      obj.referenceHash,
+      obj.references
+    ];
+
+    for (const nested of prioritized) {
+      const found = walk(nested, depth + 1);
+      if (found?.url) return found;
+    }
+
+    for (const nested of Object.values(obj)) {
+      const found = walk(nested, depth + 1);
+      if (found?.url) return found;
+    }
+
+    return null;
+  };
+
+  try {
+    const found = walk(rawDescription, 0);
+    if (!found) {
+      return {
+        step1Status: 'error',
+        metadataUrl: null,
+        metadataHash: null,
+        metadataError: {
+          code: 'anchor_missing',
+          message: 'No metadata URL found in on-chain governance description.',
+          source: 'step1',
+          retryable: false
+        }
+      };
+    }
+    return {
+      step1Status: 'success',
+      metadataUrl: found.url,
+      metadataHash: found.hash,
+      metadataError: null
+    };
+  } catch (err) {
+    return {
+      step1Status: 'error',
+      metadataUrl: null,
+      metadataHash: null,
+      metadataError: {
+        code: 'anchor_discovery_failed',
+        message: 'Failed to discover metadata anchor from on-chain data.',
+        details: err instanceof Error ? err.message : String(err),
+        source: 'step1',
+        retryable: false
+      }
+    };
+  }
+}
+
+function parseCip108Metadata(payload: unknown): GovernanceMetadata | null {
+  const root = asObject(payload);
+  if (!root) return null;
+
+  const body = asObject(root.body) ?? root;
+  const title = asText(body.title);
+  const abstract = asText(body.abstract);
+  const motivation = asText(body.motivation);
+  const rationale = asText(body.rationale);
+
+  const rawReferencesValue = body.references;
+  const rawRefs = Array.isArray(rawReferencesValue)
+    ? rawReferencesValue
+    : Array.isArray(asObject(rawReferencesValue)?.['@set'])
+      ? (asObject(rawReferencesValue)?.['@set'] as unknown[])
+      : [];
+  const references: GovernanceMetadataReference[] = [];
+  for (const entry of rawRefs) {
+    const ref = asObject(entry);
+    if (!ref) continue;
+    const label = asText(ref.label);
+    const uri = asText(ref.uri);
+    if (!label || !uri) continue;
+    const refHash = asObject(ref.referenceHash);
+    references.push({
+      label,
+      uri,
+      hashDigest: asText(refHash?.hashDigest),
+      hashAlgorithm: asText(refHash?.hashAlgorithm)
+    });
+  }
+
+  if (!title && !abstract && !motivation && !rationale && references.length === 0) {
+    return null;
+  }
+
+  return { title, abstract, motivation, rationale, references };
+}
+
+async function loadActionMetadata(url: string): Promise<{ metadata: GovernanceMetadata | null; metadataError: MetadataError | null }> {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) {
+      const body = await res.text();
+      return {
+        metadata: null,
+        metadataError: {
+          code: 'http_error',
+          message: `Metadata fetch failed with HTTP ${res.status}.`,
+          details: body.slice(0, 300),
+          statusCode: res.status,
+          source: 'step2',
+          retryable: res.status >= 500 || res.status === 429
+        }
+      };
+    }
+
+    let payload: unknown;
+    try {
+      payload = await res.json();
+    } catch (err) {
+      return {
+        metadata: null,
+        metadataError: {
+          code: 'invalid_json',
+          message: 'Metadata response is not valid JSON.',
+          details: err instanceof Error ? err.message : String(err),
+          source: 'step2',
+          retryable: false
+        }
+      };
+    }
+
+    const metadata = parseCip108Metadata(payload);
+    if (!metadata) {
+      return {
+        metadata: null,
+        metadataError: {
+          code: 'schema_mismatch',
+          message: 'Metadata JSON does not match expected CIP-108 fields.',
+          source: 'step2',
+          retryable: false
+        }
+      };
+    }
+    return { metadata, metadataError: null };
+  } catch (err) {
+    return {
+      metadata: null,
+      metadataError: {
+        code: 'network_error',
+        message: 'Network error while loading metadata URL.',
+        details: err instanceof Error ? err.message : String(err),
+        source: 'step2',
+        retryable: true
+      }
+    };
+  }
+}
+
 const GovernanceActions = () => {
   const dispatch = useAppDispatch();
   const { apiKey } = useAppSelector((state) => state.blockfrost);
@@ -364,6 +625,37 @@ const GovernanceActions = () => {
     fetchData(apiKey);
   }, [apiKey]);
 
+  const setActionByKey = (
+    txHash: string,
+    certIndex: number,
+    updater: (action: LiveGovernanceAction) => LiveGovernanceAction
+  ) => {
+    setActions(prev => prev.map(action => (
+      action.txHash === txHash && action.certIndex === certIndex
+        ? updater(action)
+        : action
+    )));
+  };
+
+  const runMetadataStep2 = async (txHash: string, certIndex: number) => {
+    const target = actions.find(action => action.txHash === txHash && action.certIndex === certIndex);
+    if (!target || !target.metadataUrl || target.metadataStep1Status !== 'success') return;
+
+    setActionByKey(txHash, certIndex, (action) => ({
+      ...action,
+      metadataStep2Status: 'loading',
+      metadataError: null
+    }));
+
+    const { metadata, metadataError } = await loadActionMetadata(target.metadataUrl);
+    setActionByKey(txHash, certIndex, (action) => ({
+      ...action,
+      metadataStep2Status: metadataError ? 'error' : 'loaded',
+      metadata,
+      metadataError
+    }));
+  };
+
   const fetchData = async (key: string) => {
     setLoading(true);
     setError(null);
@@ -373,59 +665,98 @@ const GovernanceActions = () => {
       const proposals = await fetchAllPages<BlockfrostProposal>('/governance/proposals', key);
 
       const details = await mapWithConcurrency(proposals, 8, async (proposal) => {
-        const res = await fetch(`${BLOCKFROST_BASE}/governance/proposals/${proposal.tx_hash}/${proposal.cert_index}`, {
-          headers: { project_id: key }
-        });
-        if (!res.ok) {
-          const body = await res.text();
-          throw new Error(`Blockfrost ${res.status}: ${body}`);
-        }
-        const detail: BlockfrostProposalDetail = await res.json();
-
-        let withdrawals: { stake_address: string; amount: string }[] | null = null;
-        if (proposal.governance_type === 'treasury_withdrawals') {
-          try {
-            const wRes = await fetch(
-              `${BLOCKFROST_BASE}/governance/proposals/${proposal.tx_hash}/${proposal.cert_index}/withdrawals?count=100`,
-              { headers: { project_id: key } }
-            );
-            if (wRes.ok) {
-              withdrawals = await wRes.json();
-            }
-          } catch (wErr) {
-            console.warn('Failed to fetch treasury withdrawal amounts', wErr);
+        try {
+          const res = await fetch(`${BLOCKFROST_BASE}/governance/proposals/${proposal.tx_hash}/${proposal.cert_index}`, {
+            headers: { project_id: key }
+          });
+          if (!res.ok) {
+            const body = await res.text();
+            throw new Error(`Blockfrost ${res.status}: ${body}`);
           }
-        }
+          const detail: BlockfrostProposalDetail = await res.json();
 
-        const { summary, treasuryTotalLovelace } = parseSummary(
-          proposal.governance_type,
-          detail.governance_description,
-          withdrawals
-        );
-        const title = extractGovernanceTitle(detail.governance_description);
-        return {
-          id: proposal.id,
-          txHash: proposal.tx_hash,
-          certIndex: proposal.cert_index,
-          governanceType: proposal.governance_type,
-          droppedEpoch: detail.dropped_epoch,
-          expiredEpoch: detail.expired_epoch,
-          ratifiedEpoch: detail.ratified_epoch,
-          enactedEpoch: detail.enacted_epoch,
-          treasuryWithdrawalTotalLovelace: treasuryTotalLovelace,
-          title,
-          summary,
-          detailJson: detail.governance_description ? JSON.stringify(detail.governance_description, null, 2) : null,
-        } satisfies LiveGovernanceAction;
+          let withdrawals: { stake_address: string; amount: string }[] | null = null;
+          if (proposal.governance_type === 'treasury_withdrawals') {
+            try {
+              const wRes = await fetch(
+                `${BLOCKFROST_BASE}/governance/proposals/${proposal.tx_hash}/${proposal.cert_index}/withdrawals?count=100`,
+                { headers: { project_id: key } }
+              );
+              if (wRes.ok) {
+                withdrawals = await wRes.json();
+              }
+            } catch (wErr) {
+              console.warn('Failed to fetch treasury withdrawal amounts', wErr);
+            }
+          }
+
+          const { summary, treasuryTotalLovelace } = parseSummary(
+            proposal.governance_type,
+            detail.governance_description,
+            withdrawals
+          );
+          const title = extractGovernanceTitle(detail.governance_description);
+          const anchor = discoverMetadataAnchor(detail.governance_description);
+
+          return {
+            id: proposal.id,
+            txHash: proposal.tx_hash,
+            certIndex: proposal.cert_index,
+            governanceType: proposal.governance_type,
+            droppedEpoch: detail.dropped_epoch,
+            expiredEpoch: detail.expired_epoch,
+            ratifiedEpoch: detail.ratified_epoch,
+            enactedEpoch: detail.enacted_epoch,
+            treasuryWithdrawalTotalLovelace: treasuryTotalLovelace,
+            title,
+            summary,
+            detailJson: detail.governance_description ? JSON.stringify(detail.governance_description, null, 2) : null,
+            metadataStep1Status: anchor.step1Status,
+            metadataStep2Status: anchor.step1Status === 'success' && anchor.metadataUrl ? 'idle' : 'skipped',
+            metadataUrl: anchor.metadataUrl,
+            metadataHash: anchor.metadataHash,
+            metadata: null,
+            metadataError: anchor.metadataError
+          } satisfies LiveGovernanceAction;
+        } catch (err) {
+          console.error('Failed to load proposal detail', proposal.tx_hash, proposal.cert_index, err);
+          return null;
+        }
       });
 
-      const liveActions = details.filter(action =>
-        action.droppedEpoch === null &&
-        action.expiredEpoch === null &&
-        action.ratifiedEpoch === null &&
-        action.enactedEpoch === null
-      );
-      setActions(liveActions);
+      const liveActions = details.reduce<LiveGovernanceAction[]>((acc, action) => {
+        if (!action) return acc;
+        if (
+          action.droppedEpoch === null &&
+          action.expiredEpoch === null &&
+          action.ratifiedEpoch === null &&
+          action.enactedEpoch === null
+        ) {
+          acc.push(action);
+        }
+        return acc;
+      }, []);
+      const stage2Pending = liveActions.map((action) => (
+        action.metadataStep1Status === 'success' && action.metadataUrl
+          ? { ...action, metadataStep2Status: 'loading' as const }
+          : action
+      ));
+      setActions(stage2Pending);
+
+      const stage2Loaded = await mapWithConcurrency<LiveGovernanceAction, LiveGovernanceAction>(stage2Pending, 6, async (action) => {
+        if (action.metadataStep1Status !== 'success' || !action.metadataUrl) {
+          return action;
+        }
+        const { metadata, metadataError } = await loadActionMetadata(action.metadataUrl);
+        const nextStep2Status: LiveGovernanceAction['metadataStep2Status'] = metadataError ? 'error' : 'loaded';
+        return {
+          ...action,
+          metadataStep2Status: nextStep2Status,
+          metadata,
+          metadataError: metadataError ?? action.metadataError
+        };
+      });
+      setActions(stage2Loaded);
     } catch (err) {
       console.error('Failed to fetch live governance actions', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch governance actions');
@@ -552,6 +883,7 @@ const GovernanceActions = () => {
               <div style={{ width: '100%', display: 'grid', gap: '0.75rem' }}>
                 {filteredActions.map(action => {
                   const colors = typeColor(action.governanceType);
+                  const displayTitle = action.metadata?.title ?? action.title;
                   return (
                     <div
                       key={`${action.txHash}#${action.certIndex}`}
@@ -588,12 +920,97 @@ const GovernanceActions = () => {
                         </span>
                       </div>
 
-                      {action.title && (
+                      {displayTitle && (
                         <div style={{ color: '#f8fafc', fontWeight: 700, fontSize: '0.95rem' }}>
-                          {action.title}
+                          {displayTitle}
                         </div>
                       )}
                       <div style={{ color: '#e5e7eb' }}>{action.summary}</div>
+
+                      <div style={{ fontSize: '0.8rem', color: '#cbd5e1', display: 'grid', gap: '0.25rem' }}>
+                        <div>
+                          On-chain metadata anchor:{' '}
+                          <strong>
+                            {action.metadataStep1Status === 'success' ? 'success' : action.metadataStep1Status === 'error' ? 'error' : 'loading'}
+                          </strong>
+                        </div>
+                        {action.metadataUrl && (
+                          <div style={{ wordBreak: 'break-all' }}>
+                            URL:{' '}
+                            <a href={action.metadataUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#93c5fd', textDecoration: 'underline' }}>
+                              {action.metadataUrl}
+                            </a>
+                          </div>
+                        )}
+                        {action.metadataHash && (
+                          <div style={{ wordBreak: 'break-all' }}>
+                            Hash: {action.metadataHash}
+                          </div>
+                        )}
+                        <div>
+                          Metadata document fetch:{' '}
+                          <strong>{action.metadataStep2Status}</strong>
+                        </div>
+                      </div>
+
+                      {action.metadataError && (
+                        <div style={{ padding: '0.6rem', borderRadius: '6px', border: '1px solid #7f1d1d', backgroundColor: '#450a0a', color: '#fecaca', display: 'grid', gap: '0.35rem' }}>
+                          <div>
+                            {action.metadataError.source === 'step1' ? 'Step 1' : 'Step 2'}: {action.metadataError.message}
+                          </div>
+                          <div style={{ fontSize: '0.78rem', color: '#fca5a5' }}>
+                            Code: {action.metadataError.code}
+                            {action.metadataError.statusCode !== undefined ? ` · HTTP ${action.metadataError.statusCode}` : ''}
+                            {action.metadataError.details ? ` · ${action.metadataError.details}` : ''}
+                          </div>
+                          {action.metadataStep2Status === 'error' && action.metadataUrl && (
+                            <div>
+                              <Button
+                                onClick={() => runMetadataStep2(action.txHash, action.certIndex)}
+                              >
+                                Retry metadata
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {action.metadata && (
+                        <div style={{ border: '1px solid #334155', borderRadius: '6px', padding: '0.6rem', display: 'grid', gap: '0.45rem' }}>
+                          {action.metadata.abstract && (
+                            <div style={{ color: '#e2e8f0' }}>
+                              {action.metadata.abstract}
+                            </div>
+                          )}
+                          {(action.metadata.motivation || action.metadata.rationale || action.metadata.references.length > 0) && (
+                            <details>
+                              <summary style={{ cursor: 'pointer', color: '#94a3b8', fontSize: '0.85rem' }}>
+                                Show CIP-108 details
+                              </summary>
+                              <div style={{ marginTop: '0.5rem', display: 'grid', gap: '0.4rem', color: '#d1d5db' }}>
+                                {action.metadata.motivation && <div><strong>Motivation:</strong> {action.metadata.motivation}</div>}
+                                {action.metadata.rationale && <div><strong>Rationale:</strong> {action.metadata.rationale}</div>}
+                                {action.metadata.references.length > 0 && (
+                                  <div>
+                                    <strong>References:</strong>
+                                    <ul style={{ margin: '0.35rem 0 0', paddingLeft: '1.2rem' }}>
+                                      {action.metadata.references.map((ref, idx) => (
+                                        <li key={`${ref.uri}-${idx}`}>
+                                          <a href={ref.uri} target="_blank" rel="noopener noreferrer" style={{ color: '#93c5fd', textDecoration: 'underline' }}>
+                                            {ref.label}
+                                          </a>
+                                          {ref.hashDigest ? ` · ${ref.hashDigest}` : ''}
+                                          {ref.hashAlgorithm ? ` (${ref.hashAlgorithm})` : ''}
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                )}
+                              </div>
+                            </details>
+                          )}
+                        </div>
+                      )}
 
                       {(action.ratifiedEpoch !== null || action.enactedEpoch !== null) && (
                         <div style={{ fontSize: '0.8rem', color: '#cbd5e1' }}>
