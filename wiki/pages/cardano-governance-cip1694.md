@@ -36,12 +36,19 @@ CIP-1694 defines a minimum viable on-chain governance framework for Cardano's Vo
 
 ## Off-chain metadata linkage
 - CIP-1694 governance actions can carry metadata anchors, but it does not define a full narrative metadata vocabulary.
-- CIP-108 provides that governance-action vocabulary (`title`, `abstract`, `motivation`, `rationale`, `references`) as an extension to CIP-100.
-- Together, 1694 + 108 separate on-chain decision mechanics from off-chain explanatory context and interoperability standards.
+- **CIP-100** specifies the base JSON-LD governance metadata framework (anchors, hashing, optional signing/`body` patterns, extension via `@context`).
+- **CIP-108** provides governance-action vocabulary (`title`, `abstract`, `motivation`, `rationale`, `references`) as an extension to CIP-100.
+- **CIP-119** proposes DRep registration/update profile fields on top of the same CIP-100 foundation (with relaxed `authors` witness expectations for that use case).
+- Together, 1694 + (100/108/119) separate on-chain decision mechanics from off-chain explanatory context and interoperability standards.
 
 ## Related pages
 - [Source: cip1694](source-cip1694.md)
+- [CIP-1694 explained (Intersect article)](cip-1694-explained-intersect-article.md)
+- [Source: cip100](source-cip100.md)
 - [Source: cip108](source-cip108.md)
+- [Source: cip119](source-cip119.md)
+- [Governance metadata framework (CIP-100)](governance-metadata-framework-cip100.md)
 - [Governance action metadata standard (CIP-108)](governance-action-metadata-cip108.md)
+- [DRep metadata standard (CIP-119)](drep-metadata-cip119.md)
 - [Source: Voltaire DRep Campaign Module](source-voltaire-drep-campaign-module.md)
 - [Wiki Home](wiki-home.md)

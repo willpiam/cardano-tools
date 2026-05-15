@@ -76,3 +76,30 @@ Created wiki scaffold with raw sources nested under wiki/.
   - no direct contradictions observed with existing CIP-1694 pages; scope appears complementary (on-chain governance mechanics vs off-chain metadata vocabulary)
   - open question: if CIP-108 advances to Active with field/schema changes, which pages should carry version/status drift tracking
 
+## [2026-05-15] ingest | cip100.md, cip119.md, cardano-multiplatform-lib-combined.md, Cardano CIP-1694 explained.md
+- Source(s) processed:
+  - `wiki/raw/cip100.md`
+  - `wiki/raw/cip119.md`
+  - `wiki/raw/cardano-multiplatform-lib-combined.md`
+  - `wiki/raw/Cardano CIP-1694 explained.md`
+- Pages created/updated:
+  - created `wiki/pages/source-cip100.md`
+  - created `wiki/pages/governance-metadata-framework-cip100.md`
+  - created `wiki/pages/source-cip119.md`
+  - created `wiki/pages/drep-metadata-cip119.md`
+  - created `wiki/pages/source-cardano-multiplatform-lib-combined.md`
+  - created `wiki/pages/cardano-multiplatform-lib-cml.md`
+  - created `wiki/pages/source-intersect-cip-1694-explained.md`
+  - created `wiki/pages/cip-1694-explained-intersect-article.md`
+  - updated `wiki/pages/cardano-governance-cip1694.md`
+  - updated `wiki/pages/governance-action-metadata-cip108.md`
+  - updated `wiki/pages/source-cip108.md`
+  - updated `wiki/pages/source-cip1694.md`
+  - updated `wiki/pages/wiki-home.md`
+  - updated `wiki/index.md`
+  - updated `wiki/log.md`
+- Contradictions or open questions:
+  - CIP-119 deliberately relaxes CIP-100 `authors`/witness expectations for DRep profile metadata; documented as an extension delta, not a contradiction
+  - Intersect article uses simplified action-type numbering and fork naming—aligned narratively with CIP-1694 but not a substitute for the Active spec
+  - CML combined raw doc still contains `todo` placeholders in install/run snippets; operational commands should be taken from upstream when implementing
+

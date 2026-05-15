@@ -1,0 +1,34 @@
+# Cardano Multiplatform Lib (CML)
+
+## Overview
+**Cardano Multiplatform Lib (CML)** is a Rust-first Cardano library shipped as **Rust crates** and **JS/TS/WASM** bindings for serialization, transaction construction, and supporting utilities. The wiki summary is grounded in `wiki/raw/cardano-multiplatform-lib-combined.md` (a stitched doc export).
+
+## Crate layout
+| Crate / area | Role |
+|--------------|------|
+| **cml-core** | Core types shared across crates |
+| **cml-chain** | Current-era on-chain types and builders—typical default for applications |
+| **cml-crypto** | Keys, signatures, and primitives |
+| **cml-multi-era** | Historical eras (Byron, Shelley, Alonzo, Babbage, …) and helpers for parsing legacy chain data |
+| **cml-cip25** | NFT metadata (CIP-25) |
+| **cml-cip36** | Catalyst registration (CIP-36) |
+
+Most application work uses **`cml-chain`**; reach for **`cml-multi-era`** when ingesting pre-Conway era blocks/Tx; use **cip25** / **cip36** crates only when those standards apply.
+
+## JavaScript / WASM consumption
+- NPM packages include **`@dcspark/cardano-multiplatform-lib-browser`** and **`@dcspark/cardano-multiplatform-lib-nodejs`**.
+- An **asm.js** build exists on NPM but is **deprecated path**: performance and currency with the mainline builds are poor.
+- Bundlers should use **Webpack 5+** per upstream guidance in the raw doc.
+
+## Design emphasis: CBOR fidelity
+CML highlights **preserving concrete CBOR encodings** (not just abstract structures). That matters for **hashes**, interoperability with other encoders (CLI vs library), and Plutus-related data edges—an advertised differentiator versus ad-hoc JSON-first flows.
+
+## Spec alignment
+Authors point readers to **cardano-ledger-specs** formal specs (Shelley and later eras) as prerequisite reading rather than re-deriving ledger rules inside the library docs.
+
+## Documentation caveat
+The ingested combined raw file contains **placeholder `todo` commands** in its getting-started section; prefer upstream repo/README for copy-paste install commands until raw sources are refreshed.
+
+## Related pages
+- [Source: cardano-multiplatform-lib-combined](source-cardano-multiplatform-lib-combined.md)
+- [Wiki Home](wiki-home.md)

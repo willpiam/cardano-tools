@@ -24,7 +24,13 @@ CIP-1694 defines Cardano's first full on-chain governance framework for the Volt
 
 ## Related pages
 - [Cardano governance model (CIP-1694)](cardano-governance-cip1694.md)
+- [CIP-1694 explained (Intersect article)](cip-1694-explained-intersect-article.md)
+- [Source: intersect CIP-1694 explained](source-intersect-cip-1694-explained.md)
+- [Source: cip100](source-cip100.md)
+- [Governance metadata framework (CIP-100)](governance-metadata-framework-cip100.md)
 - [Source: cip108](source-cip108.md)
 - [Governance action metadata standard (CIP-108)](governance-action-metadata-cip108.md)
+- [Source: cip119](source-cip119.md)
+- [DRep metadata standard (CIP-119)](drep-metadata-cip119.md)
 - [Source: Voltaire DRep Campaign Module](source-voltaire-drep-campaign-module.md)
 - [Wiki Home](wiki-home.md)

@@ -1,9 +1,6 @@
 
 this code base contains code for several similar projects. The first is some simple cardano governance tools. The second project is a commitment tool for writing on-chain messages.
 
-## problems
-
-- [ ] validTo seems to fail probably because of how i set up lucid
 
 ## Gov tools
 
@@ -33,6 +30,14 @@ Commands:
 - `npm run wiki:query -- <question>` - log a query against the wiki
 - `npm run wiki:lint` - check required wiki files/folders and log lint pass
 
+## Potentual Future Plans
+
+### Written In Stone
+
+- Add support for bitcoin
+  - perhaps only allowing hash commitments? 
+  - op_return? How are people doing it these days? 
+- Add support for QRL?
 
 
 <br/>

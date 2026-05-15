@@ -8,8 +8,9 @@ This wiki is maintained incrementally by an LLM.
 - Cardano on-chain governance baseline from CIP-1694 (Voltaire era).
 - Source ingested: [Source: cip1694](source-cip1694.md).
 - Companion source ingested: [Source: Voltaire DRep Campaign Module](source-voltaire-drep-campaign-module.md).
-- Governance-action off-chain metadata standard from CIP-108.
-- Source ingested: [Source: cip108](source-cip108.md).
+- Non-technical explainer ingested: [Source: intersect CIP-1694 explained](source-intersect-cip-1694-explained.md).
+- Governance off-chain metadata stack: Active [Source: cip100](source-cip100.md); proposed extensions [Source: cip108](source-cip108.md) and [Source: cip119](source-cip119.md).
+- Serialization/transaction library snapshot: [Source: cardano-multiplatform-lib-combined](source-cardano-multiplatform-lib-combined.md).
 
 ## Open questions
 - What are the concrete reward mechanics and payout cadence for Icebreakers?
@@ -18,5 +19,9 @@ This wiki is maintained incrementally by an LLM.
 ## Key pages
 - [Blockfrost Icebreakers](blockfrost-icebreakers.md)
 - [Cardano governance model (CIP-1694)](cardano-governance-cip1694.md)
+- [CIP-1694 explained (Intersect article)](cip-1694-explained-intersect-article.md)
+- [Governance metadata framework (CIP-100)](governance-metadata-framework-cip100.md)
 - [Governance action metadata standard (CIP-108)](governance-action-metadata-cip108.md)
+- [DRep metadata standard (CIP-119)](drep-metadata-cip119.md)
+- [Cardano Multiplatform Lib (CML)](cardano-multiplatform-lib-cml.md)
 - [DRep voting history: Blockfrost key and URL](ctools-drep-voting-history-blockfrost.md) (ctools app; includes Conch `/conch` query params)
