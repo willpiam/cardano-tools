@@ -435,7 +435,7 @@ const TreasuryDonation: React.FC = () => {
               }}
             >
               <p style={{ margin: 0, fontSize: '0.8rem', opacity: 0.9 }}>
-                A JSON receipt was saved automatically (same pattern as Written in Stone). If it did
+                A JSON receipt was saved automatically. If it did
                 not download &mdash; for example on some mobile browsers &mdash; use the buttons
                 below.
               </p>
