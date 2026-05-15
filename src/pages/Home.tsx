@@ -28,6 +28,12 @@ const TOOL_LINKS = [
     to: '/commit',
   },
   {
+    title: 'Treasury Donation',
+    description:
+      'Donate ADA directly to the Cardano treasury. Built with the Cardano Multiplatform Library (CML) for fine-grained transaction control.',
+    to: '/donate-treasury',
+  },
+  {
     title: 'Playground',
     description: 'Try development and testing utilities in the playground.',
     to: '/playground',

@@ -154,11 +154,11 @@ function ConnectWallet() {
                 onClick={() => setIsConnectDialogOpen(false)}
               >
                 <div
-                  className="max-w-[300px] max-h-[550px] overflow-y-auto md:max-w-[59rem] rounded-lg border-2 border-[#ffa722]"
+                  className="max-w-[300px] max-h-[550px] overflow-y-auto md:max-w-[59rem] rounded-lg border-2 border-[#ffa722] bg-[#111111] text-neutral-100"
                   onClick={(e) => e.stopPropagation()}
                 >
                   {/* Blockfrost Configuration */}
-                  <div className="mb-4 p-4 border border-gray-300 rounded-lg bg-gray-50">
+                  <div className="mb-4 p-4 border border-gray-600 rounded-lg bg-gray-100 text-gray-900">
                     <div className="flex items-center space-x-2 mb-2">
                       <input
                         type="checkbox"
@@ -172,7 +172,7 @@ function ConnectWallet() {
                         }}
                         className="rounded"
                       />
-                      <label htmlFor="useBlockfrost" className="text-sm font-medium">
+                      <label htmlFor="useBlockfrost" className="text-sm font-medium text-gray-900">
                         Use Blockfrost API Key
                       </label>
                     </div>
@@ -183,7 +183,7 @@ function ConnectWallet() {
                           placeholder="Enter your Blockfrost API key"
                           value={apiKey || ''}
                           onChange={(e) => dispatch(setApiKey(e.target.value))}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-900 bg-white placeholder:text-gray-500"
                           style={{width: '100%'}}
                         />
                         <p className="text-xs text-gray-600 mt-1">
@@ -199,15 +199,17 @@ function ConnectWallet() {
                   </div>
 
                   {!selectedWallet && showWalletSelect && (
-                    <div className="w-full p-5 rounded-lg bg-[#1a1103]">
-                      <h3 className="font-semibold text-lg text-center md:text-left">
+                    <div className="w-full p-5 rounded-lg bg-[#1a1103] text-neutral-100">
+                      <h3 className="font-semibold text-lg text-center md:text-left text-neutral-50">
                         Available Wallets
                       </h3>
                       {walletSelectList.length === 0 ? (
-                        <p>No wallets found. Please install a Cardano wallet.</p>
+                        <p className="text-neutral-200">
+                          No wallets found. Please install a Cardano wallet.
+                        </p>
                       ) : (
                         <div className="wallet-list" style={{display: 'flex', flexDirection: 'column', gap: '1rem', alignItems: 'flex-start' }}>
-                          <div>
+                          <div className="text-neutral-200">
                             There are {walletSelectList.length} wallets available.
                           </div>
                           {walletSelectList.map((wallet, index) => (

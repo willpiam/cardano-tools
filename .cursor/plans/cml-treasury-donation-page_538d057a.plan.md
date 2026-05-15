@@ -4,19 +4,19 @@ overview: Add a new "Treasury Donation" page that lets a CIP-30 connected wallet
 todos:
   - id: add_dep
     content: Promote @anastasia-labs/cardano-multiplatform-lib-browser to a direct dependency in package.json (version already in lockfile at 6.0.2-3).
-    status: pending
+    status: completed
   - id: tx_helper
     content: Create src/functions/treasuryDonation.ts with fetchTreasuryContext(apiKey) and buildAndSubmitDonation(...) using only CML (no lucid TxBuilder).
-    status: pending
+    status: completed
   - id: page
     content: Create src/pages/TreasuryDonation.tsx with ConnectWallet reuse, amount input, optional 674 metadata note, optional $computerman tip, current-treasury display, and submit/success states.
-    status: pending
+    status: completed
   - id: routes
     content: Register /donate-treasury (plus /treasury-donation, /donate aliases) in src/index.tsx.
-    status: pending
+    status: completed
   - id: home_tile
     content: Add a Treasury Donation tile to TOOL_LINKS in src/pages/Home.tsx.
-    status: pending
+    status: completed
 isProject: false
 ---
 

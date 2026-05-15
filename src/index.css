@@ -111,6 +111,8 @@ body,
 
 body {
   overflow-x: hidden;
+  /* Match black page background from above; UA default color is black, which is unreadable here. */
+  color: #e5e7eb;
 }
 
 *,
