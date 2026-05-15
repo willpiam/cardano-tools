@@ -3,11 +3,32 @@ import { Button } from '../components/Button';
 import ConnectWallet from '../components/ConnectWallet';
 import { useAppSelector } from '../store/hooks';
 import { williamDetails } from '../williamDetails';
+import { downloadJson } from '../functions/downloadJson';
+import '../simple.css';
 import {
   buildAndSubmitDonation,
   fetchTreasuryContext,
   type TreasuryContext,
 } from '../functions/treasuryDonation';
+
+/** Serializable receipt for treasury donations (BigInt-safe for JSON.stringify). */
+interface TreasuryDonationReceipt {
+  receiptType: 'cardano_treasury_donation';
+  submittedAt: string;
+  network: 'cardano-mainnet';
+  txHash: string;
+  cardanoscan: string;
+  donorChangeAddressBech32: string;
+  donationAda: number;
+  donationLovelace: string;
+  currentTreasuryLovelaceAtSubmission: string;
+  currentTreasuryAdaFormattedAtSubmission: string;
+  metadataAttached: boolean;
+  metadata674: string[] | null;
+  optionalTipAda: number | null;
+  optionalTipLovelace: string | null;
+  optionalTipAddressBech32: string | null;
+}
 
 const LOVELACE_PER_ADA = BigInt(1000000);
 
@@ -17,6 +38,9 @@ const adaToLovelace = (ada: number): bigint => {
   const truncatedFrac = (frac + '000000').slice(0, 6);
   return BigInt(whole) * LOVELACE_PER_ADA + BigInt(truncatedFrac || '0');
 };
+
+const receiptFilename = (txHash: string) =>
+  `treasury_donation_receipt_${txHash.slice(0, 12)}_${Date.now()}.json`;
 
 const formatLovelaceAsAda = (lovelace: bigint): string => {
   const negative = lovelace < BigInt(0);
@@ -53,6 +77,7 @@ const TreasuryDonation: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submittedTxHash, setSubmittedTxHash] = useState<string | null>(null);
+  const [donationReceipt, setDonationReceipt] = useState<TreasuryDonationReceipt | null>(null);
 
   const blockfrostReady = Boolean(useBlockfrost && apiKey);
   const canSubmit =
@@ -108,6 +133,7 @@ const TreasuryDonation: React.FC = () => {
     setIsSubmitting(true);
     setSubmitError(null);
     setSubmittedTxHash(null);
+    setDonationReceipt(null);
 
     try {
       // Always fetch a fresh treasury value right before building, so the
@@ -142,6 +168,29 @@ const TreasuryDonation: React.FC = () => {
             : undefined,
       });
 
+      const receipt: TreasuryDonationReceipt = {
+        receiptType: 'cardano_treasury_donation',
+        submittedAt: new Date().toISOString(),
+        network: 'cardano-mainnet',
+        txHash: result.txHash,
+        cardanoscan: `https://cardanoscan.io/transaction/${result.txHash}`,
+        donorChangeAddressBech32: walletAddress,
+        donationAda,
+        donationLovelace: donationLovelace.toString(),
+        currentTreasuryLovelaceAtSubmission: ctx.currentTreasuryLovelace.toString(),
+        currentTreasuryAdaFormattedAtSubmission: formatLovelaceAsAda(ctx.currentTreasuryLovelace),
+        metadataAttached: Boolean(metadata?.length),
+        metadata674: metadata ?? null,
+        optionalTipAda:
+          includeTip && tipLovelace > BigInt(0) ? tipAda : null,
+        optionalTipLovelace:
+          includeTip && tipLovelace > BigInt(0) ? tipLovelace.toString() : null,
+        optionalTipAddressBech32:
+          includeTip && tipLovelace > BigInt(0) ? williamDetails.paymentAddress : null,
+      };
+
+      downloadJson(receipt, receiptFilename(result.txHash));
+      setDonationReceipt(receipt);
       setSubmittedTxHash(result.txHash);
     } catch (err: any) {
       console.error('Failed to submit treasury donation', err);
@@ -375,63 +424,113 @@ const TreasuryDonation: React.FC = () => {
           >
             View on Cardanoscan →
           </a>
+          {donationReceipt && (
+            <div
+              style={{
+                marginTop: '0.75rem',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.75rem',
+                alignItems: 'flex-start',
+              }}
+            >
+              <p style={{ margin: 0, fontSize: '0.8rem', opacity: 0.9 }}>
+                A JSON receipt was saved automatically (same pattern as Written in Stone). If it did
+                not download &mdash; for example on some mobile browsers &mdash; use the buttons
+                below.
+              </p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                <Button
+                  onClick={() => downloadJson(donationReceipt, receiptFilename(donationReceipt.txHash))}
+                >
+                  Download receipt (JSON)
+                </Button>
+                <Button
+                  onClick={() =>
+                    navigator.clipboard.writeText(JSON.stringify(donationReceipt, null, 2))
+                  }
+                >
+                  Copy receipt to clipboard
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
   );
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="commit-page">
       <div
+        className="commit-page-inner"
         style={{
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-          alignItems: 'center',
-          padding: '2rem',
+          alignItems: 'stretch',
+          maxWidth: '900px',
+          marginInline: 'auto',
         }}
       >
         <div
-          className="main-section"
           style={{
             display: 'flex',
             flexDirection: 'column',
-            gap: '1rem',
-            alignItems: 'flex-start',
             justifyContent: 'center',
+            alignItems: 'center',
+            padding: '0 0.5rem',
             width: '100%',
-            maxWidth: '800px',
           }}
         >
-          <h1>Donate to the Cardano Treasury</h1>
-          <p style={{ color: '#d1d5db' }}>
-            Send ADA directly to the on-chain treasury. This page builds the donation transaction
-            with the <strong>Cardano Multiplatform Library (CML)</strong> — not lucid-evolution —
-            because the <code>donation</code> and <code>current_treasury_value</code> fields aren't
-            exposed by lucid's high-level builder.
-          </p>
+          <div
+            className="main-section"
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '1rem',
+              alignItems: 'flex-start',
+              justifyContent: 'center',
+              width: '100%',
+              maxWidth: '800px',
+            }}
+          >
+            <h1>Donate to the Cardano Treasury</h1>
+            <p style={{ color: '#d1d5db' }}>
+              Send ADA directly to the on-chain treasury
+            </p>
 
-          {!isWalletConnected && (
-            <div style={{ width: '100%' }}>
-              <div style={{ marginBottom: '0.5rem', color: '#d1d5db' }}>
-                Connect a Cardano wallet to begin.
-              </div>
-              <ConnectWallet />
-            </div>
-          )}
-
-          {isWalletConnected && (
-            <>
+            {!isWalletConnected && (
               <div style={{ width: '100%' }}>
+                <div style={{ marginBottom: '0.5rem', color: '#d1d5db' }}>
+                  Connect a Cardano wallet to begin.
+                </div>
                 <ConnectWallet />
               </div>
-              <code style={{ wordBreak: 'break-all' }}>Address: {walletAddress}</code>
+            )}
 
-              {renderContextPanel()}
-              {renderForm()}
-              {renderSubmit()}
-            </>
-          )}
+            {isWalletConnected && (
+              <>
+                <div style={{ width: '100%' }}>
+                  <ConnectWallet />
+                </div>
+                <code style={{ wordBreak: 'break-all' }}>Address: {walletAddress}</code>
+
+                {renderContextPanel()}
+                {renderForm()}
+                {renderSubmit()}
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+      <div className="bottom-area">
+        <div className="bottom-area-item">
+          <a href="https://github.com/willpiam/cardano-tools" target="_blank" rel="noopener noreferrer">
+            Source Code
+          </a>
+        </div>
+        <div className="bottom-area-item">
+          <a href="https://projects.williamdoyle.ca" target="_blank" rel="noopener noreferrer">
+            My Other Projects
+          </a>
         </div>
       </div>
     </div>
