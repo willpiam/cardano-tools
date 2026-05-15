@@ -103,3 +103,17 @@ Created wiki scaffold with raw sources nested under wiki/.
   - Intersect article uses simplified action-type numbering and fork naming—aligned narratively with CIP-1694 but not a substitute for the Active spec
   - CML combined raw doc still contains `todo` placeholders in install/run snippets; operational commands should be taken from upstream when implementing
 
+## [2026-05-15] ingest | Release 6.2.0_ Treasury donation support.md
+- Source(s) processed:
+  - `wiki/raw/Release 6.2.0_ Treasury donation support.md`
+- Pages created/updated:
+  - created `wiki/pages/source-cml-release-6-2-0-treasury-donation.md`
+  - updated `wiki/pages/cardano-multiplatform-lib-cml.md`
+  - updated `wiki/pages/source-cardano-multiplatform-lib-combined.md`
+  - updated `wiki/pages/wiki-home.md`
+  - updated `wiki/index.md`
+  - updated `wiki/log.md`
+- Contradictions or open questions:
+  - none against existing CML pages; release notes are additive to the combined doc snapshot
+  - exact Rust/TS symbol paths and Conway ledger field names are not in this clipping; implementers should confirm in upstream API docs or source for 6.2.0
+

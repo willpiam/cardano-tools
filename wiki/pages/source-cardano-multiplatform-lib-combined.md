@@ -19,4 +19,5 @@ Combined documentation snapshot for **Cardano Multiplatform Lib (CML)**—a mult
 
 ## Related pages
 - [Cardano Multiplatform Lib (CML)](cardano-multiplatform-lib-cml.md)
+- [Source: CML release 6.2.0](source-cml-release-6-2-0-treasury-donation.md) (treasury donation tx builder APIs)
 - [Wiki Home](wiki-home.md)

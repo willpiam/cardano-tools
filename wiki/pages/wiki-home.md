@@ -10,7 +10,7 @@ This wiki is maintained incrementally by an LLM.
 - Companion source ingested: [Source: Voltaire DRep Campaign Module](source-voltaire-drep-campaign-module.md).
 - Non-technical explainer ingested: [Source: intersect CIP-1694 explained](source-intersect-cip-1694-explained.md).
 - Governance off-chain metadata stack: Active [Source: cip100](source-cip100.md); proposed extensions [Source: cip108](source-cip108.md) and [Source: cip119](source-cip119.md).
-- Serialization/transaction library snapshot: [Source: cardano-multiplatform-lib-combined](source-cardano-multiplatform-lib-combined.md).
+- Serialization/transaction library snapshot: [Source: cardano-multiplatform-lib-combined](source-cardano-multiplatform-lib-combined.md); treasury donation builder APIs: [Source: CML release 6.2.0](source-cml-release-6-2-0-treasury-donation.md).
 
 ## Open questions
 - What are the concrete reward mechanics and payout cadence for Icebreakers?

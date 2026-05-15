@@ -12,6 +12,7 @@
 - [Source: intersect CIP-1694 explained](pages/source-intersect-cip-1694-explained.md) - Intersect MBO news article (2024) summarizing CIP-1694 for a general audience.
 - [Source: Voltaire DRep Campaign Module](pages/source-voltaire-drep-campaign-module.md) - 1694.io campaign/explainer rendering of CIP-1694 with governance lifecycle framing, threshold families, and bootstrap emphasis.
 - [Source: cardano-multiplatform-lib-combined](pages/source-cardano-multiplatform-lib-combined.md) - Stitched CML (Cardano Multiplatform Lib) doc export: crates, WASM/JS packages, CBOR-fidelity rationale.
+- [Source: CML release 6.2.0 treasury donation](pages/source-cml-release-6-2-0-treasury-donation.md) - GitHub release notes: `set_donation`, `set_current_treasury_value` in the tx builder (2025-04-06).
 
 ## Entities / Concepts
 - [Blockfrost Icebreakers](pages/blockfrost-icebreakers.md) - Incentivized operator program for decentralized Blockfrost fleet participation.
@@ -20,7 +21,7 @@
 - [Governance metadata framework (CIP-100)](pages/governance-metadata-framework-cip100.md) - Base JSON-LD governance metadata: anchors, hashing, `body`/`authors`, extension contexts, metadatum label 1694.
 - [Governance action metadata standard (CIP-108)](pages/governance-action-metadata-cip108.md) - Standardized off-chain fields (`title`, `abstract`, `motivation`, `rationale`, `references`) for CIP-1694 governance actions.
 - [DRep metadata standard (CIP-119)](pages/drep-metadata-cip119.md) - Proposed DRep profile anchor fields (`givenName`, narrative blocks, `Identity`/`Link` references, `doNotList`).
-- [Cardano Multiplatform Lib (CML)](pages/cardano-multiplatform-lib-cml.md) - Multi-target Rust/JS/WASM Cardano library; crate split and NPM packages (summary of ingested doc snapshot).
+- [Cardano Multiplatform Lib (CML)](pages/cardano-multiplatform-lib-cml.md) - Multi-target Rust/JS/WASM Cardano library; crate split and NPM packages; treasury donation builder helpers from CML 6.2.0.
 
 ## ctools application
 - [DRep voting history: Blockfrost key and URL params](pages/ctools-drep-voting-history-blockfrost.md) - How ctools Blockfrost tools read/write `blockfrostApiKey` (and, on the Conch protocol page `/conch`, `assetId` / `txLimit`) in the query string; Redux + `project_id` headers.

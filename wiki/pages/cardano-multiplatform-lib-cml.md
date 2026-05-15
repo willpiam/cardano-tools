@@ -23,6 +23,9 @@ Most application work uses **`cml-chain`**; reach for **`cml-multi-era`** when i
 ## Design emphasis: CBOR fidelity
 CML highlights **preserving concrete CBOR encodings** (not just abstract structures). That matters for **hashes**, interoperability with other encoders (CLI vs library), and Plutus-related data edges—an advertised differentiator versus ad-hoc JSON-first flows.
 
+## Treasury donation (tx builder, 6.2.0+)
+From **CML 6.2.0** onward, the transaction builder exposes treasury-related helpers named in upstream release notes as **`set_donation`** (ADA donation to the treasury) and **`set_current_treasury_value`** (for builds where **Plutus** needs the current treasury amount). See [Source: CML release 6.2.0](source-cml-release-6-2-0-treasury-donation.md).
+
 ## Spec alignment
 Authors point readers to **cardano-ledger-specs** formal specs (Shelley and later eras) as prerequisite reading rather than re-deriving ledger rules inside the library docs.
 
@@ -31,4 +34,5 @@ The ingested combined raw file contains **placeholder `todo` commands** in its g
 
 ## Related pages
 - [Source: cardano-multiplatform-lib-combined](source-cardano-multiplatform-lib-combined.md)
+- [Source: CML release 6.2.0](source-cml-release-6-2-0-treasury-donation.md)
 - [Wiki Home](wiki-home.md)
