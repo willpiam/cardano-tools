@@ -288,9 +288,11 @@ export const buildAndSubmitDonation = async (
     tip && tip.lovelace > BigInt(0) ? 1 : 0;
   txb.add_output(wrapAsSingleOutput(coinOnlyOutput(changeAddress, donationLovelace)));
 
-  let auxData: CML.AuxiliaryData | undefined;
+  /** Serialized once; `Transaction.new` consumes each AuxiliaryData JS wrapper via WASM. */
+  let auxDataCborHex: string | undefined;
   if (metadata && metadata.length > 0) {
-    auxData = buildAuxiliaryData(metadata);
+    const auxData = buildAuxiliaryData(metadata);
+    auxDataCborHex = auxData.to_cbor_hex();
     txb.add_auxiliary_data(auxData);
   }
 
@@ -341,7 +343,10 @@ export const buildAndSubmitDonation = async (
   }
 
   const emptyWits = CML.TransactionWitnessSetBuilder.new().build();
-  const unsignedTx = CML.Transaction.new(finalBody, emptyWits, true, auxData);
+  const auxForUnsigned = auxDataCborHex
+    ? CML.AuxiliaryData.from_cbor_hex(auxDataCborHex)
+    : undefined;
+  const unsignedTx = CML.Transaction.new(finalBody, emptyWits, true, auxForUnsigned);
   const unsignedTxHex = unsignedTx.to_cbor_hex();
 
   const witnessSetHex: string = await api.signTx(unsignedTxHex, false);
@@ -351,7 +356,10 @@ export const buildAndSubmitDonation = async (
   witsBuilder.add_existing(walletWits);
   const finalWits = witsBuilder.build();
 
-  const signedTx = CML.Transaction.new(finalBody, finalWits, true, auxData);
+  const auxForSigned = auxDataCborHex
+    ? CML.AuxiliaryData.from_cbor_hex(auxDataCborHex)
+    : undefined;
+  const signedTx = CML.Transaction.new(finalBody, finalWits, true, auxForSigned);
   const signedTxHex = signedTx.to_cbor_hex();
 
   const txHash: string = await api.submitTx(signedTxHex);
