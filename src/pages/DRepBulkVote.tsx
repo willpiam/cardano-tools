@@ -1,0 +1,735 @@
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import ConnectWallet from '../components/ConnectWallet';
+import { Button } from '../components/Button';
+import { useAppSelector } from '../store/hooks';
+import '../simple.css';
+import {
+  GOVERNANCE_TYPES,
+  fetchAllPages,
+  fetchLiveGovernanceActions,
+  formatGovActionType,
+  truncateHash,
+  type GovernanceType,
+  type LiveGovernanceAction,
+} from '../functions/governanceActionsFetch';
+import { fetchProtocolParametersSnapshot } from '../functions/blockfrostProtocolParams';
+import { deriveDRepFromWallet, resolveManualDRep, type ResolvedDRep } from '../functions/drepCredential';
+import { buildAndSubmitBulkVotes, type BulkVoteAnchor, type BulkVoteEntry } from '../functions/bulkVote';
+import { downloadJson } from '../functions/downloadJson';
+
+type UserVote = 'yes' | 'no' | 'abstain' | 'skip';
+
+type SortOption = 'none' | 'amount_asc' | 'amount_desc';
+
+interface BlockfrostDRepVote {
+  tx_hash: string;
+  cert_index: number;
+  proposal_id: string;
+  proposal_tx_hash: string;
+  proposal_cert_index: number;
+  vote: string;
+}
+
+function actionKey(a: { txHash: string; certIndex: number }): string {
+  return `${a.txHash}#${a.certIndex}`;
+}
+
+function typeColor(type: GovernanceType): { bg: string; fg: string } {
+  switch (type) {
+    case 'treasury_withdrawals':
+      return { bg: '#022c22', fg: '#34d399' };
+    case 'parameter_change':
+      return { bg: '#1e1b4b', fg: '#a5b4fc' };
+    case 'hard_fork_initiation':
+      return { bg: '#3f1d2e', fg: '#f9a8d4' };
+    case 'new_committee':
+      return { bg: '#172554', fg: '#93c5fd' };
+    case 'new_constitution':
+      return { bg: '#3f2a00', fg: '#facc15' };
+    case 'no_confidence':
+      return { bg: '#450a0a', fg: '#fca5a5' };
+    case 'info_action':
+      return { bg: '#1f2937', fg: '#d1d5db' };
+    default:
+      return { bg: '#111827', fg: '#d1d5db' };
+  }
+}
+
+interface BulkVoteReceipt {
+  receiptType: 'cardano_drep_bulk_vote';
+  submittedAt: string;
+  network: 'cardano-mainnet';
+  txHash: string;
+  cardanoscan: string;
+  drepIdBech32: string;
+  drepSource: string;
+  anchorAttached: boolean;
+  anchorUrl: string | null;
+  anchorHashHex: string | null;
+  votes: BulkVoteEntry[];
+}
+
+const receiptFilename = (txHash: string) =>
+  `drep_bulk_vote_receipt_${txHash.slice(0, 12)}_${Date.now()}.json`;
+
+const DRepBulkVote: React.FC = () => {
+  const walletName = useAppSelector((state) => state.wallet.selectedWallet);
+  const walletAddress = useAppSelector((state) => state.wallet.address);
+  const isWalletConnected = useAppSelector((state) => state.walletConnected.isWalletConnected);
+  const { useBlockfrost, apiKey } = useAppSelector((state) => state.blockfrost);
+
+  const blockfrostReady = Boolean(useBlockfrost && apiKey);
+
+  const [actions, setActions] = useState<LiveGovernanceAction[]>([]);
+  const [actionsLoading, setActionsLoading] = useState(false);
+  const [actionsError, setActionsError] = useState<string | null>(null);
+
+  const [selectedType, setSelectedType] = useState<'all' | GovernanceType>('all');
+  const [sortOption, setSortOption] = useState<SortOption>('none');
+  const [showOnlyChainUnvoted, setShowOnlyChainUnvoted] = useState(false);
+
+  const [userVotes, setUserVotes] = useState<Record<string, UserVote>>({});
+
+  const [walletDerivedDrep, setWalletDerivedDrep] = useState<ResolvedDRep | null>(null);
+  const [drepResolveError, setDrepResolveError] = useState<string | null>(null);
+  const [overrideDrep, setOverrideDrep] = useState(false);
+  const [manualDrepInput, setManualDrepInput] = useState('');
+
+  const [chainVoteByKey, setChainVoteByKey] = useState<Record<string, string | null>>({});
+  const [chainVotesLoading, setChainVotesLoading] = useState(false);
+
+  const [attachAnchor, setAttachAnchor] = useState(false);
+  const [anchorUrl, setAnchorUrl] = useState('');
+  const [anchorHashHex, setAnchorHashHex] = useState('');
+
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submittedTxHash, setSubmittedTxHash] = useState<string | null>(null);
+  const [receipt, setReceipt] = useState<BulkVoteReceipt | null>(null);
+
+  const effectiveDrep: ResolvedDRep | null = useMemo(() => {
+    if (overrideDrep && manualDrepInput.trim()) {
+      try {
+        return resolveManualDRep(manualDrepInput.trim());
+      } catch {
+        return null;
+      }
+    }
+    return walletDerivedDrep;
+  }, [overrideDrep, manualDrepInput, walletDerivedDrep]);
+
+  const effectiveDrepId = effectiveDrep?.drepIdBech32 ?? null;
+
+  useEffect(() => {
+    if (!blockfrostReady || !apiKey) {
+      setActions([]);
+      setUserVotes({});
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      setActionsLoading(true);
+      setActionsError(null);
+      try {
+        const loaded = await fetchLiveGovernanceActions(apiKey, {
+          onPartial: (partial) => {
+            if (!cancelled) setActions(partial);
+          },
+        });
+        if (!cancelled) setActions(loaded);
+      } catch (e: any) {
+        if (!cancelled) setActionsError(e?.message || 'Failed to load governance actions');
+      } finally {
+        if (!cancelled) setActionsLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [blockfrostReady, apiKey]);
+
+  useEffect(() => {
+    setUserVotes((prev) => {
+      const next = { ...prev };
+      for (const a of actions) {
+        const k = actionKey(a);
+        if (next[k] === undefined) next[k] = 'skip';
+      }
+      return next;
+    });
+  }, [actions]);
+
+  useEffect(() => {
+    if (!isWalletConnected || !walletName) {
+      setWalletDerivedDrep(null);
+      setDrepResolveError(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const wallet = (window as any).cardano?.[walletName];
+        if (!wallet) {
+          setWalletDerivedDrep(null);
+          setDrepResolveError('Wallet not found');
+          return;
+        }
+        const api = await wallet.enable();
+        const derived = await deriveDRepFromWallet(api);
+        if (cancelled) return;
+        if (!derived) {
+          setWalletDerivedDrep(null);
+          setDrepResolveError(
+            'This wallet does not expose CIP-95 getPubDRepKey. Use manual DRep override or a CIP-95-capable wallet (e.g. Eternl, Lace).'
+          );
+          return;
+        }
+        setWalletDerivedDrep(derived);
+        setDrepResolveError(null);
+      } catch (e: any) {
+        if (!cancelled) {
+          setWalletDerivedDrep(null);
+          setDrepResolveError(e?.message || 'Failed to read DRep key from wallet');
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isWalletConnected, walletName]);
+
+  useEffect(() => {
+    if (!blockfrostReady || !apiKey || !effectiveDrepId || effectiveDrep?.kind !== 'key') {
+      setChainVoteByKey({});
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      setChainVotesLoading(true);
+      try {
+        const rows = await fetchAllPages<BlockfrostDRepVote>(`/governance/dreps/${effectiveDrepId}/votes`, apiKey);
+        if (cancelled) return;
+        const m: Record<string, string | null> = {};
+        for (const r of rows) {
+          m[`${r.proposal_tx_hash}#${r.proposal_cert_index}`] = r.vote;
+        }
+        setChainVoteByKey(m);
+      } catch (e) {
+        console.warn('Could not load on-chain vote history', e);
+        if (!cancelled) setChainVoteByKey({});
+      } finally {
+        if (!cancelled) setChainVotesLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [blockfrostReady, apiKey, effectiveDrepId, effectiveDrep?.kind]);
+
+  const filteredActions = useMemo(() => {
+    let base =
+      selectedType === 'all' ? [...actions] : actions.filter((a) => a.governanceType === selectedType);
+
+    if (selectedType === 'treasury_withdrawals') {
+      if (sortOption === 'amount_asc') {
+        base.sort((a, b) => (a.treasuryWithdrawalTotalLovelace ?? 0) - (b.treasuryWithdrawalTotalLovelace ?? 0));
+      } else if (sortOption === 'amount_desc') {
+        base.sort((a, b) => (b.treasuryWithdrawalTotalLovelace ?? 0) - (a.treasuryWithdrawalTotalLovelace ?? 0));
+      }
+    }
+
+    if (showOnlyChainUnvoted && effectiveDrep?.kind === 'key') {
+      base = base.filter((a) => {
+        const v = chainVoteByKey[actionKey(a)];
+        return v === undefined || v === null;
+      });
+    }
+
+    return base;
+  }, [actions, selectedType, sortOption, showOnlyChainUnvoted, chainVoteByKey, effectiveDrep?.kind]);
+
+  const votePayloadCount = useMemo(() => {
+    return actions.reduce((n, a) => {
+      const v = userVotes[actionKey(a)] ?? 'skip';
+      return v === 'skip' ? n : n + 1;
+    }, 0);
+  }, [actions, userVotes]);
+
+  const setVote = useCallback((key: string, v: UserVote) => {
+    setUserVotes((prev) => ({ ...prev, [key]: v }));
+  }, []);
+
+  const applyToAllVisible = useCallback(
+    (v: UserVote) => {
+      setUserVotes((prev) => {
+        const next = { ...prev };
+        for (const a of filteredActions) {
+          next[actionKey(a)] = v;
+        }
+        return next;
+      });
+    },
+    [filteredActions]
+  );
+
+  const handleSubmit = async () => {
+    setSubmitError(null);
+    setSubmittedTxHash(null);
+    setReceipt(null);
+
+    if (!walletName || !walletAddress) {
+      setSubmitError('Connect a wallet with a payment address.');
+      return;
+    }
+    if (!apiKey) {
+      setSubmitError('Blockfrost API key is required.');
+      return;
+    }
+    if (!effectiveDrep) {
+      setSubmitError('Could not resolve a DRep identity. Enable wallet override and enter a valid drep1… id if needed.');
+      return;
+    }
+    if (effectiveDrep.kind === 'script') {
+      setSubmitError('Script-hash DReps are not supported in this version of the tool.');
+      return;
+    }
+
+    const entries: BulkVoteEntry[] = [];
+    for (const a of actions) {
+      const k = actionKey(a);
+      const choice = userVotes[k] ?? 'skip';
+      if (choice === 'skip') continue;
+      entries.push({ txHash: a.txHash, certIndex: a.certIndex, vote: choice });
+    }
+
+    if (!entries.length) {
+      setSubmitError('Select at least one Yes, No, or Abstain vote (Skip is ignored).');
+      return;
+    }
+
+    if (attachAnchor) {
+      const u = anchorUrl.trim();
+      const h = anchorHashHex.trim().replace(/^0x/i, '');
+      if (!u) {
+        setSubmitError('Anchor URL is required when anchor is enabled.');
+        return;
+      }
+      if (!/^[0-9a-fA-F]{64}$/.test(h)) {
+        setSubmitError('Anchor hash must be exactly 64 hex characters.');
+        return;
+      }
+    }
+
+    let anchor: BulkVoteAnchor | undefined;
+    if (attachAnchor) {
+      anchor = { url: anchorUrl.trim(), hashHex: anchorHashHex.trim().replace(/^0x/i, '') };
+    }
+
+    setSubmitting(true);
+    try {
+      const wallet = (window as any).cardano?.[walletName];
+      if (!wallet) throw new Error(`Wallet ${walletName} is no longer available`);
+      const api = await wallet.enable();
+
+      const params = await fetchProtocolParametersSnapshot(apiKey);
+      const result = await buildAndSubmitBulkVotes({
+        api,
+        params,
+        changeAddressBech32: walletAddress,
+        drepKeyHashHex: effectiveDrep.keyHashHex,
+        votes: entries,
+        anchor,
+      });
+
+      const r: BulkVoteReceipt = {
+        receiptType: 'cardano_drep_bulk_vote',
+        submittedAt: new Date().toISOString(),
+        network: 'cardano-mainnet',
+        txHash: result.txHash,
+        cardanoscan: `https://cardanoscan.io/transaction/${result.txHash}`,
+        drepIdBech32: effectiveDrep.drepIdBech32,
+        drepSource: effectiveDrep.source + (overrideDrep ? ' (override)' : ''),
+        anchorAttached: Boolean(anchor),
+        anchorUrl: anchor?.url ?? null,
+        anchorHashHex: anchor?.hashHex ?? null,
+        votes: entries,
+      };
+
+      downloadJson(r, receiptFilename(result.txHash));
+      setReceipt(r);
+      setSubmittedTxHash(result.txHash);
+    } catch (e: any) {
+      console.error(e);
+      setSubmitError(e?.info?.message || e?.message || String(e));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const renderBlockfrostGate = () => {
+    if (blockfrostReady) return null;
+    return (
+      <div
+        style={{
+          border: '1px solid #d97706',
+          backgroundColor: '#3a2a05',
+          color: '#fde68a',
+          padding: '1rem',
+          borderRadius: '8px',
+        }}
+      >
+        <strong>Blockfrost is required.</strong>
+        <p style={{ margin: '0.5rem 0 0' }}>
+          Open the wallet connect dialog and enable <em>Use Blockfrost API Key</em>, then enter your project id from{' '}
+          <a href="https://blockfrost.io" target="_blank" rel="noopener noreferrer" style={{ color: '#93c5fd' }}>
+            blockfrost.io
+          </a>
+          .
+        </p>
+      </div>
+    );
+  };
+
+  return (
+    <div className="commit-page">
+      <div className="commit-page-inner" style={{ alignItems: 'stretch', maxWidth: '980px', marginInline: 'auto' }}>
+        <div
+          className="main-section"
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1rem',
+            alignItems: 'flex-start',
+            width: '100%',
+            paddingBottom: '6rem',
+          }}
+        >
+          <h1>DRep bulk voting</h1>
+          <p style={{ color: '#d1d5db', maxWidth: '720px' }}>
+            Review live governance actions, pick Yes / No / Abstain per action, and submit many votes in one
+            transaction. Your wallet must sign with its DRep key (CIP-95). Script DReps are not supported yet.
+          </p>
+
+          {!isWalletConnected && (
+            <div style={{ width: '100%' }}>
+              <ConnectWallet />
+            </div>
+          )}
+
+          {isWalletConnected && (
+            <>
+              <ConnectWallet />
+              <code style={{ wordBreak: 'break-all' }}>Change address: {walletAddress}</code>
+            </>
+          )}
+
+          {renderBlockfrostGate()}
+
+          {blockfrostReady && (
+            <>
+              <div
+                style={{
+                  border: '1px solid #4b5563',
+                  borderRadius: '8px',
+                  padding: '1rem',
+                  backgroundColor: '#0f172a',
+                  width: '100%',
+                }}
+              >
+                <h2 style={{ marginTop: 0, fontSize: '1.1rem' }}>DRep identity</h2>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                  <input type="checkbox" checked={overrideDrep} onChange={() => setOverrideDrep(!overrideDrep)} />
+                  <span>Manual override (paste drep1…)</span>
+                </label>
+                {overrideDrep ? (
+                  <input
+                    type="text"
+                    placeholder="drep1…"
+                    value={manualDrepInput}
+                    onChange={(e) => setManualDrepInput(e.target.value)}
+                    style={{
+                      width: '100%',
+                      maxWidth: '640px',
+                      padding: '0.5rem',
+                      borderRadius: '6px',
+                      border: '1px solid #4b5563',
+                      backgroundColor: '#1e293b',
+                      color: '#e5e7eb',
+                    }}
+                  />
+                ) : (
+                  <div style={{ color: '#e5e7eb' }}>
+                    {walletDerivedDrep ? (
+                      <code style={{ wordBreak: 'break-all' }}>{walletDerivedDrep.drepIdBech32}</code>
+                    ) : (
+                      <span style={{ color: '#fca5a5' }}>{drepResolveError || 'Deriving DRep…'}</span>
+                    )}
+                  </div>
+                )}
+                {effectiveDrep?.kind === 'script' && (
+                  <p style={{ color: '#fca5a5', marginTop: '0.5rem' }}>
+                    This is a script DRep — on-chain voting from this tool is not supported yet.
+                  </p>
+                )}
+              </div>
+
+              <div
+                style={{
+                  border: '1px solid #4b5563',
+                  borderRadius: '8px',
+                  padding: '1rem',
+                  backgroundColor: '#0f172a',
+                  width: '100%',
+                }}
+              >
+                <h2 style={{ marginTop: 0, fontSize: '1.1rem' }}>Optional CIP-100 anchor (shared)</h2>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <input type="checkbox" checked={attachAnchor} onChange={() => setAttachAnchor(!attachAnchor)} />
+                  <span>Attach the same rationale anchor to every vote</span>
+                </label>
+                {attachAnchor && (
+                  <div style={{ display: 'grid', gap: '0.5rem', marginTop: '0.75rem', maxWidth: '640px' }}>
+                    <input
+                      type="url"
+                      placeholder="https://… (metadata URL)"
+                      value={anchorUrl}
+                      onChange={(e) => setAnchorUrl(e.target.value)}
+                      style={{
+                        padding: '0.5rem',
+                        borderRadius: '6px',
+                        border: '1px solid #4b5563',
+                        backgroundColor: '#1e293b',
+                        color: '#e5e7eb',
+                      }}
+                    />
+                    <input
+                      type="text"
+                      placeholder="64-char hex blake2b-256 hash of anchor document"
+                      value={anchorHashHex}
+                      onChange={(e) => setAnchorHashHex(e.target.value)}
+                      style={{
+                        padding: '0.5rem',
+                        borderRadius: '6px',
+                        border: '1px solid #4b5563',
+                        backgroundColor: '#1e293b',
+                        color: '#e5e7eb',
+                        fontFamily: 'monospace',
+                        fontSize: '0.85rem',
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div
+                style={{
+                  border: '1px solid #4b5563',
+                  borderRadius: '8px',
+                  padding: '1rem',
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: '1rem',
+                  width: '100%',
+                  backgroundColor: '#1a1103',
+                }}
+              >
+                <div style={{ minWidth: '200px' }}>
+                  <label style={{ display: 'block', marginBottom: '0.35rem', fontWeight: 600 }}>Filter type</label>
+                  <select
+                    value={selectedType}
+                    onChange={(e) => setSelectedType(e.target.value as 'all' | GovernanceType)}
+                    style={{ width: '100%', padding: '0.45rem', borderRadius: '6px' }}
+                  >
+                    <option value="all">All</option>
+                    {GOVERNANCE_TYPES.map((t) => (
+                      <option key={t} value={t}>
+                        {formatGovActionType(t)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                {selectedType === 'treasury_withdrawals' && (
+                  <div style={{ minWidth: '200px' }}>
+                    <label style={{ display: 'block', marginBottom: '0.35rem', fontWeight: 600 }}>Sort treasury</label>
+                    <select
+                      value={sortOption}
+                      onChange={(e) => setSortOption(e.target.value as SortOption)}
+                      style={{ width: '100%', padding: '0.45rem', borderRadius: '6px' }}
+                    >
+                      <option value="none">None</option>
+                      <option value="amount_asc">Amount ↑</option>
+                      <option value="amount_desc">Amount ↓</option>
+                    </select>
+                  </div>
+                )}
+                <label
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    alignSelf: 'flex-end',
+                    cursor: effectiveDrep?.kind === 'key' ? 'pointer' : 'not-allowed',
+                    opacity: effectiveDrep?.kind === 'key' ? 1 : 0.5,
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    disabled={effectiveDrep?.kind !== 'key'}
+                    checked={showOnlyChainUnvoted}
+                    onChange={() => setShowOnlyChainUnvoted(!showOnlyChainUnvoted)}
+                  />
+                  <span>Show only actions with no on-chain vote yet {chainVotesLoading ? '(loading…)' : ''}</span>
+                </label>
+              </div>
+
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'center' }}>
+                <span style={{ color: '#9ca3af', marginRight: '0.5rem' }}>Apply to visible rows:</span>
+                <Button onClick={() => applyToAllVisible('yes')}>All Yes</Button>
+                <Button onClick={() => applyToAllVisible('no')}>All No</Button>
+                <Button onClick={() => applyToAllVisible('abstain')}>All Abstain</Button>
+                <Button onClick={() => applyToAllVisible('skip')}>Reset to Skip</Button>
+              </div>
+
+              {actionsLoading && <p>Loading governance actions…</p>}
+              {actionsError && (
+                <div style={{ color: '#fca5a5', padding: '0.75rem', border: '1px solid #7f1d1d', borderRadius: '8px' }}>
+                  {actionsError}
+                </div>
+              )}
+
+              {!actionsLoading && !actionsError && filteredActions.length === 0 && (
+                <p style={{ color: '#9ca3af' }}>No actions match the current filters.</p>
+              )}
+
+              <div style={{ width: '100%', display: 'grid', gap: '0.75rem' }}>
+                {filteredActions.map((action) => {
+                  const k = actionKey(action);
+                  const choice = userVotes[k] ?? 'skip';
+                  const chain = chainVoteByKey[k];
+                  const colors = typeColor(action.governanceType);
+                  const displayTitle = action.metadata?.title ?? action.title;
+                  return (
+                    <div
+                      key={k}
+                      style={{
+                        border: '1px solid #4b5563',
+                        borderRadius: '8px',
+                        padding: '0.85rem',
+                        backgroundColor: '#1a1103',
+                        display: 'grid',
+                        gap: '0.5rem',
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
+                        <a
+                          href={`https://cardanoscan.io/govAction/${action.id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ color: '#93c5fd', fontFamily: 'monospace', fontSize: '0.8rem' }}
+                        >
+                          {truncateHash(action.id)}
+                        </a>
+                        <span
+                          style={{
+                            backgroundColor: colors.bg,
+                            color: colors.fg,
+                            fontWeight: 700,
+                            fontSize: '0.72rem',
+                            borderRadius: '9999px',
+                            padding: '0.2rem 0.55rem',
+                          }}
+                        >
+                          {formatGovActionType(action.governanceType)}
+                        </span>
+                      </div>
+                      {displayTitle && <div style={{ fontWeight: 600, color: '#f8fafc' }}>{displayTitle}</div>}
+                      <div style={{ color: '#d1d5db', fontSize: '0.9rem' }}>{action.summary}</div>
+                      {chain && (
+                        <div style={{ fontSize: '0.8rem', color: '#fcd34d' }}>
+                          On-chain vote recorded: <strong>{chain}</strong>
+                        </div>
+                      )}
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', alignItems: 'center' }}>
+                        {(['yes', 'no', 'abstain', 'skip'] as const).map((opt) => (
+                          <label key={opt} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', cursor: 'pointer' }}>
+                            <input type="radio" name={k} checked={choice === opt} onChange={() => setVote(k, opt)} />
+                            <span style={{ textTransform: 'capitalize' }}>{opt}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <p style={{ fontSize: '0.82rem', color: '#9ca3af', maxWidth: '720px' }}>
+                If the wallet refuses to sign, ensure it supports CIP-95 DRep signing alongside payment keys. One invalid
+                governance action id will fail the whole transaction — double-check selections before submitting.
+              </p>
+            </>
+          )}
+        </div>
+
+        {blockfrostReady && isWalletConnected && (
+          <div
+            style={{
+              position: 'sticky',
+              bottom: 0,
+              left: 0,
+              right: 0,
+              padding: '0.75rem 1rem',
+              background: 'linear-gradient(180deg, transparent, #0f172a 25%)',
+              borderTop: '1px solid #334155',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.5rem',
+              zIndex: 20,
+            }}
+          >
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', alignItems: 'center' }}>
+              <Button
+                onClick={handleSubmit}
+                disabled={
+                  submitting ||
+                  !effectiveDrep ||
+                  effectiveDrep.kind !== 'key' ||
+                  votePayloadCount === 0 ||
+                  !walletAddress
+                }
+              >
+                {submitting ? 'Signing…' : `Submit ${votePayloadCount} vote${votePayloadCount === 1 ? '' : 's'}`}
+              </Button>
+              <span style={{ color: '#94a3b8', fontSize: '0.9rem' }}>
+                ({votePayloadCount} vote{votePayloadCount === 1 ? '' : 's'} selected across all loaded actions)
+              </span>
+            </div>
+            {submitError && <div style={{ color: '#fca5a5', whiteSpace: 'pre-wrap' }}>{submitError}</div>}
+            {submittedTxHash && (
+              <div style={{ color: '#bbf7d0', fontSize: '0.9rem' }}>
+                Submitted:{' '}
+                <a href={`https://cardanoscan.io/transaction/${submittedTxHash}`} target="_blank" rel="noopener noreferrer" style={{ color: '#93c5fd' }}>
+                  {submittedTxHash}
+                </a>
+                {receipt && (
+                  <div style={{ marginTop: '0.5rem' }}>
+                    <Button onClick={() => downloadJson(receipt, receiptFilename(receipt.txHash))}>Download receipt JSON</Button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        <div className="bottom-area">
+          <div className="bottom-area-item">
+            <a href="https://github.com/willpiam/cardano-tools" target="_blank" rel="noopener noreferrer">
+              Source Code
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default DRepBulkVote;

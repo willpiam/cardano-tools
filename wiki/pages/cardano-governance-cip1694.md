@@ -41,6 +41,12 @@ CIP-1694 defines a minimum viable on-chain governance framework for Cardano's Vo
 - **CIP-119** proposes DRep registration/update profile fields on top of the same CIP-100 foundation (with relaxed `authors` witness expectations for that use case).
 - Together, 1694 + (100/108/119) separate on-chain decision mechanics from off-chain explanatory context and interoperability standards.
 
+## Web wallet bridge (CIP-95)
+- **CIP-95** extends **CIP-30** with a `cip: 95` extension for Conway-era governance in the browser: DRep/stake public keys, Conway-aware `.signTx()`, and DRep-capable `.signData()`.
+- Wallets expose keys and signatures; **dApps** construct transactions and use indexers to interpret governance state (delegation, registration, live actions).
+- Scope is **Ada holders and DReps**—not SPO or constitutional-committee credential flows through the web bridge.
+- See [CIP-95 wallet bridge (Conway governance)](cip95-wallet-bridge.md).
+
 ## Related pages
 - [Source: cip1694](source-cip1694.md)
 - [CIP-1694 explained (Intersect article)](cip-1694-explained-intersect-article.md)
@@ -50,5 +56,7 @@ CIP-1694 defines a minimum viable on-chain governance framework for Cardano's Vo
 - [Governance metadata framework (CIP-100)](governance-metadata-framework-cip100.md)
 - [Governance action metadata standard (CIP-108)](governance-action-metadata-cip108.md)
 - [DRep metadata standard (CIP-119)](drep-metadata-cip119.md)
+- [CIP-95 wallet bridge (Conway governance)](cip95-wallet-bridge.md)
+- [Source: cip95](source-cip95.md)
 - [Source: Voltaire DRep Campaign Module](source-voltaire-drep-campaign-module.md)
 - [Wiki Home](wiki-home.md)

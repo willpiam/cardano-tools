@@ -34,4 +34,5 @@ CIP-108 defines a common off-chain metadata structure for governance actions in 
 - [Governance metadata framework (CIP-100)](governance-metadata-framework-cip100.md)
 - [Source: cip1694](source-cip1694.md)
 - [Cardano governance model (CIP-1694)](cardano-governance-cip1694.md)
+- [ctools: Live Governance Actions](ctools-governance-actions-live.md) — mainnet Blockfrost tool that discovers anchors and parses CIP-108 `body` fields for live proposals
 - [Wiki Home](wiki-home.md)

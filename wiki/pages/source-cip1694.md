@@ -23,6 +23,8 @@ CIP-1694 defines Cardano's first full on-chain governance framework for the Volt
 - "Path to Active" notes bootstrapping via Chang #1 hard fork and full governance via Plomin hard fork.
 
 ## Related pages
+- [Source: cip95](source-cip95.md)
+- [CIP-95 wallet bridge (Conway governance)](cip95-wallet-bridge.md)
 - [Cardano governance model (CIP-1694)](cardano-governance-cip1694.md)
 - [CIP-1694 explained (Intersect article)](cip-1694-explained-intersect-article.md)
 - [Source: intersect CIP-1694 explained](source-intersect-cip-1694-explained.md)

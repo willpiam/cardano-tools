@@ -10,28 +10,15 @@ import * as CML from '@anastasia-labs/cardano-multiplatform-lib-browser';
  * The CIP-30 wallet API (passed in as `api`) is used to fetch UTxOs, sign, and submit.
  */
 
+import {
+  fetchProtocolParametersSnapshot,
+  type ProtocolParametersSnapshot,
+} from './blockfrostProtocolParams';
+
 const BLOCKFROST_BASE_URL = 'https://cardano-mainnet.blockfrost.io/api/v0';
 
-/**
- * Subset of Blockfrost's /epochs/latest/parameters response that the CML
- * TransactionBuilderConfig needs. Values come in as decimal strings or numbers
- * and we widen them up to bigint where appropriate.
- */
-export interface ProtocolParametersSnapshot {
-  minFeeA: bigint;
-  minFeeB: bigint;
-  minFeeRefScriptCostPerByte: bigint;
-  poolDeposit: bigint;
-  keyDeposit: bigint;
-  coinsPerUtxoByte: bigint;
-  maxValSize: number;
-  maxTxSize: number;
-  collateralPercent: number;
-  maxCollateralInputs: number;
-  priceMem: { numerator: bigint; denominator: bigint };
-  priceStep: { numerator: bigint; denominator: bigint };
-  costModelsJson: string;
-}
+/** Re-export for callers that import from treasuryDonation. */
+export type { ProtocolParametersSnapshot };
 
 export interface TreasuryContext {
   currentTreasuryLovelace: bigint;
@@ -61,22 +48,14 @@ export interface DonationResult {
   signedTxHex: string;
 }
 
-const decimalToRational = (raw: unknown): { numerator: bigint; denominator: bigint } => {
-  if (raw === null || raw === undefined) {
-    return { numerator: BigInt(0), denominator: BigInt(1) };
+const blockfrostFetch = async (apiKey: string, path: string): Promise<any> => {
+  const res = await fetch(`${BLOCKFROST_BASE_URL}${path}`, {
+    headers: { project_id: apiKey },
+  });
+  if (!res.ok) {
+    throw new Error(`Blockfrost ${path} failed: ${res.status} ${res.statusText}`);
   }
-  const str = String(raw);
-  if (str.includes('/')) {
-    const [n, d] = str.split('/');
-    return { numerator: BigInt(n), denominator: BigInt(d || '1') };
-  }
-  if (!str.includes('.')) {
-    return { numerator: BigInt(str), denominator: BigInt(1) };
-  }
-  const [intPart, fracPart] = str.split('.');
-  const denominator = BigInt('1' + '0'.repeat(fracPart.length));
-  const numerator = BigInt(intPart) * denominator + BigInt(fracPart);
-  return { numerator, denominator };
+  return res.json();
 };
 
 const toBigInt = (raw: unknown, fallback: bigint = BigInt(0)): bigint => {
@@ -88,22 +67,6 @@ const toBigInt = (raw: unknown, fallback: bigint = BigInt(0)): bigint => {
   }
 };
 
-const toNumber = (raw: unknown, fallback: number = 0): number => {
-  if (raw === null || raw === undefined) return fallback;
-  const n = Number(raw);
-  return Number.isFinite(n) ? n : fallback;
-};
-
-const blockfrostFetch = async (apiKey: string, path: string): Promise<any> => {
-  const res = await fetch(`${BLOCKFROST_BASE_URL}${path}`, {
-    headers: { project_id: apiKey },
-  });
-  if (!res.ok) {
-    throw new Error(`Blockfrost ${path} failed: ${res.status} ${res.statusText}`);
-  }
-  return res.json();
-};
-
 /**
  * Fetch the protocol parameters and current treasury value needed to construct
  * a donation transaction. Always re-fetched just before building so the
@@ -112,40 +75,14 @@ const blockfrostFetch = async (apiKey: string, path: string): Promise<any> => {
 export const fetchTreasuryContext = async (apiKey: string): Promise<TreasuryContext> => {
   const [network, params] = await Promise.all([
     blockfrostFetch(apiKey, '/network'),
-    blockfrostFetch(apiKey, '/epochs/latest/parameters'),
+    fetchProtocolParametersSnapshot(apiKey),
   ]);
 
   const currentTreasuryLovelace = toBigInt(network?.supply?.treasury, BigInt(0));
 
-  // Cost models JSON is normalized to a CML-compatible shape (PlutusV1/V2/V3 -> array of ints).
-  // For a no-script donation tx the empty `{}` is sufficient, but we forward whatever Blockfrost
-  // returns when available so future script-using callers can reuse this helper.
-  const costModelsObj = params?.cost_models_raw ?? params?.cost_models ?? {};
-  const costModelsJson = JSON.stringify(costModelsObj);
-
   return {
     currentTreasuryLovelace,
-    params: {
-      minFeeA: toBigInt(params?.min_fee_a, BigInt(44)),
-      minFeeB: toBigInt(params?.min_fee_b, BigInt(155381)),
-      minFeeRefScriptCostPerByte: toBigInt(
-        params?.min_fee_ref_script_cost_per_byte,
-        BigInt(15),
-      ),
-      poolDeposit: toBigInt(params?.pool_deposit, BigInt(500000000)),
-      keyDeposit: toBigInt(params?.key_deposit, BigInt(2000000)),
-      coinsPerUtxoByte: toBigInt(
-        params?.coins_per_utxo_size ?? params?.coins_per_utxo_word,
-        BigInt(4310),
-      ),
-      maxValSize: toNumber(params?.max_val_size, 5000),
-      maxTxSize: toNumber(params?.max_tx_size, 16384),
-      collateralPercent: toNumber(params?.collateral_percent, 150),
-      maxCollateralInputs: toNumber(params?.max_collateral_inputs, 3),
-      priceMem: decimalToRational(params?.price_mem),
-      priceStep: decimalToRational(params?.price_step),
-      costModelsJson,
-    },
+    params,
   };
 };
 

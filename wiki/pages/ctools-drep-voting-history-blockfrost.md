@@ -43,6 +43,10 @@ The **Conch protocol** reader (`src/pages/AssetCip20Messages.tsx`, route **`/con
 
 The Conch reader derives the CIP-14 **`asset1…` fingerprint** from the hex unit via **`@emurgo/cip14-js`** (`AssetFingerprint.fromParts`) and shows it as a link to the token on **Cardanoscan**; per-transaction links in the results table use **Cardanoscan** (`/transaction/{hash}`), not cexplorer. To author new CIP-20 / 674 payloads in transactions, the app’s **Commit** page is linked from the Conch UI (`/commit`).
 
+## Live Governance Actions (same Blockfrost key)
+
+`src/pages/GovernanceActions.tsx` (routes `/governance-actions`, `/gov-actions`, `/live-actions`, etc.) uses the same `blockfrostApiKey` query param and Redux flow. Data loading and CIP-108 metadata parsing live in `src/functions/governanceActionsFetch.ts`. See [ctools: Live Governance Actions](ctools-governance-actions-live.md).
+
 ## Related code
 
 - Pages: `src/pages/DRepVotingHistory.tsx`, `src/pages/GovernanceActions.tsx`, `src/pages/AssetCip20Messages.tsx`

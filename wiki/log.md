@@ -103,6 +103,20 @@ Created wiki scaffold with raw sources nested under wiki/.
   - Intersect article uses simplified action-type numbering and fork naming—aligned narratively with CIP-1694 but not a substitute for the Active spec
   - CML combined raw doc still contains `todo` placeholders in install/run snippets; operational commands should be taken from upstream when implementing
 
+## [2026-05-16] ingest | src/pages/GovernanceActions.tsx
+- Source(s) processed:
+  - `src/pages/GovernanceActions.tsx`
+  - `src/functions/governanceActionsFetch.ts` (data layer referenced by the page)
+- Pages created/updated:
+  - created `wiki/pages/ctools-governance-actions-live.md`
+  - updated `wiki/pages/ctools-drep-voting-history-blockfrost.md`
+  - updated `wiki/pages/governance-action-metadata-cip108.md`
+  - updated `wiki/pages/wiki-home.md`
+  - updated `wiki/index.md`
+- Contradictions or open questions:
+  - none observed; app behavior is consistent with CIP-108 field names documented in wiki
+  - open question: mainnet-only Blockfrost base URL is hardcoded; no preview/testnet switch in this tool
+
 ## [2026-05-15] ingest | Release 6.2.0_ Treasury donation support.md
 - Source(s) processed:
   - `wiki/raw/Release 6.2.0_ Treasury donation support.md`
@@ -116,4 +130,20 @@ Created wiki scaffold with raw sources nested under wiki/.
 - Contradictions or open questions:
   - none against existing CML pages; release notes are additive to the combined doc snapshot
   - exact Rust/TS symbol paths and Conway ledger field names are not in this clipping; implementers should confirm in upstream API docs or source for 6.2.0
+
+## [2026-05-16] ingest | Web-Wallet Bridge - Conway ledger era
+- Source(s) processed:
+  - `wiki/raw/Web-Wallet Bridge - Conway ledger era.md` (CIP-95)
+- Pages created/updated:
+  - created `wiki/pages/source-cip95.md`
+  - created `wiki/pages/cip95-wallet-bridge.md`
+  - updated `wiki/pages/cardano-governance-cip1694.md`
+  - updated `wiki/pages/drep-metadata-cip119.md`
+  - updated `wiki/pages/source-cip1694.md`
+  - updated `wiki/pages/wiki-home.md`
+  - updated `wiki/index.md`
+- Contradictions or open questions:
+  - none against existing CIP-1694 / CIP-119 pages; CIP-95 is the wallet-layer complement to on-chain + metadata standards
+  - spec lists `getRegisteredPubStakeKeys()` at `api` root while sibling methods use `api.cip95`—documented as in source; implementers should confirm wallet behavior
+  - ctools `ConnectWallet` calls `enable()` without `{ extensions: [{ cip: 95 }] }`; may limit CIP-95 on strict wallets (noted on concept page)
 

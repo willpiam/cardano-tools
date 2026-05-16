@@ -7,6 +7,12 @@ const TOOL_LINKS = [
     to: '/governance-actions',
   },
   {
+    title: 'DRep Bulk Voting',
+    description:
+      'Connect your DRep wallet, review every live governance action, and cast Yes/No/Abstain on many of them in a single transaction.',
+    to: '/drep-vote',
+  },
+  {
     title: 'DRep Voting History',
     description: 'Look up a DRep and view voting activity across governance proposals.',
     to: '/drephistory',
