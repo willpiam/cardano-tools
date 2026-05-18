@@ -13,7 +13,12 @@ import {
   type LiveGovernanceAction,
 } from '../functions/governanceActionsFetch';
 import { fetchProtocolParametersSnapshot } from '../functions/blockfrostProtocolParams';
-import { deriveDRepFromWallet, resolveManualDRep, type ResolvedDRep } from '../functions/drepCredential';
+import {
+  deriveDRepFromWallet,
+  enableWalletWithCip95,
+  resolveManualDRep,
+  type ResolvedDRep,
+} from '../functions/drepCredential';
 import { buildAndSubmitBulkVotes, type BulkVoteAnchor, type BulkVoteEntry } from '../functions/bulkVote';
 import { downloadJson } from '../functions/downloadJson';
 
@@ -168,19 +173,13 @@ const DRepBulkVote: React.FC = () => {
     let cancelled = false;
     (async () => {
       try {
-        const wallet = (window as any).cardano?.[walletName];
-        if (!wallet) {
-          setWalletDerivedDrep(null);
-          setDrepResolveError('Wallet not found');
-          return;
-        }
-        const api = await wallet.enable();
+        const api = await enableWalletWithCip95(walletName);
         const derived = await deriveDRepFromWallet(api);
         if (cancelled) return;
         if (!derived) {
           setWalletDerivedDrep(null);
           setDrepResolveError(
-            'This wallet does not expose CIP-95 getPubDRepKey. Use manual DRep override or a CIP-95-capable wallet (e.g. Eternl, Lace).'
+            'This wallet does not expose CIP-95 getPubDRepKey (extension may have been declined). Use manual DRep override or approve CIP-95 in a CIP-95-capable wallet (e.g. Eternl, Lace).'
           );
           return;
         }
@@ -327,9 +326,7 @@ const DRepBulkVote: React.FC = () => {
 
     setSubmitting(true);
     try {
-      const wallet = (window as any).cardano?.[walletName];
-      if (!wallet) throw new Error(`Wallet ${walletName} is no longer available`);
-      const api = await wallet.enable();
+      const api = await enableWalletWithCip95(walletName);
 
       const params = await fetchProtocolParametersSnapshot(apiKey);
       const result = await buildAndSubmitBulkVotes({

@@ -47,6 +47,16 @@ CIP-1694 defines a minimum viable on-chain governance framework for Cardano's Vo
 - Scope is **Ada holders and DReps**—not SPO or constitutional-committee credential flows through the web bridge.
 - See [CIP-95 wallet bridge (Conway governance)](cip95-wallet-bridge.md).
 
+## Governance identifiers (CIP-129)
+- **CIP-129** standardizes Bech32 and byte encodings for DRep (`drep1`), CC hot/cold (`cc_hot1`, `cc_cold1`), and governance actions (`gov_action1` = tx id + index).
+- A one-byte header preserves key type and credential type when tools store raw bytes instead of Bech32 strings.
+- On-chain action references remain `tx_hash#index` per this CIP; CIP-129 adds a portable encoded form for UIs, APIs, and sharing.
+- See [Governance identifiers (CIP-129)](governance-identifiers-cip129.md).
+
+## Hardware wallet constraints (CIP-21)
+- Transactions intended for Ledger/Trezor must follow **canonical CBOR** and CIP-21 structural rules; some Conway elements (voting procedures, treasury/donation, certain certs) are unsupported or limited on specific devices.
+- See [Hardware wallet transaction interoperability (CIP-21)](hardware-wallet-transaction-interop-cip21.md).
+
 ## Related pages
 - [Source: cip1694](source-cip1694.md)
 - [CIP-1694 explained (Intersect article)](cip-1694-explained-intersect-article.md)
@@ -58,5 +68,9 @@ CIP-1694 defines a minimum viable on-chain governance framework for Cardano's Vo
 - [DRep metadata standard (CIP-119)](drep-metadata-cip119.md)
 - [CIP-95 wallet bridge (Conway governance)](cip95-wallet-bridge.md)
 - [Source: cip95](source-cip95.md)
+- [Governance identifiers (CIP-129)](governance-identifiers-cip129.md)
+- [Source: cip129](source-cip129.md)
+- [Hardware wallet transaction interoperability (CIP-21)](hardware-wallet-transaction-interop-cip21.md)
+- [Source: cip21](source-cip21.md)
 - [Source: Voltaire DRep Campaign Module](source-voltaire-drep-campaign-module.md)
 - [Wiki Home](wiki-home.md)

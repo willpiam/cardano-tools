@@ -147,3 +147,37 @@ Created wiki scaffold with raw sources nested under wiki/.
   - spec lists `getRegisteredPubStakeKeys()` at `api` root while sibling methods use `api.cip95`—documented as in source; implementers should confirm wallet behavior
   - ctools `ConnectWallet` calls `enable()` without `{ extensions: [{ cip: 95 }] }`; may limit CIP-95 on strict wallets (noted on concept page)
 
+## [2026-05-18] ingest | Governance Identifiers.md, Transaction requirements for interoperability with hardware wallets.md
+- Source(s) processed:
+  - `wiki/raw/Governance Identifiers.md` (CIP-129)
+  - `wiki/raw/Transaction requirements for interoperability with hardware wallets.md` (CIP-21)
+- Pages created/updated:
+  - created `wiki/pages/source-cip129.md`
+  - created `wiki/pages/governance-identifiers-cip129.md`
+  - created `wiki/pages/source-cip21.md`
+  - created `wiki/pages/hardware-wallet-transaction-interop-cip21.md`
+  - updated `wiki/pages/cardano-governance-cip1694.md`
+  - updated `wiki/pages/cip95-wallet-bridge.md`
+  - updated `wiki/pages/cardano-multiplatform-lib-cml.md`
+  - updated `wiki/pages/ctools-governance-actions-live.md`
+  - updated `wiki/pages/wiki-home.md`
+  - updated `wiki/index.md`
+  - updated `wiki/log.md`
+- Contradictions or open questions:
+  - none against existing CIP-1694 / CIP-95 pages; CIP-129 is the identifier layer, CIP-21 is the HW serialization/signing layer
+  - CIP-21 Trezor/ledger device tables are point-in-time; firmware may add Conway features—verify before HW governance flows
+  - CIP-129 coexists with legacy CIP-105 Bech32 prefixes during ecosystem transition
+
+## [2026-05-18] ingest | Transaction requirements for interoperability with hardware wallets.md
+- Source(s) processed:
+  - `wiki/raw/Transaction requirements for interoperability with hardware wallets.md` (CIP-21)
+- Pages created/updated:
+  - updated `wiki/pages/source-cip21.md` (published date, auxiliary data, withdrawals, credentials, voting-procedure cap)
+  - updated `wiki/pages/hardware-wallet-transaction-interop-cip21.md` (voting-procedure section, auxiliary data, credentials/signing modes, device tables, ctools bulk-vote / Eternl+Ledger note)
+  - updated `wiki/pages/cip95-wallet-bridge.md` (one-vote-per-tx HW constraint for bulk vote)
+  - updated `wiki/index.md` (hardware-wallet summary line)
+  - updated `wiki/log.md`
+- Contradictions or open questions:
+  - none; deepens prior CIP-21 ingest from same day
+  - ctools bulk-vote multi-vote txs may work on software-only CIP-95 wallets but conflict with CIP-21 HW rule—documented, not a spec contradiction
+

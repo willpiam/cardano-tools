@@ -36,7 +36,7 @@ Splitting registered vs unregistered stake keys supports [multi-stake-key](https
 | Governance state | **Client/indexer** tracks delegation, DRep registration, etc. |
 | vs folding into CIP-30 core | Separate extension so non-governance dApps/wallets are not forced to implement |
 | vs standalone bridge | Reuses CIP-30 enable/handshake and extension siloing |
-| Key encoding | Raw hex pubkeys from wallet; app handles Bech32/`drep1` encoding |
+| Key encoding | Raw hex pubkeys from wallet; app handles Bech32/`drep1` encoding ([CIP-129](governance-identifiers-cip129.md) header + hash) |
 | Actor scope | Ada holders + DReps only |
 
 ## Relationship to metadata CIPs
@@ -44,11 +44,18 @@ Splitting registered vs unregistered stake keys supports [multi-stake-key](https
 - **CIP-108 / CIP-100** govern governance **action** narrative metadata; CIP-95 does not fetch or validate those documents.
 
 ## ctools usage (application note)
-The DRep bulk-vote tool derives `drep1...` from `api.cip95.getPubDRepKey()` (Blake2b-224 + Bech32) when the wallet exposes CIP-95; otherwise the user can paste a DRep ID manually. `ConnectWallet` currently calls `wallet.enable()` without passing `{ extensions: [{ cip: 95 }] }`—wallets that require explicit extension enable may need that added for reliable CIP-95 access.
+The DRep bulk-vote tool derives `drep1...` from `api.cip95.getPubDRepKey()` (Blake2b-224 + Bech32) when the wallet exposes CIP-95; otherwise the user can paste a DRep ID manually. `enableWalletWithCip95` in `src/functions/drepCredential.ts` requests `{ extensions: [{ cip: 95 }] }` with fallback to plain `enable()`.
+
+## Hardware wallet note
+Browser CIP-95 signing is separate from **Ledger/Trezor** limits in [CIP-21](hardware-wallet-transaction-interop-cip21.md): Trezor firmware listed in CIP-21 lacks DRep/CC key derivation, DRep/CC certs, voting procedures, and treasury/donation fields—governance txs built for HW must be validated against device support.
+
+Even when a wallet exposes CIP-95, **CIP-21 caps voting procedures to one vote per transaction** on HW paths. The DRep bulk-vote tool (`buildAndSubmitBulkVotes`) aggregates many votes per tx; Eternl + Ledger rejects that shape—use one action per tx for HW signing.
 
 ## Related pages
 - [Source: cip95](source-cip95.md)
 - [Cardano governance model (CIP-1694)](cardano-governance-cip1694.md)
 - [DRep metadata standard (CIP-119)](drep-metadata-cip119.md)
 - [Governance metadata framework (CIP-100)](governance-metadata-framework-cip100.md)
+- [Governance identifiers (CIP-129)](governance-identifiers-cip129.md)
+- [Hardware wallet transaction interoperability (CIP-21)](hardware-wallet-transaction-interop-cip21.md)
 - [Wiki Home](wiki-home.md)

@@ -12,6 +12,8 @@ This wiki is maintained incrementally by an LLM.
 - Governance off-chain metadata stack: Active [Source: cip100](source-cip100.md); proposed extensions [Source: cip108](source-cip108.md) and [Source: cip119](source-cip119.md).
 - Serialization/transaction library snapshot: [Source: cardano-multiplatform-lib-combined](source-cardano-multiplatform-lib-combined.md); treasury donation builder APIs: [Source: CML release 6.2.0](source-cml-release-6-2-0-treasury-donation.md).
 - Conway wallet web bridge: [Source: cip95](source-cip95.md) (CIP-95 extends CIP-30 for DRep/Ada-holder governance in the browser).
+- Governance identifiers: [Source: cip129](source-cip129.md) (`drep1`, `cc_hot1`, `cc_cold1`, `gov_action1` encodings).
+- Hardware wallet tx interop: [Source: cip21](source-cip21.md) (canonical CBOR and Conway signing limits for Ledger/Trezor).
 
 ## Open questions
 - What are the concrete reward mechanics and payout cadence for Icebreakers?
@@ -25,6 +27,8 @@ This wiki is maintained incrementally by an LLM.
 - [Governance action metadata standard (CIP-108)](governance-action-metadata-cip108.md)
 - [DRep metadata standard (CIP-119)](drep-metadata-cip119.md)
 - [CIP-95 wallet bridge (Conway governance)](cip95-wallet-bridge.md)
+- [Governance identifiers (CIP-129)](governance-identifiers-cip129.md)
+- [Hardware wallet transaction interoperability (CIP-21)](hardware-wallet-transaction-interop-cip21.md)
 - [Cardano Multiplatform Lib (CML)](cardano-multiplatform-lib-cml.md)
 - [DRep voting history: Blockfrost key and URL](ctools-drep-voting-history-blockfrost.md) (ctools app; includes Conch `/conch` query params)
 - [Live Governance Actions](ctools-governance-actions-live.md) (ctools app; `/governance-actions`)

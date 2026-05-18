@@ -82,6 +82,10 @@ Metadata errors show step (`step1` vs `step2`), message, `code`, optional HTTP s
 - **Sort treasury withdrawals** — only when the treasury filter is active: none, amount ascending, or amount descending (`treasuryWithdrawalTotalLovelace`).
 - **Counts** — Total live actions plus per-type counts in the header strip.
 
+## Identifiers (CIP-1694 vs CIP-129)
+
+Blockfrost and this tool key each proposal by **`tx_hash`** + **`cert_index`** (same pair as on-chain `tx_id#index` in [CIP-1694](cardano-governance-cip1694.md)). [CIP-129](governance-identifiers-cip129.md) defines a Bech32 **`gov_action1...`** encoding of those 32 + index bytes for sharing in UIs and APIs; Cardanoscan accepts gov-action URLs built from the action id.
+
 ## External links
 
 Each action links to Cardanoscan: `https://cardanoscan.io/govAction/{id}` (truncated hash display via `truncateHash`). Metadata URL and reference URIs open in new tabs.
@@ -102,3 +106,4 @@ Each action links to Cardanoscan: `https://cardanoscan.io/govAction/{id}` (trunc
 - [Governance action metadata standard (CIP-108)](governance-action-metadata-cip108.md)
 - [Governance metadata framework (CIP-100)](governance-metadata-framework-cip100.md)
 - [Cardano governance model (CIP-1694)](cardano-governance-cip1694.md)
+- [Governance identifiers (CIP-129)](governance-identifiers-cip129.md)

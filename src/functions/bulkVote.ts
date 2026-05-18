@@ -1,4 +1,5 @@
 import * as CML from '@anastasia-labs/cardano-multiplatform-lib-browser';
+import { blake2b_224 } from '@harmoniclabs/crypto';
 import type { ProtocolParametersSnapshot } from './blockfrostProtocolParams';
 
 export type BulkVoteChoice = 'yes' | 'no' | 'abstain';
@@ -80,32 +81,17 @@ function normalizeHashHex(hex: string): string {
   return hex.trim().replace(/^0x/i, '');
 }
 
-async function tryAddCollateral(api: any, txb: CML.TransactionBuilder): Promise<void> {
-  const getCollateral =
-    (typeof api.getCollateral === 'function' && api.getCollateral.bind(api)) ||
-    (api.experimental && typeof api.experimental.getCollateral === 'function' &&
-      api.experimental.getCollateral.bind(api.experimental));
-
-  if (!getCollateral) return;
-
-  let collateralHexes: string[] | undefined;
-  try {
-    collateralHexes = await getCollateral();
-  } catch {
-    return;
+function witnessSetContainsKeyHash(wits: CML.TransactionWitnessSet, expectedKeyHashHex: string): boolean {
+  const vks = wits.vkeywitnesses();
+  if (!vks) return false;
+  const want = expectedKeyHashHex.toLowerCase();
+  for (let i = 0; i < vks.len(); i++) {
+    const pub = vks.get(i).vkey();
+    const bytes = pub.to_raw_bytes();
+    const kh = CML.Ed25519KeyHash.from_raw_bytes(blake2b_224(bytes)).to_hex().toLowerCase();
+    if (kh === want) return true;
   }
-
-  if (!collateralHexes?.length) return;
-
-  for (const cHex of collateralHexes) {
-    try {
-      const utxo = CML.TransactionUnspentOutput.from_cbor_hex(cHex);
-      const inputResult = CML.SingleInputBuilder.from_transaction_unspent_output(utxo).payment_key();
-      txb.add_collateral(inputResult);
-    } catch (e) {
-      console.warn('Skipping invalid collateral UTxO', e);
-    }
-  }
+  return false;
 }
 
 /**
@@ -137,6 +123,7 @@ export async function buildAndSubmitBulkVotes(options: BuildAndSubmitBulkVotesOp
 
   const voter = CML.Voter.new_d_rep_key_hash(CML.Ed25519KeyHash.from_hex(normalizeHashHex(drepKeyHashHex)));
 
+  let voteBuilder = CML.VoteBuilder.new();
   for (const entry of votes) {
     const txHashNorm = normalizeHashHex(entry.txHash);
     if (!/^[0-9a-fA-F]{64}$/.test(txHashNorm)) {
@@ -145,11 +132,9 @@ export async function buildAndSubmitBulkVotes(options: BuildAndSubmitBulkVotesOp
     const govActionId = CML.GovActionId.new(CML.TransactionHash.from_hex(txHashNorm), BigInt(entry.certIndex));
     const voteEnum = mapVote(entry.vote);
     const procedure = cmlAnchor ? CML.VotingProcedure.new(voteEnum, cmlAnchor) : CML.VotingProcedure.new(voteEnum);
-    const voteResult = CML.VoteBuilder.new().with_vote(voter, govActionId, procedure).build();
-    txb.add_vote(voteResult);
+    voteBuilder = voteBuilder.with_vote(voter, govActionId, procedure);
   }
-
-  await tryAddCollateral(api, txb);
+  txb.add_vote(voteBuilder.build());
 
   const walletUtxoHexes: string[] = await api.getUtxos();
   if (!walletUtxoHexes || walletUtxoHexes.length === 0) {
@@ -158,8 +143,9 @@ export async function buildAndSubmitBulkVotes(options: BuildAndSubmitBulkVotesOp
   for (const utxoHex of walletUtxoHexes) {
     const utxo = CML.TransactionUnspentOutput.from_cbor_hex(utxoHex);
     const inputResult = CML.SingleInputBuilder.from_transaction_unspent_output(utxo).payment_key();
-    txb.add_input(inputResult);
+    txb.add_utxo(inputResult);
   }
+  txb.select_utxos(CML.CoinSelectionStrategyCIP2.LargestFirstMultiAsset);
 
   const balanced = txb.add_change_if_needed(changeAddress, false);
   if (!balanced) {
@@ -168,10 +154,25 @@ export async function buildAndSubmitBulkVotes(options: BuildAndSubmitBulkVotesOp
 
   const signedBuilder = txb.build(CML.ChangeSelectionAlgo.Default, changeAddress);
   const builtTx = signedBuilder.build_unchecked();
-  const unsignedTxHex = builtTx.to_cbor_hex();
+  const unsignedTxHex = builtTx.to_canonical_cbor_hex();
 
-  const witnessSetHex: string = await api.signTx(unsignedTxHex, false);
+  let witnessSetHex: string;
+  try {
+    witnessSetHex = await api.signTx(unsignedTxHex, true);
+  } catch (err: unknown) {
+    const msg =
+      err && typeof err === 'object' && 'message' in err
+        ? String((err as { message?: unknown }).message)
+        : String(err);
+    throw new Error(`Wallet refused to sign: ${msg}`);
+  }
   const walletWits = CML.TransactionWitnessSet.from_cbor_hex(witnessSetHex);
+
+  if (!witnessSetContainsKeyHash(walletWits, normalizeHashHex(drepKeyHashHex))) {
+    throw new Error(
+      'The wallet returned signatures but none matches your DRep key. Either the CIP-95 extension was not approved on this connection, or the auto-detected DRep ID does not match the wallet. Reconnect Eternl/Lace, approve CIP-95 when prompted, and try again.'
+    );
+  }
 
   const witsBuilder = CML.TransactionWitnessSetBuilder.new();
   witsBuilder.add_existing(walletWits);
@@ -180,7 +181,7 @@ export async function buildAndSubmitBulkVotes(options: BuildAndSubmitBulkVotesOp
   const finalWits = witsBuilder.build();
   const aux = builtTx.auxiliary_data();
   const signedTx = CML.Transaction.new(finalBody, finalWits, true, aux);
-  const signedTxHex = signedTx.to_cbor_hex();
+  const signedTxHex = signedTx.to_canonical_cbor_hex();
 
   const txHash: string = await api.submitTx(signedTxHex);
 

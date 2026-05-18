@@ -18,18 +18,57 @@ function hexToBytes(hex: string): Uint8Array {
   return out;
 }
 
+/** Strip CBOR short-bytestring header (0x58 len) when present. */
+function decodeCborBytestring(hex: string): Uint8Array {
+  const all = hexToBytes(hex);
+  if (all.length >= 2 && all[0] === 0x58) {
+    const len = all[1];
+    if (all.length === 2 + len) return all.slice(2);
+  }
+  return all;
+}
+
+/** CIP-95 may return a 32-byte raw pubkey or a 64-byte Bip32 extended pubkey. */
+function rawDRepPubKeyBytes(decoded: Uint8Array): Uint8Array {
+  if (decoded.length === 32) return decoded;
+  if (decoded.length === 64) return decoded.slice(0, 32);
+  throw new Error(`Unexpected DRep pubkey length ${decoded.length}; expected 32 or 64 bytes`);
+}
+
+function resolveGetPubDRepKey(api: any): (() => Promise<unknown>) | null {
+  if (typeof api?.getPubDRepKey === 'function') return api.getPubDRepKey.bind(api);
+  if (typeof api?.cip95?.getPubDRepKey === 'function') return api.cip95.getPubDRepKey.bind(api.cip95);
+  if (typeof api?.experimental?.getPubDRepKey === 'function') {
+    return api.experimental.getPubDRepKey.bind(api.experimental);
+  }
+  return null;
+}
+
+/**
+ * Enable the wallet with CIP-95 so DRep methods and DRep tx witnesses are available.
+ * Falls back to plain enable if the wallet rejects extension args.
+ */
+export async function enableWalletWithCip95(walletName: string): Promise<any> {
+  const wallet = (window as any).cardano?.[walletName];
+  if (!wallet) throw new Error(`Wallet ${walletName} is not available`);
+  try {
+    return await wallet.enable({ extensions: [{ cip: 95 }] });
+  } catch (err) {
+    console.warn('enable({ extensions: [{ cip: 95 }] }) failed, falling back to plain enable', err);
+    return await wallet.enable();
+  }
+}
+
 /**
  * Derive DRep ID from the wallet's CIP-95 public DRep key (blake2b-224 hash of the pubkey bytes).
  */
 export async function deriveDRepFromWallet(api: any): Promise<ResolvedDRep | null> {
-  const cip95 = api?.cip95;
-  if (!cip95 || typeof cip95.getPubDRepKey !== 'function') {
-    return null;
-  }
+  const getPubDRepKey = resolveGetPubDRepKey(api);
+  if (!getPubDRepKey) return null;
 
   let pubHex: string;
   try {
-    const raw = await cip95.getPubDRepKey();
+    const raw = await getPubDRepKey();
     pubHex = typeof raw === 'string' ? raw : String(raw);
   } catch {
     return null;
@@ -37,8 +76,8 @@ export async function deriveDRepFromWallet(api: any): Promise<ResolvedDRep | nul
 
   if (!pubHex?.trim()) return null;
 
-  const pubBytes = hexToBytes(pubHex);
-  const keyHashBytes = blake2b_224(pubBytes);
+  const pubKeyBytes = rawDRepPubKeyBytes(decodeCborBytestring(pubHex));
+  const keyHashBytes = blake2b_224(pubKeyBytes);
   if (keyHashBytes.length !== 28) {
     throw new Error(`Unexpected DRep key hash length ${keyHashBytes.length}; expected 28`);
   }

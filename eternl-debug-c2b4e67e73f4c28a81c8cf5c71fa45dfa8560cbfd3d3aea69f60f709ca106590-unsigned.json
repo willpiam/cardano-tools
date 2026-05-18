@@ -1,0 +1,224 @@
+{
+  "version": "v2.0.16.0",
+  "appInfo": {
+    "appType": "bex",
+    "appMode": "signTx",
+    "platform": "web",
+    "environment": "production",
+    "dappOrigin": ""
+  },
+  "error": "1. There must be exactly one voting procedure per voter\n",
+  "txBuildRes": [
+    {
+      "txIndex": 0,
+      "txCbor": "84a400d9010281825820d24800f44c33033384cb2306a00ce8c2323d3b88f18d09cb1f5a6635d7ecd48100018182583901a8adfd9249633f7bf0178a199edf3bc4ef071b403904cfd5f273ed1d0727ba7e3685b335ef03dbcaf6a43ae5659d3ed88677ddfb3691d14c1a02ed554b021a0002b88113a18202581c4281249b0696b2e347ae7cc1757d38e81fd5c7aa763903225b40e7c1a482582073e171a4c0730b4b59ecae271ab89f12a9d56360b02920e1f95107dbdc1d6762018201f682582073e171a4c0730b4b59ecae271ab89f12a9d56360b02920e1f95107dbdc1d6762028201f682582073e171a4c0730b4b59ecae271ab89f12a9d56360b02920e1f95107dbdc1d6762038201f682582073e171a4c0730b4b59ecae271ab89f12a9d56360b02920e1f95107dbdc1d6762048201f6a0f5f6",
+      "txHash": "c2b4e67e73f4c28a81c8cf5c71fa45dfa8560cbfd3d3aea69f60f709ca106590",
+      "cslTx": {
+        "__wbg_ptr": 1263952
+      },
+      "cslTxBody": {
+        "__wbg_ptr": 1261864
+      },
+      "cslTxHash": {
+        "__wbg_ptr": 1256496
+      },
+      "cslWitnessSet": {
+        "__wbg_ptr": 1256536
+      },
+      "bodyAuxDataHash": "",
+      "auxDataHash": "",
+      "builtTx": {
+        "body": {
+          "network_id": null,
+          "auxiliary_data_hash": null,
+          "fee": "178305",
+          "ttl": null,
+          "validity_start_interval": null,
+          "certs": null,
+          "withdrawals": null,
+          "collateral": null,
+          "total_collateral": null,
+          "reference_inputs": null,
+          "required_signers": null,
+          "script_data_hash": null,
+          "voting_procedures": [
+            {
+              "voter": {
+                "DRep": {
+                  "Key": "4281249b0696b2e347ae7cc1757d38e81fd5c7aa763903225b40e7c1"
+                }
+              },
+              "votes": [
+                {
+                  "action_id": {
+                    "transaction_id": "73e171a4c0730b4b59ecae271ab89f12a9d56360b02920e1f95107dbdc1d6762",
+                    "index": 1
+                  },
+                  "voting_procedure": {
+                    "vote": "Yes",
+                    "anchor": null
+                  }
+                },
+                {
+                  "action_id": {
+                    "transaction_id": "73e171a4c0730b4b59ecae271ab89f12a9d56360b02920e1f95107dbdc1d6762",
+                    "index": 2
+                  },
+                  "voting_procedure": {
+                    "vote": "Yes",
+                    "anchor": null
+                  }
+                },
+                {
+                  "action_id": {
+                    "transaction_id": "73e171a4c0730b4b59ecae271ab89f12a9d56360b02920e1f95107dbdc1d6762",
+                    "index": 3
+                  },
+                  "voting_procedure": {
+                    "vote": "Yes",
+                    "anchor": null
+                  }
+                },
+                {
+                  "action_id": {
+                    "transaction_id": "73e171a4c0730b4b59ecae271ab89f12a9d56360b02920e1f95107dbdc1d6762",
+                    "index": 4
+                  },
+                  "voting_procedure": {
+                    "vote": "Yes",
+                    "anchor": null
+                  }
+                }
+              ]
+            }
+          ],
+          "voting_proposals": null,
+          "donation": null,
+          "inputs": [
+            {
+              "transaction_id": "d24800f44c33033384cb2306a00ce8c2323d3b88f18d09cb1f5a6635d7ecd481",
+              "index": 0
+            }
+          ],
+          "outputs": [
+            {
+              "address": "addr1qx52mlvjf93n77lsz79pn8kl80zw7pcmgqusfn747fe768g8y7a8ud59kv677q7metm2gwh9vkwnakyxwlwlkd5369xqtxleh7",
+              "amount": {
+                "coin": "49108299"
+              },
+              "script_ref": null
+            }
+          ],
+          "mint": null,
+          "collateral_return": null,
+          "update": null
+        },
+        "witness_set": {
+          "bootstraps": null,
+          "native_scripts": null,
+          "plutus_data": null,
+          "plutus_scripts": null,
+          "vkeys": null
+        },
+        "auxiliary_data": null,
+        "is_valid": true,
+        "cbor": "84a400d9010281825820d24800f44c33033384cb2306a00ce8c2323d3b88f18d09cb1f5a6635d7ecd48100018182583901a8adfd9249633f7bf0178a199edf3bc4ef071b403904cfd5f273ed1d0727ba7e3685b335ef03dbcaf6a43ae5659d3ed88677ddfb3691d14c1a02ed554b021a0002b88113a18202581c4281249b0696b2e347ae7cc1757d38e81fd5c7aa763903225b40e7c1a482582073e171a4c0730b4b59ecae271ab89f12a9d56360b02920e1f95107dbdc1d6762018201f682582073e171a4c0730b4b59ecae271ab89f12a9d56360b02920e1f95107dbdc1d6762028201f682582073e171a4c0730b4b59ecae271ab89f12a9d56360b02920e1f95107dbdc1d6762038201f682582073e171a4c0730b4b59ecae271ab89f12a9d56360b02920e1f95107dbdc1d6762048201f6a0f5f6",
+        "hash": "c2b4e67e73f4c28a81c8cf5c71fa45dfa8560cbfd3d3aea69f60f709ca106590",
+        "size": 310,
+        "time": 1779052271858,
+        "inputUtxoList": [
+          {
+            "input": {
+              "index": 0,
+              "transaction_id": "d24800f44c33033384cb2306a00ce8c2323d3b88f18d09cb1f5a6635d7ecd481"
+            },
+            "output": {
+              "address": "addr1qx52mlvjf93n77lsz79pn8kl80zw7pcmgqusfn747fe768g8y7a8ud59kv677q7metm2gwh9vkwnakyxwlwlkd5369xqtxleh7",
+              "amount": {
+                "coin": "49286604"
+              }
+            },
+            "pc": "a8adfd9249633f7bf0178a199edf3bc4ef071b403904cfd5f273ed1d",
+            "sc": "0727ba7e3685b335ef03dbcaf6a43ae5659d3ed88677ddfb3691d14c",
+            "c": 49286604
+          }
+        ],
+        "colOutputDataList": [],
+        "outputData": [
+          {
+            "isBabbage": false
+          }
+        ],
+        "hasConwaySetTag": true,
+        "unknownInputUtxoList": [],
+        "state": 0
+      },
+      "txCredList": {
+        "known": [
+          "a8adfd9249633f7bf0178a199edf3bc4ef071b403904cfd5f273ed1d",
+          "4281249b0696b2e347ae7cc1757d38e81fd5c7aa763903225b40e7c1"
+        ],
+        "unknown": [],
+        "ownedList": [
+          {
+            "accountId": "xpub1g68utm0mcmg",
+            "walletId": "xpub1g68utm0mcmg-ml",
+            "type": "ledger",
+            "credList": [
+              {
+                "path": [
+                  1852,
+                  1815,
+                  0,
+                  0,
+                  0
+                ],
+                "cred": "a8adfd9249633f7bf0178a199edf3bc4ef071b403904cfd5f273ed1d",
+                "used": true
+              },
+              {
+                "path": [
+                  1852,
+                  1815,
+                  0,
+                  3,
+                  0
+                ],
+                "cred": "4281249b0696b2e347ae7cc1757d38e81fd5c7aa763903225b40e7c1",
+                "used": false
+              }
+            ],
+            "txBalance": {
+              "hash": "c2b4e67e73f4c28a81c8cf5c71fa45dfa8560cbfd3d3aea69f60f709ca106590",
+              "slot": -1,
+              "idx": -1,
+              "coin": "-178305",
+              "c": -178305,
+              "al": [
+                4,
+                5
+              ],
+              "t": 24,
+              "f": "178305",
+              "v": true
+            }
+          }
+        ],
+        "foreign": [],
+        "signed": [],
+        "unsigned": [
+          "a8adfd9249633f7bf0178a199edf3bc4ef071b403904cfd5f273ed1d",
+          "4281249b0696b2e347ae7cc1757d38e81fd5c7aa763903225b40e7c1"
+        ],
+        "scriptCredList": [],
+        "total": 2,
+        "allForeignSigned": true,
+        "allOwnedSigned": false,
+        "canSignAllUnsigned": true,
+        "allScriptsValid": true
+      },
+      "error": null,
+      "warning": ""
+    }
+  ]
+}

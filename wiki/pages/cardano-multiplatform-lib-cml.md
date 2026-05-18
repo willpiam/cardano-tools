@@ -23,6 +23,8 @@ Most application work uses **`cml-chain`**; reach for **`cml-multi-era`** when i
 ## Design emphasis: CBOR fidelity
 CML highlights **preserving concrete CBOR encodings** (not just abstract structures). That matters for **hashes**, interoperability with other encoders (CLI vs library), and Plutus-related data edges—an advertised differentiator versus ad-hoc JSON-first flows.
 
+For **hardware wallet** signing, emitted transactions should also satisfy [CIP-21](hardware-wallet-transaction-interop-cip21.md) canonical CBOR and structural rules (sorted map keys, element caps, forbidden cert combinations).
+
 ## Treasury donation (tx builder, 6.2.0+)
 From **CML 6.2.0** onward, the transaction builder exposes treasury-related helpers named in upstream release notes as **`set_donation`** (ADA donation to the treasury) and **`set_current_treasury_value`** (for builds where **Plutus** needs the current treasury amount). See [Source: CML release 6.2.0](source-cml-release-6-2-0-treasury-donation.md).
 
@@ -35,4 +37,6 @@ The ingested combined raw file contains **placeholder `todo` commands** in its g
 ## Related pages
 - [Source: cardano-multiplatform-lib-combined](source-cardano-multiplatform-lib-combined.md)
 - [Source: CML release 6.2.0](source-cml-release-6-2-0-treasury-donation.md)
+- [Hardware wallet transaction interoperability (CIP-21)](hardware-wallet-transaction-interop-cip21.md)
+- [Governance identifiers (CIP-129)](governance-identifiers-cip129.md)
 - [Wiki Home](wiki-home.md)

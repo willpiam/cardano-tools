@@ -27,6 +27,7 @@ When reading mixed documents, apply the most specific applicable CIP (119 for DR
 Off-chain CIP-119 metadata is attached at **DRep registration/update** on-chain. Browser tools typically obtain the registering DRep's public key via [CIP-95](cip95-wallet-bridge.md) (`getPubDRepKey`, extended `signTx` for `reg_drep_cert`) rather than through metadata signing alone.
 
 ## Related pages
+- [Governance identifiers (CIP-129)](governance-identifiers-cip129.md) — `drep1` Bech32 for the on-chain DRep credential (separate from this metadata document)
 - [Source: cip119](source-cip119.md)
 - [CIP-95 wallet bridge (Conway governance)](cip95-wallet-bridge.md)
 - [Governance metadata framework (CIP-100)](governance-metadata-framework-cip100.md)
