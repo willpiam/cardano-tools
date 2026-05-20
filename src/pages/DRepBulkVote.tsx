@@ -77,6 +77,52 @@ interface BulkVoteReceipt {
 const receiptFilename = (txHash: string) =>
   `drep_bulk_vote_receipt_${txHash.slice(0, 12)}_${Date.now()}.json`;
 
+const ANCHOR_ATTACH_PARAM = 'anchor';
+const ANCHOR_URL_PARAM = 'anchorUrl';
+const ANCHOR_HASH_PARAM = 'anchorHash';
+
+function readAnchorFromUrl(): {
+  attachAnchor: boolean;
+  anchorUrl: string;
+  anchorHashHex: string;
+  hasAnchorParams: boolean;
+} {
+  const params = new URLSearchParams(window.location.search);
+  const anchorUrl = params.get(ANCHOR_URL_PARAM) ?? '';
+  const anchorHashHex = params.get(ANCHOR_HASH_PARAM) ?? '';
+  const attachAnchor =
+    params.get(ANCHOR_ATTACH_PARAM) === '1' || Boolean(anchorUrl) || Boolean(anchorHashHex);
+  const hasAnchorParams =
+    params.has(ANCHOR_ATTACH_PARAM) || params.has(ANCHOR_URL_PARAM) || params.has(ANCHOR_HASH_PARAM);
+  return { attachAnchor, anchorUrl, anchorHashHex, hasAnchorParams };
+}
+
+function syncAnchorToUrl(
+  persist: boolean,
+  attachAnchor: boolean,
+  anchorUrl: string,
+  anchorHashHex: string
+): void {
+  const url = new URL(window.location.href);
+  if (!persist) {
+    url.searchParams.delete(ANCHOR_ATTACH_PARAM);
+    url.searchParams.delete(ANCHOR_URL_PARAM);
+    url.searchParams.delete(ANCHOR_HASH_PARAM);
+  } else {
+    if (attachAnchor) url.searchParams.set(ANCHOR_ATTACH_PARAM, '1');
+    else url.searchParams.delete(ANCHOR_ATTACH_PARAM);
+    const u = anchorUrl.trim();
+    if (u) url.searchParams.set(ANCHOR_URL_PARAM, u);
+    else url.searchParams.delete(ANCHOR_URL_PARAM);
+    const h = anchorHashHex.trim().replace(/^0x/i, '');
+    if (h) url.searchParams.set(ANCHOR_HASH_PARAM, h);
+    else url.searchParams.delete(ANCHOR_HASH_PARAM);
+  }
+  window.history.replaceState({}, '', url.toString());
+}
+
+const initialAnchorFromUrl = readAnchorFromUrl();
+
 const DRepBulkVote: React.FC = () => {
   const walletName = useAppSelector((state) => state.wallet.selectedWallet);
   const walletAddress = useAppSelector((state) => state.wallet.address);
@@ -103,9 +149,10 @@ const DRepBulkVote: React.FC = () => {
   const [chainVoteByKey, setChainVoteByKey] = useState<Record<string, string | null>>({});
   const [chainVotesLoading, setChainVotesLoading] = useState(false);
 
-  const [attachAnchor, setAttachAnchor] = useState(false);
-  const [anchorUrl, setAnchorUrl] = useState('');
-  const [anchorHashHex, setAnchorHashHex] = useState('');
+  const [attachAnchor, setAttachAnchor] = useState(initialAnchorFromUrl.attachAnchor);
+  const [anchorUrl, setAnchorUrl] = useState(initialAnchorFromUrl.anchorUrl);
+  const [anchorHashHex, setAnchorHashHex] = useState(initialAnchorFromUrl.anchorHashHex);
+  const [persistAnchorInUrl, setPersistAnchorInUrl] = useState(initialAnchorFromUrl.hasAnchorParams);
 
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -124,6 +171,10 @@ const DRepBulkVote: React.FC = () => {
   }, [overrideDrep, manualDrepInput, walletDerivedDrep]);
 
   const effectiveDrepId = effectiveDrep?.drepIdBech32 ?? null;
+
+  useEffect(() => {
+    syncAnchorToUrl(persistAnchorInUrl, attachAnchor, anchorUrl, anchorHashHex);
+  }, [persistAnchorInUrl, attachAnchor, anchorUrl, anchorHashHex]);
 
   useEffect(() => {
     if (!blockfrostReady || !apiKey) {
@@ -515,6 +566,26 @@ const DRepBulkVote: React.FC = () => {
                       }}
                     />
                   </div>
+                )}
+                <label
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    marginTop: '0.75rem',
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={persistAnchorInUrl}
+                    onChange={() => setPersistAnchorInUrl(!persistAnchorInUrl)}
+                  />
+                  <span>Save anchor details to URL (survives refresh)</span>
+                </label>
+                {persistAnchorInUrl && (
+                  <p style={{ margin: '0.35rem 0 0', fontSize: '0.8rem', color: '#9ca3af' }}>
+                    Anchor URL and hash are stored in the page link. Treat shared URLs as sensitive.
+                  </p>
                 )}
               </div>
 
