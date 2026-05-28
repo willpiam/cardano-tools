@@ -71,6 +71,8 @@ interface BulkVoteReceipt {
   anchorAttached: boolean;
   anchorUrl: string | null;
   anchorHashHex: string | null;
+  metadataAttached: boolean;
+  metadata674: string[] | null;
   votes: BulkVoteEntry[];
 }
 
@@ -153,6 +155,8 @@ const DRepBulkVote: React.FC = () => {
   const [anchorUrl, setAnchorUrl] = useState(initialAnchorFromUrl.anchorUrl);
   const [anchorHashHex, setAnchorHashHex] = useState(initialAnchorFromUrl.anchorHashHex);
   const [persistAnchorInUrl, setPersistAnchorInUrl] = useState(initialAnchorFromUrl.hasAnchorParams);
+  const [includeNote, setIncludeNote] = useState(false);
+  const [noteText, setNoteText] = useState("casting drep votes - using $computerman bulk vote tool");
 
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -374,6 +378,10 @@ const DRepBulkVote: React.FC = () => {
     if (attachAnchor) {
       anchor = { url: anchorUrl.trim(), hashHex: anchorHashHex.trim().replace(/^0x/i, '') };
     }
+    const metadata: string[] | undefined =
+      includeNote && noteText.trim().length > 0
+        ? [noteText.trim(), `bulk vote: ${entries.length} action(s)`]
+        : undefined;
 
     setSubmitting(true);
     try {
@@ -387,6 +395,7 @@ const DRepBulkVote: React.FC = () => {
         drepKeyHashHex: effectiveDrep.keyHashHex,
         votes: entries,
         anchor,
+        metadata,
       });
 
       const r: BulkVoteReceipt = {
@@ -400,6 +409,8 @@ const DRepBulkVote: React.FC = () => {
         anchorAttached: Boolean(anchor),
         anchorUrl: anchor?.url ?? null,
         anchorHashHex: anchor?.hashHex ?? null,
+        metadataAttached: Boolean(metadata?.length),
+        metadata674: metadata ?? null,
         votes: entries,
       };
 
@@ -586,6 +597,39 @@ const DRepBulkVote: React.FC = () => {
                   <p style={{ margin: '0.35rem 0 0', fontSize: '0.8rem', color: '#9ca3af' }}>
                     Anchor URL and hash are stored in the page link. Treat shared URLs as sensitive.
                   </p>
+                )}
+              </div>
+
+              <div
+                style={{
+                  border: '1px solid #4b5563',
+                  borderRadius: '8px',
+                  padding: '1rem',
+                  backgroundColor: '#0f172a',
+                  width: '100%',
+                }}
+              >
+                <h2 style={{ marginTop: 0, fontSize: '1.1rem' }}>Optional CIP-20 message (label 674)</h2>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <input type="checkbox" checked={includeNote} onChange={() => setIncludeNote(!includeNote)} />
+                  <span>Attach CIP-20 metadata note</span>
+                </label>
+                {includeNote && (
+                  <textarea
+                    value={noteText}
+                    onChange={(e) => setNoteText(e.target.value)}
+                    rows={2}
+                    style={{
+                      width: '100%',
+                      maxWidth: '640px',
+                      marginTop: '0.75rem',
+                      padding: '0.5rem',
+                      borderRadius: '6px',
+                      border: '1px solid #4b5563',
+                      backgroundColor: '#1e293b',
+                      color: '#e5e7eb',
+                    }}
+                  />
                 )}
               </div>
 

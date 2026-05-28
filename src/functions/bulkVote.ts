@@ -1,6 +1,7 @@
 import * as CML from '@anastasia-labs/cardano-multiplatform-lib-browser';
 import { blake2b_224 } from '@harmoniclabs/crypto';
 import type { ProtocolParametersSnapshot } from './blockfrostProtocolParams';
+import { buildCip20AuxiliaryData } from './cip20Metadata';
 
 export type BulkVoteChoice = 'yes' | 'no' | 'abstain';
 
@@ -25,6 +26,8 @@ export interface BuildAndSubmitBulkVotesOptions {
   votes: BulkVoteEntry[];
   /** Optional shared CIP-100 anchor applied to every vote procedure. */
   anchor?: BulkVoteAnchor;
+  /** Optional CIP-20 metadata strings (label 674). */
+  metadata?: string[];
 }
 
 export interface BulkVoteResult {
@@ -98,7 +101,7 @@ function witnessSetContainsKeyHash(wits: CML.TransactionWitnessSet, expectedKeyH
  * Build and submit a single transaction containing many DRep votes (CIP-1694 voting procedures).
  */
 export async function buildAndSubmitBulkVotes(options: BuildAndSubmitBulkVotesOptions): Promise<BulkVoteResult> {
-  const { api, params, changeAddressBech32, drepKeyHashHex, votes, anchor } = options;
+  const { api, params, changeAddressBech32, drepKeyHashHex, votes, anchor, metadata } = options;
 
   if (!votes.length) {
     throw new Error('No votes to submit');
@@ -135,6 +138,13 @@ export async function buildAndSubmitBulkVotes(options: BuildAndSubmitBulkVotesOp
     voteBuilder = voteBuilder.with_vote(voter, govActionId, procedure);
   }
   txb.add_vote(voteBuilder.build());
+
+  let auxDataCborHex: string | undefined;
+  if (metadata && metadata.length > 0) {
+    const auxData = buildCip20AuxiliaryData(metadata);
+    auxDataCborHex = auxData.to_cbor_hex();
+    txb.add_auxiliary_data(auxData);
+  }
 
   const walletUtxoHexes: string[] = await api.getUtxos();
   if (!walletUtxoHexes || walletUtxoHexes.length === 0) {
@@ -179,8 +189,10 @@ export async function buildAndSubmitBulkVotes(options: BuildAndSubmitBulkVotesOp
 
   const finalBody = builtTx.body();
   const finalWits = witsBuilder.build();
-  const aux = builtTx.auxiliary_data();
-  const signedTx = CML.Transaction.new(finalBody, finalWits, true, aux);
+  const auxForSigned = auxDataCborHex
+    ? CML.AuxiliaryData.from_cbor_hex(auxDataCborHex)
+    : builtTx.auxiliary_data();
+  const signedTx = CML.Transaction.new(finalBody, finalWits, true, auxForSigned);
   const signedTxHex = signedTx.to_canonical_cbor_hex();
 
   const txHash: string = await api.submitTx(signedTxHex);

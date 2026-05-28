@@ -46,6 +46,8 @@ Splitting registered vs unregistered stake keys supports [multi-stake-key](https
 ## ctools usage (application note)
 The DRep bulk-vote tool derives `drep1...` from `api.cip95.getPubDRepKey()` (Blake2b-224 + Bech32) when the wallet exposes CIP-95; otherwise the user can paste a DRep ID manually. `enableWalletWithCip95` in `src/functions/drepCredential.ts` requests `{ extensions: [{ cip: 95 }] }` with fallback to plain `enable()`.
 
+The same bulk-vote flow now also supports an optional CIP-20 metadata note (label 674) at transaction level, implemented with the shared CML helper (`src/functions/cip20Metadata.ts`) that emits auxiliary data independently from the per-vote CIP-100 anchor.
+
 ## Hardware wallet note
 Browser CIP-95 signing is separate from **Ledger/Trezor** limits in [CIP-21](hardware-wallet-transaction-interop-cip21.md): Trezor firmware listed in CIP-21 lacks DRep/CC key derivation, DRep/CC certs, voting procedures, and treasury/donation fields—governance txs built for HW must be validated against device support.
 

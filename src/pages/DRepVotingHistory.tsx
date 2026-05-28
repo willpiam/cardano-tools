@@ -3,8 +3,16 @@ import { useParams, useNavigate } from 'react-router';
 import { useAppSelector, useAppDispatch } from '../store/hooks';
 import { setBlockfrostConfig } from '../store/blockfrostSlice';
 import { Button } from '../components/Button';
-
-const BLOCKFROST_BASE = 'https://cardano-mainnet.blockfrost.io/api/v0';
+import { fetchAllPages } from '../functions/governanceActionsFetch';
+import {
+  fetchGovernanceEpochContext,
+  fetchProposalExpirationFields,
+  formatGovernanceTimeRemaining,
+  governanceTimeStatusTitle,
+  resolveGovernanceTimeStatus,
+  timeRemainingColor,
+  type GovernanceActionTimeStatus,
+} from '../utils/governanceExpiration';
 
 interface BlockfrostProposal {
   id: string;
@@ -29,26 +37,7 @@ interface MergedProposal {
   govActionType: string;
   vote: string | null;
   voteTxHash: string | null;
-}
-
-async function fetchAllPages<T>(endpoint: string, apiKey: string): Promise<T[]> {
-  const results: T[] = [];
-  let page = 1;
-  while (true) {
-    const res = await fetch(`${BLOCKFROST_BASE}${endpoint}?page=${page}&count=100&order=desc`, {
-      headers: { project_id: apiKey }
-    });
-    if (res.status === 404) break;
-    if (!res.ok) {
-      const body = await res.text();
-      throw new Error(`Blockfrost ${res.status}: ${body}`);
-    }
-    const data: T[] = await res.json();
-    results.push(...data);
-    if (data.length < 100) break;
-    page++;
-  }
-  return results;
+  timeStatus: GovernanceActionTimeStatus;
 }
 
 function voteColor(vote: string | null): string {
@@ -87,6 +76,7 @@ const DRepVotingHistory = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copiedProposalId, setCopiedProposalId] = useState<string | null>(null);
+  const [nowSec, setNowSec] = useState(() => Math.floor(Date.now() / 1000));
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -110,16 +100,27 @@ const DRepVotingHistory = () => {
     fetchData(drepId, apiKey);
   }, [drepId, apiKey]);
 
+  useEffect(() => {
+    if (!mergedData.some((row) => row.timeStatus.kind === 'countdown')) return;
+    const id = window.setInterval(() => {
+      setNowSec(Math.floor(Date.now() / 1000));
+    }, 60_000);
+    return () => window.clearInterval(id);
+  }, [mergedData]);
+
   const fetchData = async (id: string, key: string) => {
     setLoading(true);
     setError(null);
     setMergedData([]);
 
     try {
-      const [proposals, votes] = await Promise.all([
+      const [proposals, votes, ctx] = await Promise.all([
         fetchAllPages<BlockfrostProposal>('/governance/proposals', key),
         fetchAllPages<BlockfrostDRepVote>(`/governance/dreps/${id}/votes`, key),
+        fetchGovernanceEpochContext(key),
       ]);
+
+      const expirationByKey = await fetchProposalExpirationFields(key, proposals);
 
       const voteMap = new Map<string, BlockfrostDRepVote>();
       for (const v of votes) {
@@ -128,8 +129,13 @@ const DRepVotingHistory = () => {
       }
 
       const merged: MergedProposal[] = proposals.map((p) => {
-        const key = `${p.tx_hash}#${p.cert_index}`;
-        const vote = voteMap.get(key);
+        const proposalKey = `${p.tx_hash}#${p.cert_index}`;
+        const vote = voteMap.get(proposalKey);
+        const expirationFields = expirationByKey.get(proposalKey);
+        const timeStatus = expirationFields
+          ? resolveGovernanceTimeStatus(expirationFields, ctx)
+          : { kind: 'unknown' as const };
+
         return {
           proposalId: p.id,
           proposalTxHash: p.tx_hash,
@@ -137,9 +143,11 @@ const DRepVotingHistory = () => {
           govActionType: p.governance_type,
           vote: vote?.vote ?? null,
           voteTxHash: vote?.tx_hash ?? null,
+          timeStatus,
         };
       });
 
+      setNowSec(Math.floor(Date.now() / 1000));
       setMergedData(merged);
     } catch (err) {
       console.error('Failed to fetch DRep voting history', err);
@@ -252,6 +260,7 @@ const DRepVotingHistory = () => {
                       <th className="px-4 py-2 border-b">Governance Action</th>
                       <th className="px-4 py-2 border-b w-0 whitespace-nowrap">Copy ID</th>
                       <th className="px-4 py-2 border-b">Action Type</th>
+                      <th className="px-4 py-2 border-b">Time left</th>
                       <th className="px-4 py-2 border-b">Vote</th>
                       <th className="px-4 py-2 border-b">Vote Tx</th>
                     </tr>
@@ -281,6 +290,14 @@ const DRepVotingHistory = () => {
                         </td>
                         <td className="px-4 py-2 border-b">
                           {formatGovActionType(row.govActionType)}
+                        </td>
+                        <td className="px-4 py-2 border-b whitespace-nowrap" title={governanceTimeStatusTitle(row.timeStatus)}>
+                          <span style={{
+                            color: timeRemainingColor(row.timeStatus, nowSec),
+                            fontWeight: row.timeStatus.kind === 'countdown' ? 'bold' : 'normal',
+                          }}>
+                            {formatGovernanceTimeRemaining(row.timeStatus, nowSec)}
+                          </span>
                         </td>
                         <td className="px-4 py-2 border-b">
                           <span style={{

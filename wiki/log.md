@@ -181,3 +181,6 @@ Created wiki scaffold with raw sources nested under wiki/.
   - none; deepens prior CIP-21 ingest from same day
   - ctools bulk-vote multi-vote txs may work on software-only CIP-95 wallets but conflict with CIP-21 HW rule—documented, not a spec contradiction
 
+## [2026-05-21] ingest | DRep bulk vote optional CIP-20 message
+- Updated `wiki/pages/cip95-wallet-bridge.md` with a ctools note that `DRepBulkVote` supports optional label-674 CIP-20 metadata via `src/functions/cip20Metadata.ts`, distinct from the optional shared CIP-100 vote anchor.
+
