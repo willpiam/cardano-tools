@@ -110,6 +110,16 @@ export function formatGovernanceTimeRemaining(
   }
 }
 
+/** Voting has ended (ratified, enacted, expired, or dropped). Excludes live countdown and unknown. */
+export function isGovernanceActionFinalized(status: GovernanceActionTimeStatus): boolean {
+  return (
+    status.kind === 'expired' ||
+    status.kind === 'ratified' ||
+    status.kind === 'enacted' ||
+    status.kind === 'dropped'
+  );
+}
+
 export function governanceTimeStatusTitle(status: GovernanceActionTimeStatus): string | undefined {
   if (status.kind === 'countdown') {
     return `Voting ends ${new Date(status.deadlineSec * 1000).toLocaleString()}`;

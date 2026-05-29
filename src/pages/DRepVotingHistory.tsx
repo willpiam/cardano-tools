@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router';
 import { useAppSelector, useAppDispatch } from '../store/hooks';
 import { setBlockfrostConfig } from '../store/blockfrostSlice';
 import { Button } from '../components/Button';
+import { DRepVoteSummaryChart } from '../components/DRepVoteSummaryChart';
 import { fetchAllPages } from '../functions/governanceActionsFetch';
 import {
   fetchGovernanceEpochContext,
@@ -247,10 +248,18 @@ const DRepVotingHistory = () => {
 
           {!loading && !error && mergedData.length > 0 && (
             <>
-              <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
-                <span>Total proposals: <strong>{mergedData.length}</strong></span>
-                <span style={{ color: '#22c55e' }}>Voted: <strong>{votedCount}</strong></span>
-                <span style={{ color: '#6b7280' }}>Did not vote: <strong>{missedCount}</strong></span>
+              <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', alignItems: 'flex-start' }}>
+                <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', flex: 1 }}>
+                  <span>Total proposals: <strong>{mergedData.length}</strong></span>
+                  <span style={{ color: '#22c55e' }}>Voted: <strong>{votedCount}</strong></span>
+                  <span style={{ color: '#6b7280' }}>Did not vote: <strong>{missedCount}</strong></span>
+                </div>
+                <DRepVoteSummaryChart
+                  rows={mergedData.map((row) => ({
+                    vote: row.vote,
+                    timeStatus: row.timeStatus,
+                  }))}
+                />
               </div>
 
               <div className="overflow-x-auto" style={{ width: '100%' }}>
