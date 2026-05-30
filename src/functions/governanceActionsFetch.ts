@@ -83,8 +83,65 @@ export interface LiveGovernanceAction {
   metadataError: MetadataError | null;
 }
 
+/** Approximate two calendar months (60 days), used for recent finalized action inclusion. */
+export const RECENT_GOVERNANCE_ACTION_MAX_AGE_SEC = 60 * 24 * 60 * 60;
+
 export interface FetchLiveGovernanceActionsOptions {
   onPartial?: (actions: LiveGovernanceAction[]) => void;
+  /** Also include ratified/enacted actions submitted within the past ~2 months. */
+  includeRecentRatified?: boolean;
+}
+
+/** Proposal is still open on-chain (no dropped/expired/ratified/enacted epoch recorded). */
+export function isLiveGovernanceAction(action: Pick<
+  LiveGovernanceAction,
+  'droppedEpoch' | 'expiredEpoch' | 'ratifiedEpoch' | 'enactedEpoch'
+>): boolean {
+  return (
+    action.droppedEpoch === null &&
+    action.expiredEpoch === null &&
+    action.ratifiedEpoch === null &&
+    action.enactedEpoch === null
+  );
+}
+
+/** DRep votes can still be cast until the action expires, is dropped, or is enacted. */
+export function isVotableGovernanceAction(action: Pick<
+  LiveGovernanceAction,
+  'droppedEpoch' | 'expiredEpoch' | 'enactedEpoch'
+>): boolean {
+  return (
+    action.droppedEpoch === null &&
+    action.expiredEpoch === null &&
+    action.enactedEpoch === null
+  );
+}
+
+async function fetchTxBlockTimes(apiKey: string, txHashes: string[]): Promise<Map<string, number>> {
+  const unique = [...new Set(txHashes)];
+  if (unique.length === 0) return new Map();
+
+  const rows = await mapWithConcurrency(unique, 8, async (hash) => {
+    try {
+      const res = await fetch(`${BLOCKFROST_BASE}/txs/${hash}`, {
+        headers: { project_id: apiKey },
+      });
+      if (!res.ok) return { hash, blockTime: null as number | null };
+      const data: { block_time?: number } = await res.json();
+      return {
+        hash,
+        blockTime: typeof data.block_time === 'number' ? data.block_time : null,
+      };
+    } catch {
+      return { hash, blockTime: null as number | null };
+    }
+  });
+
+  const map = new Map<string, number>();
+  for (const { hash, blockTime } of rows) {
+    if (blockTime !== null) map.set(hash, blockTime);
+  }
+  return map;
 }
 
 export async function fetchAllPages<T>(endpoint: string, apiKey: string): Promise<T[]> {
@@ -576,8 +633,9 @@ export async function loadActionMetadata(
 }
 
 /**
- * Fetch all governance proposals that are still "live" (not dropped, expired, ratified, or enacted),
- * including CIP-108 metadata where discoverable.
+ * Fetch governance proposals that are still "live" (not dropped, expired, ratified, or enacted),
+ * optionally including ratified/enacted actions submitted within the past ~2 months.
+ * Includes CIP-108 metadata where discoverable.
  */
 export async function fetchLiveGovernanceActions(
   apiKey: string,
@@ -638,27 +696,44 @@ export async function fetchLiveGovernanceActions(
         metadataHash: anchor.metadataHash,
         metadata: null,
         metadataError: anchor.metadataError,
-      } satisfies LiveGovernanceAction;
+      } as LiveGovernanceAction;
     } catch (err) {
       console.error('Failed to load proposal detail', proposal.tx_hash, proposal.cert_index, err);
       return null;
     }
   });
 
-  const liveActions = details.reduce<LiveGovernanceAction[]>((acc, action) => {
-    if (!action) return acc;
-    if (
-      action.droppedEpoch === null &&
-      action.expiredEpoch === null &&
-      action.ratifiedEpoch === null &&
-      action.enactedEpoch === null
-    ) {
-      acc.push(action);
-    }
-    return acc;
-  }, []);
+  const loadedActions = details.filter((action): action is LiveGovernanceAction => action !== null);
 
-  const stage2Pending = liveActions.map((action) =>
+  let includedActions: LiveGovernanceAction[] = loadedActions.filter(isLiveGovernanceAction);
+
+  if (options?.includeRecentRatified) {
+    const cutoffSec = Math.floor(Date.now() / 1000) - RECENT_GOVERNANCE_ACTION_MAX_AGE_SEC;
+    const recentRatifiedCandidates = loadedActions.filter(
+      (action) =>
+        !isLiveGovernanceAction(action) &&
+        (action.ratifiedEpoch !== null || action.enactedEpoch !== null)
+    );
+    const blockTimes = await fetchTxBlockTimes(
+      apiKey,
+      recentRatifiedCandidates.map((action) => action.txHash)
+    );
+    const recentRatified = recentRatifiedCandidates.filter((action) => {
+      const blockTime = blockTimes.get(action.txHash);
+      return blockTime !== undefined && blockTime >= cutoffSec;
+    });
+
+    const seen = new Set<string>();
+    includedActions = [];
+    for (const action of [...loadedActions.filter(isLiveGovernanceAction), ...recentRatified]) {
+      const key = `${action.txHash}#${action.certIndex}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      includedActions.push(action);
+    }
+  }
+
+  const stage2Pending = includedActions.map((action) =>
     action.metadataStep1Status === 'success' && action.metadataUrl
       ? { ...action, metadataStep2Status: 'loading' as const }
       : action

@@ -8,6 +8,7 @@ import {
   fetchAllPages,
   fetchLiveGovernanceActions,
   formatGovActionType,
+  isVotableGovernanceAction,
   truncateHash,
   type GovernanceType,
   type LiveGovernanceAction,
@@ -37,6 +38,14 @@ interface BlockfrostDRepVote {
 
 function actionKey(a: { txHash: string; certIndex: number }): string {
   return `${a.txHash}#${a.certIndex}`;
+}
+
+function governanceStatusLabel(action: LiveGovernanceAction): string | null {
+  if (action.enactedEpoch !== null) return 'Enacted';
+  if (action.expiredEpoch !== null) return 'Expired';
+  if (action.droppedEpoch !== null) return 'Dropped';
+  if (action.ratifiedEpoch !== null) return 'Ratified';
+  return null;
 }
 
 function typeColor(type: GovernanceType): { bg: string; fg: string } {
@@ -140,6 +149,7 @@ const DRepBulkVote: React.FC = () => {
   const [selectedType, setSelectedType] = useState<'all' | GovernanceType>('all');
   const [sortOption, setSortOption] = useState<SortOption>('none');
   const [showOnlyChainUnvoted, setShowOnlyChainUnvoted] = useState(false);
+  const [includeRecentRatified, setIncludeRecentRatified] = useState(false);
 
   const [userVotes, setUserVotes] = useState<Record<string, UserVote>>({});
 
@@ -192,6 +202,7 @@ const DRepBulkVote: React.FC = () => {
       setActionsError(null);
       try {
         const loaded = await fetchLiveGovernanceActions(apiKey, {
+          includeRecentRatified,
           onPartial: (partial) => {
             if (!cancelled) setActions(partial);
           },
@@ -206,7 +217,7 @@ const DRepBulkVote: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [blockfrostReady, apiKey]);
+  }, [blockfrostReady, apiKey, includeRecentRatified]);
 
   useEffect(() => {
     setUserVotes((prev) => {
@@ -304,6 +315,7 @@ const DRepBulkVote: React.FC = () => {
 
   const votePayloadCount = useMemo(() => {
     return actions.reduce((n, a) => {
+      if (!isVotableGovernanceAction(a)) return n;
       const v = userVotes[actionKey(a)] ?? 'skip';
       return v === 'skip' ? n : n + 1;
     }, 0);
@@ -318,6 +330,7 @@ const DRepBulkVote: React.FC = () => {
       setUserVotes((prev) => {
         const next = { ...prev };
         for (const a of filteredActions) {
+          if (!isVotableGovernanceAction(a)) continue;
           next[actionKey(a)] = v;
         }
         return next;
@@ -350,6 +363,7 @@ const DRepBulkVote: React.FC = () => {
 
     const entries: BulkVoteEntry[] = [];
     for (const a of actions) {
+      if (!isVotableGovernanceAction(a)) continue;
       const k = actionKey(a);
       const choice = userVotes[k] ?? 'skip';
       if (choice === 'skip') continue;
@@ -692,6 +706,22 @@ const DRepBulkVote: React.FC = () => {
                   />
                   <span>Show only actions with no on-chain vote yet {chainVotesLoading ? '(loading…)' : ''}</span>
                 </label>
+                <label
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    alignSelf: 'flex-end',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={includeRecentRatified}
+                    onChange={() => setIncludeRecentRatified(!includeRecentRatified)}
+                  />
+                  <span>Also load ratified actions from the past 2 months</span>
+                </label>
               </div>
 
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'center' }}>
@@ -720,6 +750,8 @@ const DRepBulkVote: React.FC = () => {
                   const chain = chainVoteByKey[k];
                   const colors = typeColor(action.governanceType);
                   const displayTitle = action.metadata?.title ?? action.title;
+                  const statusLabel = governanceStatusLabel(action);
+                  const votable = isVotableGovernanceAction(action);
                   return (
                     <div
                       key={k}
@@ -753,6 +785,20 @@ const DRepBulkVote: React.FC = () => {
                         >
                           {formatGovActionType(action.governanceType)}
                         </span>
+                        {statusLabel && (
+                          <span
+                            style={{
+                              backgroundColor: statusLabel === 'Ratified' ? '#1e3a5f' : '#374151',
+                              color: statusLabel === 'Ratified' ? '#93c5fd' : '#d1d5db',
+                              fontWeight: 700,
+                              fontSize: '0.72rem',
+                              borderRadius: '9999px',
+                              padding: '0.2rem 0.55rem',
+                            }}
+                          >
+                            {statusLabel}
+                          </span>
+                        )}
                       </div>
                       {displayTitle && <div style={{ fontWeight: 600, color: '#f8fafc' }}>{displayTitle}</div>}
                       <div style={{ color: '#d1d5db', fontSize: '0.9rem' }}>{action.summary}</div>
@@ -761,10 +807,30 @@ const DRepBulkVote: React.FC = () => {
                           On-chain vote recorded: <strong>{chain}</strong>
                         </div>
                       )}
+                      {!votable && (
+                        <div style={{ fontSize: '0.8rem', color: '#9ca3af' }}>
+                          Voting closed — this action has expired, been dropped, or been enacted.
+                        </div>
+                      )}
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', alignItems: 'center' }}>
                         {(['yes', 'no', 'abstain', 'skip'] as const).map((opt) => (
-                          <label key={opt} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', cursor: 'pointer' }}>
-                            <input type="radio" name={k} checked={choice === opt} onChange={() => setVote(k, opt)} />
+                          <label
+                            key={opt}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.35rem',
+                              cursor: votable ? 'pointer' : 'not-allowed',
+                              opacity: votable ? 1 : 0.45,
+                            }}
+                          >
+                            <input
+                              type="radio"
+                              name={k}
+                              checked={choice === opt}
+                              disabled={!votable}
+                              onChange={() => setVote(k, opt)}
+                            />
                             <span style={{ textTransform: 'capitalize' }}>{opt}</span>
                           </label>
                         ))}
