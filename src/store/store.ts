@@ -6,6 +6,7 @@ import modalReducer from './modalSlice';
 import walletConnectedReducer from './isWalletConnectedSlice';
 import blockfrostReducer from './blockfrostSlice';
 import ethWalletReducer from './ethWalletSlice';
+import pinataReducer from './pinataSlice';
 
 export const store = configureStore({
   reducer: {
@@ -16,6 +17,7 @@ export const store = configureStore({
     walletConnected: walletConnectedReducer,
     blockfrost: blockfrostReducer,
     ethWallet: ethWalletReducer,
+    pinata: pinataReducer,
   },
 });
 

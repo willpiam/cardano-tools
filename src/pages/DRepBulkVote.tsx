@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import ConnectWallet from '../components/ConnectWallet';
 import { Button } from '../components/Button';
-import { useAppSelector } from '../store/hooks';
+import { useAppDispatch, useAppSelector } from '../store/hooks';
 import '../simple.css';
 import {
   GOVERNANCE_TYPES,
@@ -22,6 +22,9 @@ import {
 } from '../functions/drepCredential';
 import { buildAndSubmitBulkVotes, type BulkVoteAnchor, type BulkVoteEntry } from '../functions/bulkVote';
 import { downloadJson } from '../functions/downloadJson';
+import { buildCip100RationaleBytes, hashGovernanceAnchorBytes } from '../functions/cip100RationaleDocument';
+import { uploadJsonToPinata } from '../functions/pinataUpload';
+import { setPinataConfig } from '../store/pinataSlice';
 
 type UserVote = 'yes' | 'no' | 'abstain' | 'skip';
 
@@ -80,6 +83,8 @@ interface BulkVoteReceipt {
   anchorAttached: boolean;
   anchorUrl: string | null;
   anchorHashHex: string | null;
+  rationaleUploadedViaPinata: boolean;
+  rationaleIpfsUrl: string | null;
   metadataAttached: boolean;
   metadata674: string[] | null;
   votes: BulkVoteEntry[];
@@ -91,6 +96,7 @@ const receiptFilename = (txHash: string) =>
 const ANCHOR_ATTACH_PARAM = 'anchor';
 const ANCHOR_URL_PARAM = 'anchorUrl';
 const ANCHOR_HASH_PARAM = 'anchorHash';
+const PINATA_JWT_PARAM = 'pinataJwt';
 
 function readAnchorFromUrl(): {
   attachAnchor: boolean;
@@ -135,12 +141,15 @@ function syncAnchorToUrl(
 const initialAnchorFromUrl = readAnchorFromUrl();
 
 const DRepBulkVote: React.FC = () => {
+  const dispatch = useAppDispatch();
   const walletName = useAppSelector((state) => state.wallet.selectedWallet);
   const walletAddress = useAppSelector((state) => state.wallet.address);
   const isWalletConnected = useAppSelector((state) => state.walletConnected.isWalletConnected);
   const { useBlockfrost, apiKey } = useAppSelector((state) => state.blockfrost);
+  const { usePinata, jwt: pinataJwt } = useAppSelector((state) => state.pinata);
 
   const blockfrostReady = Boolean(useBlockfrost && apiKey);
+  const pinataReady = Boolean(usePinata && pinataJwt);
 
   const [actions, setActions] = useState<LiveGovernanceAction[]>([]);
   const [actionsLoading, setActionsLoading] = useState(false);
@@ -167,6 +176,11 @@ const DRepBulkVote: React.FC = () => {
   const [persistAnchorInUrl, setPersistAnchorInUrl] = useState(initialAnchorFromUrl.hasAnchorParams);
   const [includeNote, setIncludeNote] = useState(false);
   const [noteText, setNoteText] = useState("casting drep votes - using $computerman bulk vote tool");
+  const [localPinataJwt, setLocalPinataJwt] = useState(pinataJwt ?? '');
+  const [rationaleText, setRationaleText] = useState('');
+  const [rationaleUploading, setRationaleUploading] = useState(false);
+  const [rationaleUploadError, setRationaleUploadError] = useState<string | null>(null);
+  const [pinataUploadResult, setPinataUploadResult] = useState<{ url: string; hashHex: string } | null>(null);
 
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -185,6 +199,19 @@ const DRepBulkVote: React.FC = () => {
   }, [overrideDrep, manualDrepInput, walletDerivedDrep]);
 
   const effectiveDrepId = effectiveDrep?.drepIdBech32 ?? null;
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const urlPinataJwt = params.get(PINATA_JWT_PARAM);
+    if (urlPinataJwt) {
+      dispatch(setPinataConfig({ usePinata: true, jwt: urlPinataJwt }));
+      setLocalPinataJwt(urlPinataJwt);
+    }
+  }, [dispatch]);
+
+  useEffect(() => {
+    if (pinataJwt) setLocalPinataJwt(pinataJwt);
+  }, [pinataJwt]);
 
   useEffect(() => {
     syncAnchorToUrl(persistAnchorInUrl, attachAnchor, anchorUrl, anchorHashHex);
@@ -339,6 +366,47 @@ const DRepBulkVote: React.FC = () => {
     [filteredActions]
   );
 
+  const handleApplyPinataJwt = () => {
+    const nextJwt = localPinataJwt.trim();
+    dispatch(setPinataConfig({ usePinata: Boolean(nextJwt), jwt: nextJwt || null }));
+    const url = new URL(window.location.href);
+    if (nextJwt) url.searchParams.set(PINATA_JWT_PARAM, nextJwt);
+    else url.searchParams.delete(PINATA_JWT_PARAM);
+    window.history.replaceState({}, '', url.toString());
+  };
+
+  const handleUploadRationale = async () => {
+    setRationaleUploadError(null);
+    setPinataUploadResult(null);
+
+    const jwt = (pinataJwt || localPinataJwt).trim();
+    const rationale = rationaleText.trim();
+    if (!jwt) {
+      setRationaleUploadError('Pinata JWT is required.');
+      return;
+    }
+    if (!rationale) {
+      setRationaleUploadError('Rationale text is required before uploading.');
+      return;
+    }
+
+    setRationaleUploading(true);
+    try {
+      const bytes = buildCip100RationaleBytes(rationale);
+      const hashHex = hashGovernanceAnchorBytes(bytes);
+      const uploaded = await uploadJsonToPinata(jwt, bytes, `drep-bulk-vote-rationale-${Date.now()}.json`);
+
+      setAnchorUrl(uploaded.url);
+      setAnchorHashHex(hashHex);
+      setAttachAnchor(true);
+      setPinataUploadResult({ url: uploaded.url, hashHex });
+    } catch (e: any) {
+      setRationaleUploadError(e?.message || String(e));
+    } finally {
+      setRationaleUploading(false);
+    }
+  };
+
   const handleSubmit = async () => {
     setSubmitError(null);
     setSubmittedTxHash(null);
@@ -392,6 +460,12 @@ const DRepBulkVote: React.FC = () => {
     if (attachAnchor) {
       anchor = { url: anchorUrl.trim(), hashHex: anchorHashHex.trim().replace(/^0x/i, '') };
     }
+    const rationaleUploadedViaPinata = Boolean(
+      anchor &&
+      pinataUploadResult &&
+      anchor.url === pinataUploadResult.url &&
+      anchor.hashHex.toLowerCase() === pinataUploadResult.hashHex.toLowerCase()
+    );
     const metadata: string[] | undefined =
       includeNote && noteText.trim().length > 0
         ? [noteText.trim(), `bulk vote: ${entries.length} action(s)`]
@@ -423,6 +497,8 @@ const DRepBulkVote: React.FC = () => {
         anchorAttached: Boolean(anchor),
         anchorUrl: anchor?.url ?? null,
         anchorHashHex: anchor?.hashHex ?? null,
+        rationaleUploadedViaPinata,
+        rationaleIpfsUrl: rationaleUploadedViaPinata ? pinataUploadResult?.url ?? null : null,
         metadataAttached: Boolean(metadata?.length),
         metadata674: metadata ?? null,
         votes: entries,
@@ -544,6 +620,115 @@ const DRepBulkVote: React.FC = () => {
                     This is a script DRep — on-chain voting from this tool is not supported yet.
                   </p>
                 )}
+              </div>
+
+              <div
+                style={{
+                  border: '1px solid #4b5563',
+                  borderRadius: '8px',
+                  padding: '1rem',
+                  backgroundColor: '#0f172a',
+                  width: '100%',
+                }}
+              >
+                <h2 style={{ marginTop: 0, fontSize: '1.1rem' }}>Publish rationale to IPFS</h2>
+                <p style={{ margin: '0 0 0.75rem', color: '#d1d5db', fontSize: '0.9rem', maxWidth: '720px' }}>
+                  Upload a CIP-100 rationale document with Pinata, then use the returned IPFS CID and computed
+                  blake2b-256 hash as the shared vote anchor.
+                </p>
+                <div style={{ display: 'grid', gap: '0.5rem', maxWidth: '640px' }}>
+                  <label style={{ display: 'block', fontWeight: 600 }}>Pinata JWT</label>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'center' }}>
+                    <input
+                      type="text"
+                      placeholder="Enter your Pinata JWT"
+                      value={localPinataJwt}
+                      onChange={(e) => setLocalPinataJwt(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleApplyPinataJwt()}
+                      style={{
+                        flex: '1 1 320px',
+                        padding: '0.5rem',
+                        borderRadius: '6px',
+                        border: '1px solid #4b5563',
+                        backgroundColor: '#1e293b',
+                        color: '#e5e7eb',
+                      }}
+                    />
+                    <Button onClick={handleApplyPinataJwt}>Set Key</Button>
+                  </div>
+                  <p style={{ margin: 0, fontSize: '0.8rem', color: '#9ca3af' }}>
+                    Get a JWT from{' '}
+                    <a
+                      href="https://app.pinata.cloud/developers/api-keys"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ color: '#93c5fd' }}
+                    >
+                      Pinata developer API keys
+                    </a>
+                    .
+                  </p>
+                  {pinataReady && (
+                    <div
+                      style={{
+                        padding: '0.5rem',
+                        backgroundColor: '#3a2a05',
+                        border: '1px solid #d97706',
+                        borderRadius: '6px',
+                        color: '#fde68a',
+                        fontSize: '0.8rem',
+                      }}
+                    >
+                      Security notice: your Pinata JWT is stored in the URL. Be careful when screensharing or sharing
+                      links.
+                    </div>
+                  )}
+                  <label style={{ display: 'block', fontWeight: 600, marginTop: '0.5rem' }}>Rationale text</label>
+                  <textarea
+                    value={rationaleText}
+                    onChange={(e) => setRationaleText(e.target.value)}
+                    rows={6}
+                    placeholder="Explain the rationale for this batch of DRep votes."
+                    style={{
+                      width: '100%',
+                      padding: '0.5rem',
+                      borderRadius: '6px',
+                      border: '1px solid #4b5563',
+                      backgroundColor: '#1e293b',
+                      color: '#e5e7eb',
+                    }}
+                  />
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'center' }}>
+                    <Button
+                      onClick={handleUploadRationale}
+                      disabled={rationaleUploading || !pinataReady || !rationaleText.trim()}
+                    >
+                      {rationaleUploading ? 'Uploading…' : 'Upload to IPFS'}
+                    </Button>
+                    {!pinataReady && (
+                      <span style={{ color: '#9ca3af', fontSize: '0.85rem' }}>
+                        Set a Pinata JWT before uploading.
+                      </span>
+                    )}
+                  </div>
+                  {rationaleUploadError && (
+                    <div style={{ color: '#fca5a5', whiteSpace: 'pre-wrap' }}>{rationaleUploadError}</div>
+                  )}
+                  {pinataUploadResult && (
+                    <div style={{ color: '#bbf7d0', fontSize: '0.85rem', display: 'grid', gap: '0.25rem' }}>
+                      <div>
+                        Uploaded:{' '}
+                        <a href={pinataUploadResult.url} target="_blank" rel="noopener noreferrer" style={{ color: '#93c5fd' }}>
+                          {pinataUploadResult.url}
+                        </a>
+                      </div>
+                      <div style={{ wordBreak: 'break-all' }}>
+                        Hash: <code>{pinataUploadResult.hashHex}</code>
+                      </div>
+                      <div>The shared CIP-100 anchor fields below were updated from this upload.</div>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div
