@@ -184,3 +184,8 @@ Created wiki scaffold with raw sources nested under wiki/.
 ## [2026-05-21] ingest | DRep bulk vote optional CIP-20 message
 - Updated `wiki/pages/cip95-wallet-bridge.md` with a ctools note that `DRepBulkVote` supports optional label-674 CIP-20 metadata via `src/functions/cip20Metadata.ts`, distinct from the optional shared CIP-100 vote anchor.
 
+## [2026-06-03] query | DRep vote metadata charts
+- Question asked: Implement vote rationale charts and on-chain CIP-100 anchor detection on DRep Voting History.
+- Pages consulted: `wiki/pages/governance-metadata-framework-cip100.md`, `wiki/pages/ctools-drep-voting-history-blockfrost.md`, `wiki/pages/cip95-wallet-bridge.md`.
+- Updated `wiki/pages/ctools-drep-voting-history-blockfrost.md` with anchor enrichment via `/txs/{hash}/cbor` and chart behavior.
+

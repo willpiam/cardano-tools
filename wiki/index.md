@@ -30,5 +30,5 @@
 - [Hardware wallet transaction interoperability (CIP-21)](pages/hardware-wallet-transaction-interop-cip21.md) - HW signing constraints: canonical CBOR, one vote per tx, cert combinations, device Conway gaps; bulk multi-vote txs fail on Ledger via Eternl.
 
 ## ctools application
-- [DRep voting history: Blockfrost key and URL params](pages/ctools-drep-voting-history-blockfrost.md) - How ctools Blockfrost tools read/write `blockfrostApiKey` (and, on the Conch protocol page `/conch`, `assetId` / `txLimit`) in the query string; Redux + `project_id` headers.
+- [DRep voting history: Blockfrost key and URL params](pages/ctools-drep-voting-history-blockfrost.md) - Blockfrost key URL/Redux flow; vote summary + CIP-100 anchor charts (CBOR enrichment via `voteTxAnchors.ts`).
 - [Live Governance Actions](pages/ctools-governance-actions-live.md) - Blockfrost-backed browser for live mainnet proposals: type filters, treasury sort, two-step metadata (anchor + CIP-108 fetch), Cardanoscan links.

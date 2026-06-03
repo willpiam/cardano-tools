@@ -4,22 +4,22 @@ overview: Add CIP-100 vote-anchor detection to DRep Voting History by parsing un
 todos:
   - id: vote-tx-anchors
     content: "Add voteTxAnchors.ts: CML parse + Blockfrost /txs/{hash}/cbor fetch with per-tx cache; export mapWithConcurrency from governanceActionsFetch"
-    status: pending
+    status: completed
   - id: vote-tx-anchors-test
     content: Add voteTxAnchors.test.ts with eternl-debug CBOR fixture + optional anchored tx fixture
-    status: pending
+    status: completed
   - id: chart-shared
     content: Extract governanceChartShared.tsx (pie/bar + modal); add pie/bar toggle to DRepVoteSummaryChart
-    status: pending
+    status: completed
   - id: metadata-chart
     content: Add DRepVoteMetadataChart.tsx with 3-bucket counts, cross-tab in modal, computeVoteMetadataSummary
-    status: pending
+    status: completed
   - id: drep-history-page
     content: "Wire DRepVotingHistory: phase-B enrichment, rationale column, headline stat, both chart buttons"
-    status: pending
+    status: completed
   - id: wiki-note
     content: Update ctools-drep-voting-history-blockfrost.md + wiki/log.md with anchor detection approach
-    status: pending
+    status: completed
 isProject: false
 ---
 

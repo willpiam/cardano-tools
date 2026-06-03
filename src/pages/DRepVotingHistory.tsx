@@ -1,10 +1,16 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { useAppSelector, useAppDispatch } from '../store/hooks';
 import { setBlockfrostConfig } from '../store/blockfrostSlice';
 import { Button } from '../components/Button';
+import { IpfsLinkModal } from '../components/IpfsLinkModal';
 import { DRepVoteSummaryChart } from '../components/DRepVoteSummaryChart';
+import {
+  DRepVoteMetadataChart,
+  type VoteAnchorStatus,
+} from '../components/DRepVoteMetadataChart';
 import { fetchAllPages } from '../functions/governanceActionsFetch';
+import { fetchVoteTxAnchorMap, proposalKey } from '../functions/voteTxAnchors';
 import {
   fetchGovernanceEpochContext,
   fetchProposalExpirationFields,
@@ -31,6 +37,12 @@ interface BlockfrostDRepVote {
   vote: string;
 }
 
+export interface VoteAnchorInfo {
+  status: VoteAnchorStatus;
+  url?: string;
+  hashHex?: string;
+}
+
 interface MergedProposal {
   proposalId: string;
   proposalTxHash: string;
@@ -38,6 +50,7 @@ interface MergedProposal {
   govActionType: string;
   vote: string | null;
   voteTxHash: string | null;
+  voteAnchor: VoteAnchorInfo;
   timeStatus: GovernanceActionTimeStatus;
 }
 
@@ -65,6 +78,43 @@ function formatGovActionType(type: string): string {
     .replace(/\b\w/g, c => c.toUpperCase());
 }
 
+function initialVoteAnchor(vote: string | null): VoteAnchorInfo {
+  if (!vote) return { status: 'none' };
+  return { status: 'unknown' };
+}
+
+function resolveVoteAnchor(
+  vote: string | null,
+  voteTxHash: string | null,
+  proposalTxHash: string,
+  proposalCertIndex: number,
+  anchorByProposalKey: Map<string, { hasAnchor: boolean; url?: string; hashHex?: string }>,
+  failedTxHashes: Set<string>
+): VoteAnchorInfo {
+  if (!vote) return { status: 'none' };
+  if (!voteTxHash) return { status: 'unknown' };
+
+  const normalizedTx = voteTxHash.trim().toLowerCase();
+  if (failedTxHashes.has(normalizedTx)) {
+    return { status: 'unknown' };
+  }
+
+  const key = proposalKey(proposalTxHash, proposalCertIndex);
+  const entry = anchorByProposalKey.get(key);
+  if (!entry) {
+    return { status: 'unknown' };
+  }
+
+  if (entry.hasAnchor) {
+    return {
+      status: 'present',
+      url: entry.url,
+      hashHex: entry.hashHex,
+    };
+  }
+  return { status: 'absent' };
+}
+
 const DRepVotingHistory = () => {
   const { drepId } = useParams<{ drepId: string }>();
   const navigate = useNavigate();
@@ -75,8 +125,11 @@ const DRepVotingHistory = () => {
   const [drepInput, setDrepInput] = useState(drepId || '');
   const [mergedData, setMergedData] = useState<MergedProposal[]>([]);
   const [loading, setLoading] = useState(false);
+  const [anchorLoading, setAnchorLoading] = useState(false);
+  const [anchorCheckFailedCount, setAnchorCheckFailedCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [copiedProposalId, setCopiedProposalId] = useState<string | null>(null);
+  const [rationaleModal, setRationaleModal] = useState<{ url: string; hashHex?: string } | null>(null);
   const [nowSec, setNowSec] = useState(() => Math.floor(Date.now() / 1000));
 
   useEffect(() => {
@@ -109,10 +162,60 @@ const DRepVotingHistory = () => {
     return () => window.clearInterval(id);
   }, [mergedData]);
 
+  const enrichAnchors = async (merged: MergedProposal[], id: string, key: string) => {
+    const voteTxHashes = merged
+      .map((m) => m.voteTxHash)
+      .filter((h): h is string => Boolean(h));
+
+    if (voteTxHashes.length === 0) {
+      setAnchorCheckFailedCount(0);
+      return;
+    }
+
+    setAnchorLoading(true);
+    try {
+      const { anchorByProposalKey, failedTxHashes } = await fetchVoteTxAnchorMap(
+        key,
+        voteTxHashes,
+        id
+      );
+      const failedSet = new Set(failedTxHashes.map((h) => h.toLowerCase()));
+      setAnchorCheckFailedCount(failedTxHashes.length);
+
+      setMergedData((prev) =>
+        prev.map((row) => ({
+          ...row,
+          voteAnchor: resolveVoteAnchor(
+            row.vote,
+            row.voteTxHash,
+            row.proposalTxHash,
+            row.proposalCertIndex,
+            anchorByProposalKey,
+            failedSet
+          ),
+        }))
+      );
+    } catch (err) {
+      console.error('Failed to enrich vote anchors', err);
+      setMergedData((prev) =>
+        prev.map((row) => ({
+          ...row,
+          voteAnchor: row.vote
+            ? { status: 'unknown' as const }
+            : { status: 'none' as const },
+        }))
+      );
+    } finally {
+      setAnchorLoading(false);
+    }
+  };
+
   const fetchData = async (id: string, key: string) => {
     setLoading(true);
     setError(null);
     setMergedData([]);
+    setAnchorCheckFailedCount(0);
+    setAnchorLoading(false);
 
     try {
       const [proposals, votes, ctx] = await Promise.all([
@@ -130,30 +233,34 @@ const DRepVotingHistory = () => {
       }
 
       const merged: MergedProposal[] = proposals.map((p) => {
-        const proposalKey = `${p.tx_hash}#${p.cert_index}`;
-        const vote = voteMap.get(proposalKey);
-        const expirationFields = expirationByKey.get(proposalKey);
+        const proposalKeyStr = `${p.tx_hash}#${p.cert_index}`;
+        const vote = voteMap.get(proposalKeyStr);
+        const expirationFields = expirationByKey.get(proposalKeyStr);
         const timeStatus = expirationFields
           ? resolveGovernanceTimeStatus(expirationFields, ctx)
           : { kind: 'unknown' as const };
+        const voteValue = vote?.vote ?? null;
 
         return {
           proposalId: p.id,
           proposalTxHash: p.tx_hash,
           proposalCertIndex: p.cert_index,
           govActionType: p.governance_type,
-          vote: vote?.vote ?? null,
+          vote: voteValue,
           voteTxHash: vote?.tx_hash ?? null,
+          voteAnchor: initialVoteAnchor(voteValue),
           timeStatus,
         };
       });
 
       setNowSec(Math.floor(Date.now() / 1000));
       setMergedData(merged);
+      setLoading(false);
+
+      void enrichAnchors(merged, id, key);
     } catch (err) {
       console.error('Failed to fetch DRep voting history', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch data');
-    } finally {
       setLoading(false);
     }
   };
@@ -180,8 +287,18 @@ const DRepVotingHistory = () => {
     });
   };
 
-  const votedCount = mergedData.filter(m => m.vote !== null).length;
-  const missedCount = mergedData.filter(m => m.vote === null).length;
+  const votedCount = mergedData.filter((m) => m.vote !== null).length;
+  const missedCount = mergedData.filter((m) => m.vote === null).length;
+
+  const withAnchorCount = useMemo(
+    () => mergedData.filter((m) => m.voteAnchor.status === 'present').length,
+    [mergedData]
+  );
+
+  const anchorPct =
+    votedCount > 0 && !anchorLoading
+      ? Math.round((withAnchorCount / votedCount) * 100)
+      : null;
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -248,18 +365,43 @@ const DRepVotingHistory = () => {
 
           {!loading && !error && mergedData.length > 0 && (
             <>
-              <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', alignItems: 'flex-start' }}>
-                <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', flex: 1 }}>
-                  <span>Total proposals: <strong>{mergedData.length}</strong></span>
-                  <span style={{ color: '#22c55e' }}>Voted: <strong>{votedCount}</strong></span>
-                  <span style={{ color: '#6b7280' }}>Did not vote: <strong>{missedCount}</strong></span>
+              <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', alignItems: 'flex-start', width: '100%' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', flex: 1, minWidth: 200 }}>
+                  <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
+                    <span>Total proposals: <strong>{mergedData.length}</strong></span>
+                    <span style={{ color: '#22c55e' }}>Voted: <strong>{votedCount}</strong></span>
+                    <span style={{ color: '#6b7280' }}>Did not vote: <strong>{missedCount}</strong></span>
+                  </div>
+                  {votedCount > 0 && (
+                    <span style={{ fontSize: '0.9rem', color: '#14b8a6' }}>
+                      {anchorLoading ? (
+                        'Checking CIP-100 vote anchors…'
+                      ) : anchorPct !== null ? (
+                        <>
+                          <strong>{withAnchorCount}</strong> of <strong>{votedCount}</strong> voted actions
+                          include a CIP-100 anchor ({anchorPct}%)
+                        </>
+                      ) : null}
+                    </span>
+                  )}
                 </div>
-                <DRepVoteSummaryChart
-                  rows={mergedData.map((row) => ({
-                    vote: row.vote,
-                    timeStatus: row.timeStatus,
-                  }))}
-                />
+                <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                  <DRepVoteSummaryChart
+                    rows={mergedData.map((row) => ({
+                      vote: row.vote,
+                      timeStatus: row.timeStatus,
+                    }))}
+                  />
+                  <DRepVoteMetadataChart
+                    rows={mergedData.map((row) => ({
+                      vote: row.vote,
+                      anchorStatus: row.voteAnchor.status,
+                      timeStatus: row.timeStatus,
+                    }))}
+                    anchorCheckFailedCount={anchorCheckFailedCount}
+                    loading={anchorLoading}
+                  />
+                </div>
               </div>
 
               <div className="overflow-x-auto" style={{ width: '100%' }}>
@@ -271,6 +413,7 @@ const DRepVotingHistory = () => {
                       <th className="px-4 py-2 border-b">Action Type</th>
                       <th className="px-4 py-2 border-b">Time left</th>
                       <th className="px-4 py-2 border-b">Vote</th>
+                      <th className="px-4 py-2 border-b">Rationale</th>
                       <th className="px-4 py-2 border-b">Vote Tx</th>
                     </tr>
                   </thead>
@@ -319,6 +462,39 @@ const DRepVotingHistory = () => {
                             {voteLabel(row.vote)}
                           </span>
                         </td>
+                        <td className="px-4 py-2 border-b text-xs">
+                          {!row.vote ? (
+                            <span style={{ color: '#6b7280' }}>—</span>
+                          ) : anchorLoading ? (
+                            <span style={{ color: '#9ca3af' }}>…</span>
+                          ) : row.voteAnchor.status === 'present' && row.voteAnchor.url ? (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setRationaleModal({
+                                  url: row.voteAnchor.url!,
+                                  hashHex: row.voteAnchor.hashHex,
+                                })
+                              }
+                              style={{
+                                color: '#7dd3fc',
+                                textDecoration: 'underline',
+                                background: 'transparent',
+                                border: 'none',
+                                padding: 0,
+                                cursor: 'pointer',
+                                fontSize: 'inherit',
+                                fontWeight: 500,
+                              }}
+                            >
+                              Rationale
+                            </button>
+                          ) : row.voteAnchor.status === 'absent' ? (
+                            <span style={{ color: '#6b7280' }}>—</span>
+                          ) : (
+                            <span style={{ color: '#9ca3af' }}>?</span>
+                          )}
+                        </td>
                         <td className="px-4 py-2 border-b font-mono text-xs">
                           {row.voteTxHash ? (
                             <a
@@ -340,6 +516,13 @@ const DRepVotingHistory = () => {
               </div>
             </>
           )}
+
+          <IpfsLinkModal
+            open={rationaleModal !== null}
+            url={rationaleModal?.url ?? ''}
+            hashHex={rationaleModal?.hashHex}
+            onClose={() => setRationaleModal(null)}
+          />
 
           {!loading && !error && drepId && apiKey && mergedData.length === 0 && (
             <p>No governance proposals found.</p>

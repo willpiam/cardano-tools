@@ -25,6 +25,18 @@ There is no separate step that removes the key from the URL when clearing Redux;
 
 Requests to Blockfrost use the HTTP header **`project_id`** set to the key (Blockfrost’s convention), not the query string. The base URL is fixed mainnet (`https://cardano-mainnet.blockfrost.io/api/v0`). Pagination uses path + query (`page`, `count`, `order`); the secret stays in the header.
 
+## Vote rationale (CIP-100 anchor) charts
+
+The DRep Voting History page shows two summary charts: **vote disposition** (Yes / No / Abstain / did not vote) and **vote rationale** (did not vote / voted without on-chain anchor / voted with anchor).
+
+Blockfrost `GET /governance/dreps/{drep_id}/votes` does not include per-vote anchor fields. After the main table loads, the app enriches votes in a second phase:
+
+1. Collect unique **vote transaction** hashes from rows where the DRep voted.
+2. For each hash, `GET /txs/{hash}/cbor` and parse `voting_procedures` with CML (`src/functions/voteTxAnchors.ts`).
+3. Match the page DRep credential and governance action id (`proposal_tx_hash#proposal_cert_index`) to detect whether the `VotingProcedure` includes a CIP-100 anchor (URL + hash on-chain only—no off-chain document fetch).
+
+The results table adds a **Rationale** column (link when an anchor URL is present). Expanded chart modals support pie/bar toggle and a vote-choice × anchor cross-tab for voted actions. See [Governance metadata framework (CIP-100)](governance-metadata-framework-cip100.md).
+
 ## Security note
 
 Putting API keys in query parameters can expose them in shared links, referrer headers, analytics, and server access logs. This behavior is intentional for shareable/bookmarkable sessions in this tool, but operators should treat shared URLs as sensitive.
@@ -50,6 +62,8 @@ The Conch reader derives the CIP-14 **`asset1…` fingerprint** from the hex uni
 ## Related code
 
 - Pages: `src/pages/DRepVotingHistory.tsx`, `src/pages/GovernanceActions.tsx`, `src/pages/AssetCip20Messages.tsx`
+- Charts: `src/components/DRepVoteSummaryChart.tsx`, `src/components/DRepVoteMetadataChart.tsx`, `src/components/governanceChartShared.tsx`
+- Vote anchor parsing: `src/functions/voteTxAnchors.ts`
 - State: `src/store/blockfrostSlice.ts`
 - Conch / CIP-20 history helpers: `src/utils/cip20AssetHistory.ts`
 - CIP-14 fingerprint from unit hex: `src/utils/cip14AssetFingerprint.ts` (uses `@emurgo/cip14-js`)

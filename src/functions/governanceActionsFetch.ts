@@ -164,7 +164,7 @@ export async function fetchAllPages<T>(endpoint: string, apiKey: string): Promis
   return results;
 }
 
-async function mapWithConcurrency<T, U>(
+export async function mapWithConcurrency<T, U>(
   items: T[],
   concurrency: number,
   mapper: (item: T, index: number) => Promise<U>

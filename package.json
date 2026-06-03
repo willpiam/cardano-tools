@@ -99,6 +99,7 @@
   },
   "devDependencies": {
     "@babel/plugin-proposal-private-property-in-object": "^7.21.11",
+    "@types/jest": "^29.5.14",
     "autoprefixer": "^10.4.21",
     "crypto-browserify": "^3.12.1",
     "path-browserify": "^1.0.1",
