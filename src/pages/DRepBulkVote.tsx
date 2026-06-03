@@ -633,8 +633,8 @@ const DRepBulkVote: React.FC = () => {
               >
                 <h2 style={{ marginTop: 0, fontSize: '1.1rem' }}>Publish rationale to IPFS</h2>
                 <p style={{ margin: '0 0 0.75rem', color: '#d1d5db', fontSize: '0.9rem', maxWidth: '720px' }}>
-                  Upload a CIP-100 rationale document with Pinata, then use the returned IPFS CID and computed
-                  blake2b-256 hash as the shared vote anchor.
+                  Upload a CIP-100 JSON-LD document (your text in <code>body.comment</code>) with Pinata, then use the
+                  returned IPFS CID and computed blake2b-256 hash as the shared vote anchor.
                 </p>
                 <div style={{ display: 'grid', gap: '0.5rem', maxWidth: '640px' }}>
                   <label style={{ display: 'block', fontWeight: 600 }}>Pinata JWT</label>
@@ -688,7 +688,7 @@ const DRepBulkVote: React.FC = () => {
                     value={rationaleText}
                     onChange={(e) => setRationaleText(e.target.value)}
                     rows={6}
-                    placeholder="Explain the rationale for this batch of DRep votes."
+                    placeholder="Explain why you are voting this way (markdown supported)."
                     style={{
                       width: '100%',
                       padding: '0.5rem',
