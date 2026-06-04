@@ -7,10 +7,18 @@ interface IpfsLinkModalProps {
   open: boolean;
   url: string;
   hashHex?: string;
+  /** Dialog heading (default: vote rationale). */
+  title?: string;
   onClose: () => void;
 }
 
-export function IpfsLinkModal({ open, url, hashHex, onClose }: IpfsLinkModalProps) {
+export function IpfsLinkModal({
+  open,
+  url,
+  hashHex,
+  title = 'Open vote rationale',
+  onClose,
+}: IpfsLinkModalProps) {
   const [copied, setCopied] = useState(false);
   const parsed = parseIpfsLink(url);
 
@@ -44,7 +52,7 @@ export function IpfsLinkModal({ open, url, hashHex, onClose }: IpfsLinkModalProp
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
           <h2 id="ipfs-link-title" className="ipfs-link-modal-title">
-            Open vote rationale
+            {title}
           </h2>
           <button type="button" onClick={onClose} aria-label="Close" className="ipfs-link-modal-close">
             ×

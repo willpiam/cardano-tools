@@ -14,6 +14,7 @@ import { fetchVoteTxAnchorMap, proposalKey } from '../functions/voteTxAnchors';
 import {
   fetchGovernanceEpochContext,
   fetchProposalExpirationFields,
+  type ProposalMetadataAnchorInfo,
   formatGovernanceTimeRemaining,
   governanceTimeStatusTitle,
   resolveGovernanceTimeStatus,
@@ -51,7 +52,14 @@ interface MergedProposal {
   vote: string | null;
   voteTxHash: string | null;
   voteAnchor: VoteAnchorInfo;
+  actionMetadataAnchor: ProposalMetadataAnchorInfo;
   timeStatus: GovernanceActionTimeStatus;
+}
+
+interface IpfsModalState {
+  url: string;
+  hashHex?: string;
+  title: string;
 }
 
 function voteColor(vote: string | null): string {
@@ -129,7 +137,7 @@ const DRepVotingHistory = () => {
   const [anchorCheckFailedCount, setAnchorCheckFailedCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [copiedProposalId, setCopiedProposalId] = useState<string | null>(null);
-  const [rationaleModal, setRationaleModal] = useState<{ url: string; hashHex?: string } | null>(null);
+  const [ipfsModal, setIpfsModal] = useState<IpfsModalState | null>(null);
   const [nowSec, setNowSec] = useState(() => Math.floor(Date.now() / 1000));
 
   useEffect(() => {
@@ -224,7 +232,7 @@ const DRepVotingHistory = () => {
         fetchGovernanceEpochContext(key),
       ]);
 
-      const expirationByKey = await fetchProposalExpirationFields(key, proposals);
+      const { expirationByKey, metadataAnchorByKey } = await fetchProposalExpirationFields(key, proposals);
 
       const voteMap = new Map<string, BlockfrostDRepVote>();
       for (const v of votes) {
@@ -249,6 +257,7 @@ const DRepVotingHistory = () => {
           vote: voteValue,
           voteTxHash: vote?.tx_hash ?? null,
           voteAnchor: initialVoteAnchor(voteValue),
+          actionMetadataAnchor: metadataAnchorByKey.get(proposalKeyStr) ?? { status: 'unknown' },
           timeStatus,
         };
       });
@@ -411,6 +420,7 @@ const DRepVotingHistory = () => {
                       <th className="px-4 py-2 border-b">Governance Action</th>
                       <th className="px-4 py-2 border-b w-0 whitespace-nowrap">Copy ID</th>
                       <th className="px-4 py-2 border-b">Action Type</th>
+                      <th className="px-4 py-2 border-b">Action metadata</th>
                       <th className="px-4 py-2 border-b">Time left</th>
                       <th className="px-4 py-2 border-b">Vote</th>
                       <th className="px-4 py-2 border-b">Rationale</th>
@@ -443,6 +453,36 @@ const DRepVotingHistory = () => {
                         <td className="px-4 py-2 border-b">
                           {formatGovActionType(row.govActionType)}
                         </td>
+                        <td className="px-4 py-2 border-b text-xs">
+                          {row.actionMetadataAnchor.status === 'present' && row.actionMetadataAnchor.url ? (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setIpfsModal({
+                                  url: row.actionMetadataAnchor.url!,
+                                  hashHex: row.actionMetadataAnchor.hashHex,
+                                  title: 'Open governance action metadata',
+                                })
+                              }
+                              style={{
+                                color: '#7dd3fc',
+                                textDecoration: 'underline',
+                                background: 'transparent',
+                                border: 'none',
+                                padding: 0,
+                                cursor: 'pointer',
+                                fontSize: 'inherit',
+                                fontWeight: 500,
+                              }}
+                            >
+                              Metadata
+                            </button>
+                          ) : row.actionMetadataAnchor.status === 'absent' ? (
+                            <span style={{ color: '#6b7280' }}>—</span>
+                          ) : (
+                            <span style={{ color: '#9ca3af' }}>?</span>
+                          )}
+                        </td>
                         <td className="px-4 py-2 border-b whitespace-nowrap" title={governanceTimeStatusTitle(row.timeStatus)}>
                           <span style={{
                             color: timeRemainingColor(row.timeStatus, nowSec),
@@ -471,9 +511,10 @@ const DRepVotingHistory = () => {
                             <button
                               type="button"
                               onClick={() =>
-                                setRationaleModal({
+                                setIpfsModal({
                                   url: row.voteAnchor.url!,
                                   hashHex: row.voteAnchor.hashHex,
+                                  title: 'Open vote rationale',
                                 })
                               }
                               style={{
@@ -518,10 +559,11 @@ const DRepVotingHistory = () => {
           )}
 
           <IpfsLinkModal
-            open={rationaleModal !== null}
-            url={rationaleModal?.url ?? ''}
-            hashHex={rationaleModal?.hashHex}
-            onClose={() => setRationaleModal(null)}
+            open={ipfsModal !== null}
+            url={ipfsModal?.url ?? ''}
+            hashHex={ipfsModal?.hashHex}
+            title={ipfsModal?.title}
+            onClose={() => setIpfsModal(null)}
           />
 
           {!loading && !error && drepId && apiKey && mergedData.length === 0 && (

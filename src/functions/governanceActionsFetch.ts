@@ -431,7 +431,7 @@ function asText(value: unknown): string | null {
   return trimmed ? trimmed : null;
 }
 
-function discoverMetadataAnchor(rawDescription: unknown): {
+export function discoverMetadataAnchor(rawDescription: unknown): {
   step1Status: 'success' | 'error';
   metadataUrl: string | null;
   metadataHash: string | null;

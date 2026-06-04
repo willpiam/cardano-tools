@@ -1,4 +1,14 @@
+import { discoverMetadataAnchor } from '../functions/governanceActionsFetch';
+
 const BLOCKFROST_BASE = 'https://cardano-mainnet.blockfrost.io/api/v0';
+
+export type ProposalMetadataAnchorStatus = 'present' | 'absent' | 'unknown';
+
+export interface ProposalMetadataAnchorInfo {
+  status: ProposalMetadataAnchorStatus;
+  url?: string;
+  hashHex?: string;
+}
 
 export interface BlockfrostEpochLatest {
   epoch: number;
@@ -172,7 +182,10 @@ async function mapWithConcurrency<T, U>(
 export async function fetchProposalExpirationFields(
   apiKey: string,
   proposals: { tx_hash: string; cert_index: number }[]
-): Promise<Map<string, BlockfrostProposalExpirationFields>> {
+): Promise<{
+  expirationByKey: Map<string, BlockfrostProposalExpirationFields>;
+  metadataAnchorByKey: Map<string, ProposalMetadataAnchorInfo>;
+}> {
   const details = await mapWithConcurrency(proposals, 8, async (proposal) => {
     const key = `${proposal.tx_hash}#${proposal.cert_index}`;
     try {
@@ -180,8 +193,20 @@ export async function fetchProposalExpirationFields(
         `${BLOCKFROST_BASE}/governance/proposals/${proposal.tx_hash}/${proposal.cert_index}`,
         { headers: { project_id: apiKey } }
       );
-      if (!res.ok) return { key, fields: null };
+      if (!res.ok) return { key, fields: null, metadataAnchor: null as ProposalMetadataAnchorInfo | null };
       const detail = await res.json();
+      const anchor = discoverMetadataAnchor(detail.governance_description);
+      const metadataAnchor: ProposalMetadataAnchorInfo =
+        anchor.step1Status === 'success' && anchor.metadataUrl
+          ? {
+              status: 'present',
+              url: anchor.metadataUrl,
+              hashHex: anchor.metadataHash ?? undefined,
+            }
+          : anchor.metadataError?.code === 'anchor_missing'
+            ? { status: 'absent' }
+            : { status: 'unknown' };
+
       return {
         key,
         fields: {
@@ -191,15 +216,18 @@ export async function fetchProposalExpirationFields(
           enacted_epoch: detail.enacted_epoch ?? null,
           dropped_epoch: detail.dropped_epoch ?? null,
         } satisfies BlockfrostProposalExpirationFields,
+        metadataAnchor,
       };
     } catch {
-      return { key, fields: null };
+      return { key, fields: null, metadataAnchor: null };
     }
   });
 
-  const map = new Map<string, BlockfrostProposalExpirationFields>();
-  for (const { key, fields } of details) {
-    if (fields) map.set(key, fields);
+  const expirationByKey = new Map<string, BlockfrostProposalExpirationFields>();
+  const metadataAnchorByKey = new Map<string, ProposalMetadataAnchorInfo>();
+  for (const { key, fields, metadataAnchor } of details) {
+    if (fields) expirationByKey.set(key, fields);
+    if (metadataAnchor) metadataAnchorByKey.set(key, metadataAnchor);
   }
-  return map;
+  return { expirationByKey, metadataAnchorByKey };
 }
