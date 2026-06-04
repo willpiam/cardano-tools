@@ -1,14 +1,12 @@
-import { discoverMetadataAnchor } from '../functions/governanceActionsFetch';
+import {
+  fetchBlockfrostProposalMetadataAnchor,
+  resolveProposalMetadataAnchorInfo,
+  type ProposalMetadataAnchorInfo,
+} from '../functions/governanceActionsFetch';
+
+export type { ProposalMetadataAnchorInfo } from '../functions/governanceActionsFetch';
 
 const BLOCKFROST_BASE = 'https://cardano-mainnet.blockfrost.io/api/v0';
-
-export type ProposalMetadataAnchorStatus = 'present' | 'absent' | 'unknown';
-
-export interface ProposalMetadataAnchorInfo {
-  status: ProposalMetadataAnchorStatus;
-  url?: string;
-  hashHex?: string;
-}
 
 export interface BlockfrostEpochLatest {
   epoch: number;
@@ -181,7 +179,7 @@ async function mapWithConcurrency<T, U>(
 
 export async function fetchProposalExpirationFields(
   apiKey: string,
-  proposals: { tx_hash: string; cert_index: number }[]
+  proposals: { tx_hash: string; cert_index: number; id?: string }[]
 ): Promise<{
   expirationByKey: Map<string, BlockfrostProposalExpirationFields>;
   metadataAnchorByKey: Map<string, ProposalMetadataAnchorInfo>;
@@ -189,23 +187,19 @@ export async function fetchProposalExpirationFields(
   const details = await mapWithConcurrency(proposals, 8, async (proposal) => {
     const key = `${proposal.tx_hash}#${proposal.cert_index}`;
     try {
-      const res = await fetch(
-        `${BLOCKFROST_BASE}/governance/proposals/${proposal.tx_hash}/${proposal.cert_index}`,
-        { headers: { project_id: apiKey } }
+      const [detailRes, blockfrostAnchor] = await Promise.all([
+        fetch(
+          `${BLOCKFROST_BASE}/governance/proposals/${proposal.tx_hash}/${proposal.cert_index}`,
+          { headers: { project_id: apiKey } }
+        ),
+        fetchBlockfrostProposalMetadataAnchor(apiKey, proposal),
+      ]);
+      if (!detailRes.ok) return { key, fields: null, metadataAnchor: null as ProposalMetadataAnchorInfo | null };
+      const detail = await detailRes.json();
+      const metadataAnchor = resolveProposalMetadataAnchorInfo(
+        blockfrostAnchor,
+        detail.governance_description
       );
-      if (!res.ok) return { key, fields: null, metadataAnchor: null as ProposalMetadataAnchorInfo | null };
-      const detail = await res.json();
-      const anchor = discoverMetadataAnchor(detail.governance_description);
-      const metadataAnchor: ProposalMetadataAnchorInfo =
-        anchor.step1Status === 'success' && anchor.metadataUrl
-          ? {
-              status: 'present',
-              url: anchor.metadataUrl,
-              hashHex: anchor.metadataHash ?? undefined,
-            }
-          : anchor.metadataError?.code === 'anchor_missing'
-            ? { status: 'absent' }
-            : { status: 'unknown' };
 
       return {
         key,

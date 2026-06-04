@@ -232,7 +232,10 @@ const DRepVotingHistory = () => {
         fetchGovernanceEpochContext(key),
       ]);
 
-      const { expirationByKey, metadataAnchorByKey } = await fetchProposalExpirationFields(key, proposals);
+      const { expirationByKey, metadataAnchorByKey } = await fetchProposalExpirationFields(
+        key,
+        proposals.map((p) => ({ tx_hash: p.tx_hash, cert_index: p.cert_index, id: p.id }))
+      );
 
       const voteMap = new Map<string, BlockfrostDRepVote>();
       for (const v of votes) {
@@ -374,8 +377,8 @@ const DRepVotingHistory = () => {
 
           {!loading && !error && mergedData.length > 0 && (
             <>
-              <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', alignItems: 'flex-start', width: '100%' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', flex: 1, minWidth: 200 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', width: '100%' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
                   <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
                     <span>Total proposals: <strong>{mergedData.length}</strong></span>
                     <span style={{ color: '#22c55e' }}>Voted: <strong>{votedCount}</strong></span>

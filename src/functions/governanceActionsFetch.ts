@@ -431,6 +431,77 @@ function asText(value: unknown): string | null {
   return trimmed ? trimmed : null;
 }
 
+export interface ProposalMetadataAnchorRef {
+  tx_hash: string;
+  cert_index: number;
+  id?: string;
+}
+
+/** Blockfrost stores GA metadata anchors separately from `governance_description` (except e.g. constitution URL). */
+export async function fetchBlockfrostProposalMetadataAnchor(
+  apiKey: string,
+  proposal: ProposalMetadataAnchorRef
+): Promise<{ url: string; hashHex?: string } | null> {
+  const endpoints: string[] = [];
+  if (proposal.id) {
+    endpoints.push(`/governance/proposals/${encodeURIComponent(proposal.id)}/metadata`);
+  }
+  endpoints.push(
+    `/governance/proposals/${proposal.tx_hash}/${proposal.cert_index}/metadata`
+  );
+
+  for (const endpoint of endpoints) {
+    try {
+      const res = await fetch(`${BLOCKFROST_BASE}${endpoint}`, {
+        headers: { project_id: apiKey },
+      });
+      if (!res.ok) continue;
+      const data = (await res.json()) as { url?: unknown; hash?: unknown };
+      const url = asText(data.url);
+      if (!url) continue;
+      const hashHex = asText(data.hash) ?? undefined;
+      return { url, hashHex };
+    } catch {
+      continue;
+    }
+  }
+  return null;
+}
+
+export type ProposalMetadataAnchorStatus = 'present' | 'absent' | 'unknown';
+
+export interface ProposalMetadataAnchorInfo {
+  status: ProposalMetadataAnchorStatus;
+  url?: string;
+  hashHex?: string;
+}
+
+export function resolveProposalMetadataAnchorInfo(
+  blockfrostAnchor: { url: string; hashHex?: string } | null,
+  governanceDescription: unknown
+): ProposalMetadataAnchorInfo {
+  if (blockfrostAnchor) {
+    return {
+      status: 'present',
+      url: blockfrostAnchor.url,
+      hashHex: blockfrostAnchor.hashHex,
+    };
+  }
+
+  const discovered = discoverMetadataAnchor(governanceDescription);
+  if (discovered.step1Status === 'success' && discovered.metadataUrl) {
+    return {
+      status: 'present',
+      url: discovered.metadataUrl,
+      hashHex: discovered.metadataHash ?? undefined,
+    };
+  }
+  if (discovered.metadataError?.code === 'anchor_missing') {
+    return { status: 'absent' };
+  }
+  return { status: 'unknown' };
+}
+
 export function discoverMetadataAnchor(rawDescription: unknown): {
   step1Status: 'success' | 'error';
   metadataUrl: string | null;
@@ -675,7 +746,46 @@ export async function fetchLiveGovernanceActions(
         withdrawals
       );
       const title = extractGovernanceTitle(detail.governance_description);
-      const anchor = discoverMetadataAnchor(detail.governance_description);
+      const blockfrostAnchor = await fetchBlockfrostProposalMetadataAnchor(apiKey, {
+        tx_hash: proposal.tx_hash,
+        cert_index: proposal.cert_index,
+        id: proposal.id,
+      });
+      const resolved = resolveProposalMetadataAnchorInfo(
+        blockfrostAnchor,
+        detail.governance_description
+      );
+      const anchor =
+        resolved.status === 'present'
+          ? {
+              step1Status: 'success' as const,
+              metadataUrl: resolved.url ?? null,
+              metadataHash: resolved.hashHex ?? null,
+              metadataError: null,
+            }
+          : resolved.status === 'absent'
+            ? {
+                step1Status: 'error' as const,
+                metadataUrl: null,
+                metadataHash: null,
+                metadataError: {
+                  code: 'anchor_missing' as const,
+                  message: 'No metadata URL found for this governance action.',
+                  source: 'step1' as const,
+                  retryable: false,
+                },
+              }
+            : {
+                step1Status: 'error' as const,
+                metadataUrl: null,
+                metadataHash: null,
+                metadataError: {
+                  code: 'anchor_discovery_failed' as const,
+                  message: 'Could not resolve governance action metadata anchor.',
+                  source: 'step1' as const,
+                  retryable: false,
+                },
+              };
 
       return {
         id: proposal.id,
