@@ -4,22 +4,22 @@ overview: "Add browser-persistent caching for finalized governance actions on DR
 todos:
   - id: cache-idb
     content: "Add drepVotingHistoryCache.ts (IndexedDB schema v1: global proposal + per-drep vote enrichment)"
-    status: pending
+    status: completed
   - id: fetch-refactor
     content: Extract single-proposal enrichment helper; dedupe mapWithConcurrency import in governanceExpiration.ts
-    status: pending
+    status: completed
   - id: load-path
     content: Update DRepVotingHistory fetchData/enrichAnchors to read/write cache and skip finalized API calls when warm
-    status: pending
+    status: completed
   - id: recache-orchestrator
     content: Add drepVotingHistoryRecache.ts with batched proposal + CBOR phases, cooldowns, onProgress
-    status: pending
+    status: completed
   - id: recache-modal-ui
     content: Add ReloadingRecacheModal + button on DRepVotingHistory; wire progress labels
-    status: pending
+    status: completed
   - id: tests-wiki
     content: Unit tests for batching/progress helpers; wiki note + log entry
-    status: pending
+    status: completed
 isProject: false
 ---
 

@@ -11,9 +11,26 @@ import {
 } from '../components/DRepVoteMetadataChart';
 import { fetchAllPages } from '../functions/governanceActionsFetch';
 import { fetchVoteTxAnchorMap, proposalKey } from '../functions/voteTxAnchors';
+import { ReloadingRecacheModal } from '../components/ReloadingRecacheModal';
+import {
+  loadAllProposalCache,
+  loadDrepVoteCache,
+  proposalCacheKey,
+  putDrepVoteCacheBatch,
+  putProposalCacheBatch,
+  type CachedDrepVoteEnrichment,
+  type CachedProposalEnrichment,
+  type CachedVoteAnchorInfo,
+} from '../utils/drepVotingHistoryCache';
+import {
+  RECACHE_MODAL_TITLE,
+  runPhasedRecache,
+  type RecacheProgress,
+} from '../utils/drepVotingHistoryRecache';
 import {
   fetchGovernanceEpochContext,
   fetchProposalExpirationFields,
+  isGovernanceActionFinalized,
   type ProposalMetadataAnchorInfo,
   formatGovernanceTimeRemaining,
   governanceTimeStatusTitle,
@@ -38,11 +55,7 @@ interface BlockfrostDRepVote {
   vote: string;
 }
 
-export interface VoteAnchorInfo {
-  status: VoteAnchorStatus;
-  url?: string;
-  hashHex?: string;
-}
+export type VoteAnchorInfo = CachedVoteAnchorInfo;
 
 interface MergedProposal {
   proposalId: string;
@@ -139,6 +152,13 @@ const DRepVotingHistory = () => {
   const [copiedProposalId, setCopiedProposalId] = useState<string | null>(null);
   const [ipfsModal, setIpfsModal] = useState<IpfsModalState | null>(null);
   const [nowSec, setNowSec] = useState(() => Math.floor(Date.now() / 1000));
+  const [cachedClosedCount, setCachedClosedCount] = useState(0);
+  const [recaching, setRecaching] = useState(false);
+  const [recacheModalOpen, setRecacheModalOpen] = useState(false);
+  const [recacheProgress, setRecacheProgress] = useState<RecacheProgress>({
+    title: RECACHE_MODAL_TITLE,
+    description: '',
+  });
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -170,10 +190,21 @@ const DRepVotingHistory = () => {
     return () => window.clearInterval(id);
   }, [mergedData]);
 
-  const enrichAnchors = async (merged: MergedProposal[], id: string, key: string) => {
-    const voteTxHashes = merged
-      .map((m) => m.voteTxHash)
-      .filter((h): h is string => Boolean(h));
+  const enrichAnchors = async (
+    merged: MergedProposal[],
+    id: string,
+    key: string,
+    ctx: import('../utils/governanceExpiration').GovernanceEpochContext
+  ) => {
+    const rowsNeedingCbor = merged.filter((row) => {
+      if (!row.vote || !row.voteTxHash) return false;
+      if (!isGovernanceActionFinalized(row.timeStatus)) return true;
+      return row.voteAnchor.status === 'unknown';
+    });
+
+    const voteTxHashes = [
+      ...new Set(rowsNeedingCbor.map((m) => m.voteTxHash).filter((h): h is string => Boolean(h))),
+    ];
 
     if (voteTxHashes.length === 0) {
       setAnchorCheckFailedCount(0);
@@ -181,6 +212,7 @@ const DRepVotingHistory = () => {
     }
 
     setAnchorLoading(true);
+    const nowSec = Math.floor(Date.now() / 1000);
     try {
       const { anchorByProposalKey, failedTxHashes } = await fetchVoteTxAnchorMap(
         key,
@@ -190,19 +222,46 @@ const DRepVotingHistory = () => {
       const failedSet = new Set(failedTxHashes.map((h) => h.toLowerCase()));
       setAnchorCheckFailedCount(failedTxHashes.length);
 
+      const drepVoteWrites = new Map<string, CachedDrepVoteEnrichment>();
+
       setMergedData((prev) =>
-        prev.map((row) => ({
-          ...row,
-          voteAnchor: resolveVoteAnchor(
+        prev.map((row) => {
+          const needsUpdate = rowsNeedingCbor.some(
+            (r) =>
+              r.proposalTxHash === row.proposalTxHash &&
+              r.proposalCertIndex === row.proposalCertIndex
+          );
+          if (!needsUpdate) return row;
+
+          const voteAnchor = resolveVoteAnchor(
             row.vote,
             row.voteTxHash,
             row.proposalTxHash,
             row.proposalCertIndex,
             anchorByProposalKey,
             failedSet
-          ),
-        }))
+          );
+
+          if (
+            row.vote &&
+            row.voteTxHash &&
+            isGovernanceActionFinalized(row.timeStatus) &&
+            voteAnchor.status !== 'unknown'
+          ) {
+            const pk = proposalCacheKey(row.proposalTxHash, row.proposalCertIndex);
+            drepVoteWrites.set(pk, {
+              vote: row.vote,
+              voteTxHash: row.voteTxHash,
+              voteAnchor,
+              cachedAtSec: nowSec,
+            });
+          }
+
+          return { ...row, voteAnchor };
+        })
       );
+
+      await putDrepVoteCacheBatch(id, drepVoteWrites);
     } catch (err) {
       console.error('Failed to enrich vote anchors', err);
       setMergedData((prev) =>
@@ -224,33 +283,115 @@ const DRepVotingHistory = () => {
     setMergedData([]);
     setAnchorCheckFailedCount(0);
     setAnchorLoading(false);
+    setCachedClosedCount(0);
 
     try {
-      const [proposals, votes, ctx] = await Promise.all([
+      const [proposals, votes, ctx, proposalCache, drepVoteCache] = await Promise.all([
         fetchAllPages<BlockfrostProposal>('/governance/proposals', key),
         fetchAllPages<BlockfrostDRepVote>(`/governance/dreps/${id}/votes`, key),
         fetchGovernanceEpochContext(key),
+        loadAllProposalCache(),
+        loadDrepVoteCache(id),
       ]);
 
-      const { expirationByKey, metadataAnchorByKey } = await fetchProposalExpirationFields(
-        key,
-        proposals.map((p) => ({ tx_hash: p.tx_hash, cert_index: p.cert_index, id: p.id }))
-      );
+      const needsDetail: BlockfrostProposal[] = [];
+      for (const p of proposals) {
+        const cacheKey = proposalCacheKey(p.tx_hash, p.cert_index);
+        const cached = proposalCache.get(cacheKey);
+        if (!cached) {
+          needsDetail.push(p);
+          continue;
+        }
+        const status = resolveGovernanceTimeStatus(cached.expiration, ctx);
+        if (!isGovernanceActionFinalized(status)) {
+          needsDetail.push(p);
+        }
+      }
+
+      const fetched =
+        needsDetail.length > 0
+          ? await fetchProposalExpirationFields(
+              key,
+              needsDetail.map((p) => ({
+                tx_hash: p.tx_hash,
+                cert_index: p.cert_index,
+                id: p.id,
+              }))
+            )
+          : {
+              expirationByKey: new Map<string, import('../utils/governanceExpiration').BlockfrostProposalExpirationFields>(),
+              metadataAnchorByKey: new Map<string, ProposalMetadataAnchorInfo>(),
+            };
+
+      const expirationByKey = new Map(fetched.expirationByKey);
+      const metadataAnchorByKey = new Map(fetched.metadataAnchorByKey);
+      for (const [cacheKey, cached] of proposalCache) {
+        if (!expirationByKey.has(cacheKey)) {
+          expirationByKey.set(cacheKey, cached.expiration);
+        }
+        if (!metadataAnchorByKey.has(cacheKey)) {
+          metadataAnchorByKey.set(cacheKey, cached.metadataAnchor);
+        }
+      }
+
+      const nowSec = Math.floor(Date.now() / 1000);
+      const proposalCacheWrites = new Map<string, CachedProposalEnrichment>();
 
       const voteMap = new Map<string, BlockfrostDRepVote>();
       for (const v of votes) {
-        const voteKey = `${v.proposal_tx_hash}#${v.proposal_cert_index}`;
-        voteMap.set(voteKey, v);
+        voteMap.set(proposalCacheKey(v.proposal_tx_hash, v.proposal_cert_index), v);
       }
 
+      let closedFromCache = 0;
+
       const merged: MergedProposal[] = proposals.map((p) => {
-        const proposalKeyStr = `${p.tx_hash}#${p.cert_index}`;
+        const proposalKeyStr = proposalCacheKey(p.tx_hash, p.cert_index);
         const vote = voteMap.get(proposalKeyStr);
         const expirationFields = expirationByKey.get(proposalKeyStr);
         const timeStatus = expirationFields
-          ? resolveGovernanceTimeStatus(expirationFields, ctx)
+          ? resolveGovernanceTimeStatus(expirationFields, ctx, nowSec)
           : { kind: 'unknown' as const };
         const voteValue = vote?.vote ?? null;
+        const voteTxHash = vote?.tx_hash ?? null;
+        const finalized = isGovernanceActionFinalized(timeStatus);
+
+        const fetchedFields = fetched.expirationByKey.has(proposalKeyStr);
+        if (finalized && fetchedFields && expirationFields) {
+          const meta = metadataAnchorByKey.get(proposalKeyStr);
+          if (meta) {
+            proposalCacheWrites.set(proposalKeyStr, {
+              expiration: expirationFields,
+              metadataAnchor: meta,
+              cachedAtSec: nowSec,
+            });
+          }
+        }
+
+        let voteAnchor: VoteAnchorInfo = initialVoteAnchor(voteValue);
+        const cachedVote = drepVoteCache.get(proposalKeyStr);
+        const proposalCached = proposalCache.has(proposalKeyStr);
+
+        if (finalized && proposalCached) {
+          const voteFullyCached =
+            !voteValue ||
+            (cachedVote &&
+              cachedVote.vote === voteValue &&
+              cachedVote.voteTxHash === voteTxHash &&
+              cachedVote.voteAnchor.status !== 'unknown');
+          if (voteFullyCached) closedFromCache += 1;
+        }
+
+        if (
+          finalized &&
+          voteValue &&
+          voteTxHash &&
+          cachedVote &&
+          cachedVote.vote === voteValue &&
+          cachedVote.voteTxHash === voteTxHash &&
+          cachedVote.voteAnchor.status !== 'unknown'
+        ) {
+          voteAnchor = cachedVote.voteAnchor;
+        }
 
         return {
           proposalId: p.id,
@@ -258,22 +399,115 @@ const DRepVotingHistory = () => {
           proposalCertIndex: p.cert_index,
           govActionType: p.governance_type,
           vote: voteValue,
-          voteTxHash: vote?.tx_hash ?? null,
-          voteAnchor: initialVoteAnchor(voteValue),
+          voteTxHash,
+          voteAnchor,
           actionMetadataAnchor: metadataAnchorByKey.get(proposalKeyStr) ?? { status: 'unknown' },
           timeStatus,
         };
       });
 
-      setNowSec(Math.floor(Date.now() / 1000));
+      await putProposalCacheBatch(proposalCacheWrites);
+
+      setNowSec(nowSec);
       setMergedData(merged);
+      setCachedClosedCount(closedFromCache);
       setLoading(false);
 
-      void enrichAnchors(merged, id, key);
+      void enrichAnchors(merged, id, key, ctx);
     } catch (err) {
       console.error('Failed to fetch DRep voting history', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch data');
       setLoading(false);
+    }
+  };
+
+  const handleForceRecache = async () => {
+    if (!drepId || !apiKey || recaching) return;
+
+    setRecaching(true);
+    setRecacheModalOpen(true);
+    setRecacheProgress({ title: RECACHE_MODAL_TITLE, description: 'Loading governance actions…' });
+
+    try {
+      const [proposals, votes, ctx, proposalCache] = await Promise.all([
+        fetchAllPages<BlockfrostProposal>('/governance/proposals', apiKey),
+        fetchAllPages<BlockfrostDRepVote>(`/governance/dreps/${drepId}/votes`, apiKey),
+        fetchGovernanceEpochContext(apiKey),
+        loadAllProposalCache(),
+      ]);
+
+      const nowSec = Math.floor(Date.now() / 1000);
+      const finalizedProposals: { tx_hash: string; cert_index: number; id?: string }[] = [];
+
+      for (const p of proposals) {
+        const key = proposalCacheKey(p.tx_hash, p.cert_index);
+        const cached = proposalCache.get(key);
+        if (!cached) continue;
+        const status = resolveGovernanceTimeStatus(cached.expiration, ctx, nowSec);
+        if (isGovernanceActionFinalized(status)) {
+          finalizedProposals.push({
+            tx_hash: p.tx_hash,
+            cert_index: p.cert_index,
+            id: p.id,
+          });
+        }
+      }
+
+      if (mergedData.length > 0) {
+        const seen = new Set(finalizedProposals.map((p) => proposalCacheKey(p.tx_hash, p.cert_index)));
+        for (const row of mergedData) {
+          if (!isGovernanceActionFinalized(row.timeStatus)) continue;
+          const key = proposalCacheKey(row.proposalTxHash, row.proposalCertIndex);
+          if (seen.has(key)) continue;
+          seen.add(key);
+          finalizedProposals.push({
+            tx_hash: row.proposalTxHash,
+            cert_index: row.proposalCertIndex,
+            id: row.proposalId,
+          });
+        }
+      }
+
+      const recacheVotes = votes
+        .filter((v) => {
+          const key = proposalCacheKey(v.proposal_tx_hash, v.proposal_cert_index);
+          return finalizedProposals.some(
+            (p) => proposalCacheKey(p.tx_hash, p.cert_index) === key
+          );
+        })
+        .map((v) => ({
+          proposalTxHash: v.proposal_tx_hash,
+          proposalCertIndex: v.proposal_cert_index,
+          vote: v.vote,
+          voteTxHash: v.tx_hash,
+        }));
+
+      if (finalizedProposals.length === 0) {
+        setRecacheProgress({
+          title: RECACHE_MODAL_TITLE,
+          description: 'No closed governance actions in cache yet. Load history first.',
+        });
+        await new Promise((r) => window.setTimeout(r, 2500));
+        return;
+      }
+
+      await runPhasedRecache({
+        apiKey,
+        drepId,
+        ctx,
+        proposals: finalizedProposals,
+        votes: recacheVotes,
+        onProgress: setRecacheProgress,
+      });
+
+      setRecacheProgress({ title: RECACHE_MODAL_TITLE, description: 'Refreshing table…' });
+      await fetchData(drepId, apiKey);
+    } catch (err) {
+      console.error('Force recache failed', err);
+      setError(err instanceof Error ? err.message : 'Recache failed');
+    } finally {
+      setRecaching(false);
+      setRecacheModalOpen(false);
     }
   };
 
@@ -379,10 +613,21 @@ const DRepVotingHistory = () => {
             <>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', width: '100%' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                  <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
                     <span>Total proposals: <strong>{mergedData.length}</strong></span>
                     <span style={{ color: '#22c55e' }}>Voted: <strong>{votedCount}</strong></span>
                     <span style={{ color: '#6b7280' }}>Did not vote: <strong>{missedCount}</strong></span>
+                    {cachedClosedCount > 0 && (
+                      <span style={{ fontSize: '0.85rem', color: '#9ca3af' }}>
+                        Cached <strong>{cachedClosedCount}</strong> closed actions
+                      </span>
+                    )}
+                    <Button
+                      onClick={() => void handleForceRecache()}
+                      disabled={loading || anchorLoading || recaching}
+                    >
+                      Reload closed actions
+                    </Button>
                   </div>
                   {votedCount > 0 && (
                     <span style={{ fontSize: '0.9rem', color: '#14b8a6' }}>
@@ -560,6 +805,12 @@ const DRepVotingHistory = () => {
               </div>
             </>
           )}
+
+          <ReloadingRecacheModal
+            open={recacheModalOpen}
+            title={recacheProgress.title}
+            description={recacheProgress.description}
+          />
 
           <IpfsLinkModal
             open={ipfsModal !== null}

@@ -1,5 +1,6 @@
 import {
   fetchBlockfrostProposalMetadataAnchor,
+  mapWithConcurrency,
   resolveProposalMetadataAnchorInfo,
   type ProposalMetadataAnchorInfo,
 } from '../functions/governanceActionsFetch';
@@ -155,67 +156,67 @@ export function timeRemainingColor(status: GovernanceActionTimeStatus, nowSec = 
   }
 }
 
-async function mapWithConcurrency<T, U>(
-  items: T[],
-  concurrency: number,
-  mapper: (item: T) => Promise<U>
-): Promise<U[]> {
-  const results: U[] = new Array(items.length);
-  let next = 0;
+export interface ProposalEnrichmentInput {
+  tx_hash: string;
+  cert_index: number;
+  id?: string;
+}
 
-  async function worker() {
-    while (true) {
-      const current = next++;
-      if (current >= items.length) return;
-      results[current] = await mapper(items[current]);
+export interface SingleProposalEnrichmentResult {
+  key: string;
+  fields: BlockfrostProposalExpirationFields | null;
+  metadataAnchor: ProposalMetadataAnchorInfo | null;
+}
+
+export async function fetchSingleProposalEnrichment(
+  apiKey: string,
+  proposal: ProposalEnrichmentInput
+): Promise<SingleProposalEnrichmentResult> {
+  const key = `${proposal.tx_hash}#${proposal.cert_index}`;
+  try {
+    const [detailRes, blockfrostAnchor] = await Promise.all([
+      fetch(
+        `${BLOCKFROST_BASE}/governance/proposals/${proposal.tx_hash}/${proposal.cert_index}`,
+        { headers: { project_id: apiKey } }
+      ),
+      fetchBlockfrostProposalMetadataAnchor(apiKey, proposal),
+    ]);
+    if (!detailRes.ok) {
+      return { key, fields: null, metadataAnchor: null };
     }
-  }
+    const detail = await detailRes.json();
+    const metadataAnchor = resolveProposalMetadataAnchorInfo(
+      blockfrostAnchor,
+      detail.governance_description
+    );
 
-  await Promise.all(
-    Array.from({ length: Math.min(concurrency, items.length) }, () => worker())
-  );
-  return results;
+    return {
+      key,
+      fields: {
+        expiration: typeof detail.expiration === 'number' ? detail.expiration : null,
+        expired_epoch: detail.expired_epoch ?? null,
+        ratified_epoch: detail.ratified_epoch ?? null,
+        enacted_epoch: detail.enacted_epoch ?? null,
+        dropped_epoch: detail.dropped_epoch ?? null,
+      },
+      metadataAnchor,
+    };
+  } catch {
+    return { key, fields: null, metadataAnchor: null };
+  }
 }
 
 export async function fetchProposalExpirationFields(
   apiKey: string,
-  proposals: { tx_hash: string; cert_index: number; id?: string }[]
+  proposals: ProposalEnrichmentInput[],
+  concurrency = 8
 ): Promise<{
   expirationByKey: Map<string, BlockfrostProposalExpirationFields>;
   metadataAnchorByKey: Map<string, ProposalMetadataAnchorInfo>;
 }> {
-  const details = await mapWithConcurrency(proposals, 8, async (proposal) => {
-    const key = `${proposal.tx_hash}#${proposal.cert_index}`;
-    try {
-      const [detailRes, blockfrostAnchor] = await Promise.all([
-        fetch(
-          `${BLOCKFROST_BASE}/governance/proposals/${proposal.tx_hash}/${proposal.cert_index}`,
-          { headers: { project_id: apiKey } }
-        ),
-        fetchBlockfrostProposalMetadataAnchor(apiKey, proposal),
-      ]);
-      if (!detailRes.ok) return { key, fields: null, metadataAnchor: null as ProposalMetadataAnchorInfo | null };
-      const detail = await detailRes.json();
-      const metadataAnchor = resolveProposalMetadataAnchorInfo(
-        blockfrostAnchor,
-        detail.governance_description
-      );
-
-      return {
-        key,
-        fields: {
-          expiration: typeof detail.expiration === 'number' ? detail.expiration : null,
-          expired_epoch: detail.expired_epoch ?? null,
-          ratified_epoch: detail.ratified_epoch ?? null,
-          enacted_epoch: detail.enacted_epoch ?? null,
-          dropped_epoch: detail.dropped_epoch ?? null,
-        } satisfies BlockfrostProposalExpirationFields,
-        metadataAnchor,
-      };
-    } catch {
-      return { key, fields: null, metadataAnchor: null };
-    }
-  });
+  const details = await mapWithConcurrency(proposals, concurrency, (proposal) =>
+    fetchSingleProposalEnrichment(apiKey, proposal)
+  );
 
   const expirationByKey = new Map<string, BlockfrostProposalExpirationFields>();
   const metadataAnchorByKey = new Map<string, ProposalMetadataAnchorInfo>();

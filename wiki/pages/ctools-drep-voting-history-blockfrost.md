@@ -37,6 +37,17 @@ Blockfrost `GET /governance/dreps/{drep_id}/votes` does not include per-vote anc
 
 The results table adds a **Rationale** column (link when an anchor URL is present). Expanded chart modals support pie/bar toggle and a vote-choice × anchor cross-tab for voted actions. See [Governance metadata framework (CIP-100)](governance-metadata-framework-cip100.md).
 
+## Cached closed governance actions
+
+For governance actions where voting has ended (expired, ratified, enacted, or dropped), the DRep Voting History page stores enrichment in the browser **IndexedDB** (`ctools-drep-voting-history`):
+
+- **Global per proposal** (`tx_hash#cert_index`): expiration epochs and governance-action metadata anchor from Blockfrost detail + metadata endpoints.
+- **Per DRep**: vote disposition, vote transaction hash, and CIP-100 vote rationale anchor (from `/txs/{hash}/cbor` parsing).
+
+On refresh, paginated proposal and vote lists still load from Blockfrost, but detail/metadata and vote-CBOR calls are skipped for closed actions when cache entries exist. Open actions (`countdown` / unknown status) always refetch.
+
+**Reload closed actions** runs a phased recache: batched proposal requests, a cooldown between batches, then batched vote-CBOR fetches, with a modal titled **Reloading & Recaching** showing the current step (e.g. `Requesting batch 2 of 12`, `Waiting 10 seconds between batch 3 and 4`). Helpers: `src/utils/drepVotingHistoryCache.ts`, `src/utils/drepVotingHistoryRecache.ts`, `src/components/ReloadingRecacheModal.tsx`.
+
 ## Security note
 
 Putting API keys in query parameters can expose them in shared links, referrer headers, analytics, and server access logs. This behavior is intentional for shareable/bookmarkable sessions in this tool, but operators should treat shared URLs as sensitive.

@@ -1,0 +1,26 @@
+.reloading-recache-panel {
+  text-align: center;
+}
+
+.reloading-recache-spinner {
+  width: 40px;
+  height: 40px;
+  margin: 1.25rem auto;
+  border: 3px solid rgba(255, 167, 34, 0.25);
+  border-top-color: #ffa722;
+  border-radius: 50%;
+  animation: reloading-recache-spin 0.85s linear infinite;
+}
+
+.reloading-recache-description {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #d4d4d4;
+  line-height: 1.4;
+}
+
+@keyframes reloading-recache-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

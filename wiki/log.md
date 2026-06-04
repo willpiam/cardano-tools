@@ -189,3 +189,6 @@ Created wiki scaffold with raw sources nested under wiki/.
 - Pages consulted: `wiki/pages/governance-metadata-framework-cip100.md`, `wiki/pages/ctools-drep-voting-history-blockfrost.md`, `wiki/pages/cip95-wallet-bridge.md`.
 - Updated `wiki/pages/ctools-drep-voting-history-blockfrost.md` with anchor enrichment via `/txs/{hash}/cbor` and chart behavior.
 
+## [2026-06-04] ingest | DRep voting history closed-action cache
+- Updated `wiki/pages/ctools-drep-voting-history-blockfrost.md` with IndexedDB cache for finalized governance actions and phased **Reload closed actions** recache modal.
+
