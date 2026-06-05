@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router';
 import { useAppSelector, useAppDispatch } from '../store/hooks';
 import { setBlockfrostConfig } from '../store/blockfrostSlice';
 import { Button } from '../components/Button';
+import { GovernanceActionMetadataModal } from '../components/GovernanceActionMetadataModal';
 import { IpfsLinkModal } from '../components/IpfsLinkModal';
 import { DRepVoteSummaryChart } from '../components/DRepVoteSummaryChart';
 import {
@@ -73,6 +74,12 @@ interface IpfsModalState {
   url: string;
   hashHex?: string;
   title: string;
+}
+
+interface MetadataModalState {
+  url: string;
+  hashHex?: string;
+  proposalId: string;
 }
 
 function voteColor(vote: string | null): string {
@@ -151,6 +158,7 @@ const DRepVotingHistory = () => {
   const [error, setError] = useState<string | null>(null);
   const [copiedProposalId, setCopiedProposalId] = useState<string | null>(null);
   const [ipfsModal, setIpfsModal] = useState<IpfsModalState | null>(null);
+  const [metadataModal, setMetadataModal] = useState<MetadataModalState | null>(null);
   const [nowSec, setNowSec] = useState(() => Math.floor(Date.now() / 1000));
   const [cachedClosedCount, setCachedClosedCount] = useState(0);
   const [recaching, setRecaching] = useState(false);
@@ -665,6 +673,7 @@ const DRepVotingHistory = () => {
                 <table className="min-w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-[#1a1103]">
+                      <th className="px-2 py-2 border-b w-0 whitespace-nowrap" title="View governance metadata">Details</th>
                       <th className="px-4 py-2 border-b">Governance Action</th>
                       <th className="px-4 py-2 border-b w-0 whitespace-nowrap">Copy ID</th>
                       <th className="px-4 py-2 border-b">Action Type</th>
@@ -678,6 +687,28 @@ const DRepVotingHistory = () => {
                   <tbody>
                     {mergedData.map((row) => (
                       <tr key={`${row.proposalTxHash}#${row.proposalCertIndex}`} className="odd:bg-[#33240b] even:bg-[#1a1103]">
+                        <td className="px-2 py-2 border-b w-0 whitespace-nowrap align-middle text-xs">
+                          {row.actionMetadataAnchor.status === 'present' && row.actionMetadataAnchor.url ? (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setMetadataModal({
+                                  url: row.actionMetadataAnchor.url!,
+                                  hashHex: row.actionMetadataAnchor.hashHex,
+                                  proposalId: row.proposalId,
+                                })
+                              }
+                              className="btn text-xs py-1 px-2"
+                              title="View governance metadata"
+                            >
+                              View
+                            </button>
+                          ) : row.actionMetadataAnchor.status === 'absent' ? (
+                            <span style={{ color: '#6b7280' }}>—</span>
+                          ) : (
+                            <span style={{ color: '#9ca3af' }}>?</span>
+                          )}
+                        </td>
                         <td className="px-4 py-2 border-b font-mono text-xs">
                           <a
                             href={`https://cardanoscan.io/govAction/${row.proposalId}`}
@@ -810,6 +841,14 @@ const DRepVotingHistory = () => {
             open={recacheModalOpen}
             title={recacheProgress.title}
             description={recacheProgress.description}
+          />
+
+          <GovernanceActionMetadataModal
+            open={metadataModal !== null}
+            anchorUrl={metadataModal?.url ?? ''}
+            hashHex={metadataModal?.hashHex}
+            proposalLabel={metadataModal ? truncateHash(metadataModal.proposalId) : ''}
+            onClose={() => setMetadataModal(null)}
           />
 
           <IpfsLinkModal

@@ -1,3 +1,5 @@
+import { type IpfsGateway, parseIpfsLink } from '../utils/ipfsGateways';
+
 const BLOCKFROST_BASE = 'https://cardano-mainnet.blockfrost.io/api/v0';
 
 export const GOVERNANCE_TYPES = [
@@ -640,15 +642,27 @@ function parseCip108Metadata(payload: unknown): GovernanceMetadata | null {
   return { title, abstract, motivation, rationale, references };
 }
 
-export async function loadActionMetadata(
-  url: string
-): Promise<{ metadata: GovernanceMetadata | null; metadataError: MetadataError | null }> {
+/** Resolve a browser-fetchable URL for governance metadata (IPFS gateway or direct URL). */
+export function resolveMetadataFetchUrl(anchorUrl: string, gateway: IpfsGateway): string {
+  const parsed = parseIpfsLink(anchorUrl);
+  if (parsed) return gateway.buildUrl(parsed);
+  return anchorUrl;
+}
+
+interface LoadActionMetadataResult {
+  metadata: GovernanceMetadata | null;
+  metadataError: MetadataError | null;
+  rawPayload: unknown | null;
+}
+
+async function loadActionMetadataFromFetchUrl(fetchUrl: string): Promise<LoadActionMetadataResult> {
   try {
-    const res = await fetch(url);
+    const res = await fetch(fetchUrl);
     if (!res.ok) {
       const body = await res.text();
       return {
         metadata: null,
+        rawPayload: null,
         metadataError: {
           code: 'http_error',
           message: `Metadata fetch failed with HTTP ${res.status}.`,
@@ -666,6 +680,7 @@ export async function loadActionMetadata(
     } catch (err) {
       return {
         metadata: null,
+        rawPayload: null,
         metadataError: {
           code: 'invalid_json',
           message: 'Metadata response is not valid JSON.',
@@ -680,6 +695,7 @@ export async function loadActionMetadata(
     if (!metadata) {
       return {
         metadata: null,
+        rawPayload: payload,
         metadataError: {
           code: 'schema_mismatch',
           message: 'Metadata JSON does not match expected CIP-108 fields.',
@@ -688,10 +704,11 @@ export async function loadActionMetadata(
         },
       };
     }
-    return { metadata, metadataError: null };
+    return { metadata, metadataError: null, rawPayload: payload };
   } catch (err) {
     return {
       metadata: null,
+      rawPayload: null,
       metadataError: {
         code: 'network_error',
         message: 'Network error while loading metadata URL.',
@@ -701,6 +718,26 @@ export async function loadActionMetadata(
       },
     };
   }
+}
+
+export async function loadActionMetadata(
+  url: string
+): Promise<{ metadata: GovernanceMetadata | null; metadataError: MetadataError | null }> {
+  return loadActionMetadataFromFetchUrl(url);
+}
+
+export async function loadActionMetadataViaGateway(
+  anchorUrl: string,
+  gateway: IpfsGateway
+): Promise<{
+  metadata: GovernanceMetadata | null;
+  metadataError: MetadataError | null;
+  rawPayload: unknown | null;
+  fetchUrl: string;
+}> {
+  const fetchUrl = resolveMetadataFetchUrl(anchorUrl, gateway);
+  const result = await loadActionMetadataFromFetchUrl(fetchUrl);
+  return { ...result, fetchUrl };
 }
 
 /**

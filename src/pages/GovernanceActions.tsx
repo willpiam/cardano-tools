@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { setBlockfrostConfig } from '../store/blockfrostSlice';
 import { Button } from '../components/Button';
+import { GovernanceMetadataView } from '../components/GovernanceMetadataView';
 import {
   GOVERNANCE_TYPES,
   fetchLiveGovernanceActions,
@@ -389,59 +390,7 @@ const GovernanceActions = () => {
                       )}
 
                       {action.metadata && (
-                        <div
-                          style={{
-                            border: '1px solid #334155',
-                            borderRadius: '6px',
-                            padding: '0.6rem',
-                            display: 'grid',
-                            gap: '0.45rem',
-                          }}
-                        >
-                          {action.metadata.abstract && <div style={{ color: '#e2e8f0' }}>{action.metadata.abstract}</div>}
-                          {(action.metadata.motivation ||
-                            action.metadata.rationale ||
-                            action.metadata.references.length > 0) && (
-                            <details>
-                              <summary style={{ cursor: 'pointer', color: '#94a3b8', fontSize: '0.85rem' }}>
-                                Show CIP-108 details
-                              </summary>
-                              <div style={{ marginTop: '0.5rem', display: 'grid', gap: '0.4rem', color: '#d1d5db' }}>
-                                {action.metadata.motivation && (
-                                  <div>
-                                    <strong>Motivation:</strong> {action.metadata.motivation}
-                                  </div>
-                                )}
-                                {action.metadata.rationale && (
-                                  <div>
-                                    <strong>Rationale:</strong> {action.metadata.rationale}
-                                  </div>
-                                )}
-                                {action.metadata.references.length > 0 && (
-                                  <div>
-                                    <strong>References:</strong>
-                                    <ul style={{ margin: '0.35rem 0 0', paddingLeft: '1.2rem' }}>
-                                      {action.metadata.references.map((ref, idx) => (
-                                        <li key={`${ref.uri}-${idx}`}>
-                                          <a
-                                            href={ref.uri}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            style={{ color: '#93c5fd', textDecoration: 'underline' }}
-                                          >
-                                            {ref.label}
-                                          </a>
-                                          {ref.hashDigest ? ` · ${ref.hashDigest}` : ''}
-                                          {ref.hashAlgorithm ? ` (${ref.hashAlgorithm})` : ''}
-                                        </li>
-                                      ))}
-                                    </ul>
-                                  </div>
-                                )}
-                              </div>
-                            </details>
-                          )}
-                        </div>
+                        <GovernanceMetadataView metadata={action.metadata} />
                       )}
 
                       {(action.ratifiedEpoch !== null || action.enactedEpoch !== null) && (
