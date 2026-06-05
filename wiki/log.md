@@ -192,3 +192,6 @@ Created wiki scaffold with raw sources nested under wiki/.
 ## [2026-06-04] ingest | DRep voting history closed-action cache
 - Updated `wiki/pages/ctools-drep-voting-history-blockfrost.md` with IndexedDB cache for finalized governance actions and phased **Reload closed actions** recache modal.
 
+## [2026-06-05] ingest | Conch transaction metadata cache
+- Added `src/utils/conchHistoryCache.ts` (IndexedDB `ctools-conch-history`) and cache-first metadata loading in `cip20AssetHistory.ts`; Conch settings modal to clear cached transaction lookups; updated `wiki/pages/ctools-drep-voting-history-blockfrost.md`.
+

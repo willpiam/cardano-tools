@@ -64,6 +64,8 @@ The **Conch protocol** reader (`src/pages/AssetCip20Messages.tsx`, route **`/con
 
 **Load history** runs the Blockfrost fetches (header `project_id` only) and does not add the secret to Blockfrost request URLs. Helpers live in `src/utils/cip20AssetHistory.ts`.
 
+Per-transaction metadata lookups are cached in browser **IndexedDB** (`ctools-conch-history`, store `transactions`) keyed by normalized tx hash. On each load the asset transaction list is always refetched; Blockfrost `GET /txs/{hash}/metadata` is skipped for txs already in cache (including txs confirmed to have no CIP-20 label `674`). A **Settings** gear on the Conch page opens a modal showing the cache count and a **Clear {n} cached Conch transactions** button. Cache module: `src/utils/conchHistoryCache.ts`; settings modal: `src/components/ConchHistorySettingsModal.tsx`.
+
 The Conch reader derives the CIP-14 **`asset1…` fingerprint** from the hex unit via **`@emurgo/cip14-js`** (`AssetFingerprint.fromParts`) and shows it as a link to the token on **Cardanoscan**; per-transaction links in the results table use **Cardanoscan** (`/transaction/{hash}`), not cexplorer. To author new CIP-20 / 674 payloads in transactions, the app’s **Commit** page is linked from the Conch UI (`/commit`).
 
 ## Live Governance Actions (same Blockfrost key)
@@ -77,4 +79,5 @@ The Conch reader derives the CIP-14 **`asset1…` fingerprint** from the hex uni
 - Vote anchor parsing: `src/functions/voteTxAnchors.ts`
 - State: `src/store/blockfrostSlice.ts`
 - Conch / CIP-20 history helpers: `src/utils/cip20AssetHistory.ts`
+- Conch transaction metadata cache: `src/utils/conchHistoryCache.ts`
 - CIP-14 fingerprint from unit hex: `src/utils/cip14AssetFingerprint.ts` (uses `@emurgo/cip14-js`)

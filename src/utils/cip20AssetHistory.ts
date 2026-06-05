@@ -1,3 +1,10 @@
+import {
+  conchTxCacheKey,
+  getConchTxCacheBatch,
+  putConchTxCacheBatch,
+  type CachedConchTx,
+} from './conchHistoryCache';
+
 const BLOCKFROST_BASE = 'https://cardano-mainnet.blockfrost.io/api/v0';
 
 export interface BlockfrostAssetTx {
@@ -15,6 +22,12 @@ export interface Cip20MessageRow {
   url: string;
   timestamp: string;
   message: string;
+}
+
+export interface Cip20HistoryResult {
+  rows: Cip20MessageRow[];
+  cachedTxCount: number;
+  fetchedTxCount: number;
 }
 
 async function bfFetchJson<T>(path: string, apiKey: string): Promise<T> {
@@ -88,6 +101,30 @@ function formatCip20Message(jsonMetadata: unknown): string {
   return '';
 }
 
+function buildCacheEntry(
+  blockTime: number,
+  metadata: BlockfrostTxMetadataEntry[]
+): CachedConchTx {
+  const hasCip20 = hasCip20Metadata(metadata);
+  const entry = metadata.find((m) => m.label === '674');
+  const message = hasCip20 ? formatCip20Message(entry?.json_metadata) : '';
+  return {
+    blockTime,
+    hasCip20,
+    message,
+    cachedAtSec: Math.floor(Date.now() / 1000),
+  };
+}
+
+export function cip20MessageRowFromCache(txHash: string, cached: CachedConchTx): Cip20MessageRow {
+  return {
+    tx: txHash,
+    url: `https://cardanoscan.io/transaction/${txHash}`,
+    timestamp: new Date(cached.blockTime * 1000).toLocaleString(),
+    message: cached.message,
+  };
+}
+
 async function mapWithConcurrency<T, U>(
   items: T[],
   concurrency: number,
@@ -116,26 +153,42 @@ export async function getAssetCip20History(
   assetId: string,
   apiKey: string,
   amount: number
-): Promise<Cip20MessageRow[]> {
+): Promise<Cip20HistoryResult> {
   const history = await fetchAssetTransactions(assetId, apiKey, amount);
-  if (history.length === 0) return [];
+  if (history.length === 0) {
+    return { rows: [], cachedTxCount: 0, fetchedTxCount: 0 };
+  }
 
-  const withMeta = await mapWithConcurrency(history, 8, async (row) => {
-    const metadata = await fetchTxMetadata(row.tx_hash, apiKey);
-    return { tx: row.tx_hash, block_time: row.block_time, metadata };
-  });
+  const cacheByKey = await getConchTxCacheBatch(history.map((row) => row.tx_hash));
+  const uncached = history.filter((row) => !cacheByKey.has(conchTxCacheKey(row.tx_hash)));
+  const cachedTxCount = history.length - uncached.length;
 
-  const messageTxs = withMeta.filter((x) => hasCip20Metadata(x.metadata));
+  const newCacheEntries = new Map<string, CachedConchTx>();
 
-  return messageTxs.map((row) => {
-    const entry = row.metadata.find((m) => m.label === '674');
-    const message = formatCip20Message(entry?.json_metadata);
-    const ts = row.block_time ?? 0;
-    return {
-      tx: row.tx,
-      url: `https://cardanoscan.io/transaction/${row.tx}`,
-      timestamp: new Date(ts * 1000).toLocaleString(),
-      message,
-    };
-  });
+  if (uncached.length > 0) {
+    const fetched = await mapWithConcurrency(uncached, 8, async (row) => {
+      const metadata = await fetchTxMetadata(row.tx_hash, apiKey);
+      const entry = buildCacheEntry(row.block_time ?? 0, metadata);
+      newCacheEntries.set(row.tx_hash, entry);
+      return { txHash: row.tx_hash, entry };
+    });
+    await putConchTxCacheBatch(newCacheEntries);
+    for (const { txHash, entry } of fetched) {
+      cacheByKey.set(conchTxCacheKey(txHash), entry);
+    }
+  }
+
+  const rows = history
+    .map((row) => {
+      const cached = cacheByKey.get(conchTxCacheKey(row.tx_hash));
+      if (!cached?.hasCip20) return null;
+      return cip20MessageRowFromCache(row.tx_hash, cached);
+    })
+    .filter((row): row is Cip20MessageRow => row != null);
+
+  return {
+    rows,
+    cachedTxCount,
+    fetchedTxCount: uncached.length,
+  };
 }

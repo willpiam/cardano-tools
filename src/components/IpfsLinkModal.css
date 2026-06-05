@@ -161,6 +161,52 @@
   max-width: min(1100px, 98vw);
 }
 
+.voting-history-settings-panel {
+  max-width: min(520px, 95vw);
+}
+
+.voting-history-settings-stats {
+  display: grid;
+  gap: 0.35rem;
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+  border-radius: 6px;
+  border: 1px solid #444;
+  background: #1a1a1a;
+  font-size: 0.85rem;
+  color: #d1d5db;
+}
+
+.voting-history-settings-actions {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.voting-history-settings-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border-radius: 4px;
+  border: 1px solid #4b5563;
+  background: #1f2937;
+  color: #e5e7eb;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.voting-history-settings-icon-btn:hover:not(:disabled) {
+  border-color: #ffa722;
+  color: #ffa722;
+}
+
+.voting-history-settings-icon-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .governance-metadata-toolbar {
   display: flex;
   flex-wrap: wrap;

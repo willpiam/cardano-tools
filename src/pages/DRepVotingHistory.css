@@ -1,0 +1,53 @@
+.drep-voting-history-page {
+  width: 100%;
+  max-width: min(1440px, 98vw);
+}
+
+.drep-voting-history-table-wrap {
+  width: 100%;
+}
+
+.drep-voting-history-table {
+  width: 100%;
+  min-width: 1200px;
+  table-layout: auto;
+}
+
+.drep-voting-history-table th,
+.drep-voting-history-table td {
+  padding-left: 0.85rem;
+  padding-right: 0.85rem;
+  vertical-align: middle;
+}
+
+.drep-voting-history-table .col-details,
+.drep-voting-history-table .col-copy {
+  width: 1%;
+  white-space: nowrap;
+}
+
+.drep-voting-history-table .col-gov-action {
+  min-width: 11rem;
+  white-space: nowrap;
+}
+
+.drep-voting-history-table .col-action-type {
+  min-width: 9.5rem;
+  white-space: nowrap;
+}
+
+.drep-voting-history-table .col-metadata,
+.drep-voting-history-table .col-rationale {
+  min-width: 6.5rem;
+  white-space: nowrap;
+}
+
+.drep-voting-history-table .col-time-left,
+.drep-voting-history-table .col-vote {
+  white-space: nowrap;
+}
+
+.drep-voting-history-table .col-vote-tx {
+  min-width: 9rem;
+  white-space: nowrap;
+}

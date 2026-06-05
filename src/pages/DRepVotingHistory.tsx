@@ -1,8 +1,12 @@
 import { useState, useEffect, useMemo } from 'react';
+import { Settings } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router';
 import { useAppSelector, useAppDispatch } from '../store/hooks';
 import { setBlockfrostConfig } from '../store/blockfrostSlice';
 import { Button } from '../components/Button';
+import { DRepVotingHistorySettingsModal } from '../components/DRepVotingHistorySettingsModal';
+import '../components/IpfsLinkModal.css';
+import './DRepVotingHistory.css';
 import { GovernanceActionMetadataModal } from '../components/GovernanceActionMetadataModal';
 import { IpfsLinkModal } from '../components/IpfsLinkModal';
 import { DRepVoteSummaryChart } from '../components/DRepVoteSummaryChart';
@@ -174,6 +178,7 @@ const DRepVotingHistory = () => {
     title: RECACHE_MODAL_TITLE,
     description: '',
   });
+  const [settingsModalOpen, setSettingsModalOpen] = useState(false);
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -578,7 +583,7 @@ const DRepVotingHistory = () => {
   return (
     <div className="min-h-screen flex flex-col">
       <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '2rem' }}>
-        <div className="main-section" style={{ display: 'flex', flexDirection: 'column', gap: '1rem', alignItems: 'flex-start', justifyContent: 'center', width: '100%', maxWidth: '900px' }}>
+        <div className="main-section drep-voting-history-page" style={{ display: 'flex', flexDirection: 'column', gap: '1rem', alignItems: 'flex-start', justifyContent: 'center' }}>
           <h1>DRep Voting History</h1>
 
           {!apiKey && (
@@ -651,18 +656,16 @@ const DRepVotingHistory = () => {
                         Cached <strong>{cachedClosedCount}</strong> closed actions
                       </span>
                     )}
-                    <Button
-                      onClick={() => void handleForceRecache()}
-                      disabled={loading || anchorLoading || recaching}
+                    <button
+                      type="button"
+                      className="voting-history-settings-icon-btn"
+                      onClick={() => setSettingsModalOpen(true)}
+                      disabled={loading || recaching}
+                      title="Settings"
+                      aria-label="Open voting history settings"
                     >
-                      Reload closed actions
-                    </Button>
-                    <Button
-                      onClick={() => void handleClearMetadataDocCache()}
-                      disabled={cachedMetadataDocCount === 0 || loading || recaching}
-                    >
-                      Clear {cachedMetadataDocCount} cached governance metadata documents
-                    </Button>
+                      <Settings size={18} aria-hidden="true" />
+                    </button>
                   </div>
                   {votedCount > 0 && (
                     <span style={{ fontSize: '0.9rem', color: '#14b8a6' }}>
@@ -696,25 +699,25 @@ const DRepVotingHistory = () => {
                 </div>
               </div>
 
-              <div className="overflow-x-auto" style={{ width: '100%' }}>
-                <table className="min-w-full text-left border-collapse">
+              <div className="overflow-x-auto drep-voting-history-table-wrap">
+                <table className="drep-voting-history-table text-left border-collapse">
                   <thead>
                     <tr className="bg-[#1a1103]">
-                      <th className="px-2 py-2 border-b w-0 whitespace-nowrap" title="View governance metadata">Details</th>
-                      <th className="px-4 py-2 border-b">Governance Action</th>
-                      <th className="px-4 py-2 border-b w-0 whitespace-nowrap">Copy ID</th>
-                      <th className="px-4 py-2 border-b">Action Type</th>
-                      <th className="px-4 py-2 border-b">Action metadata</th>
-                      <th className="px-4 py-2 border-b">Time left</th>
-                      <th className="px-4 py-2 border-b">Vote</th>
-                      <th className="px-4 py-2 border-b">Rationale</th>
-                      <th className="px-4 py-2 border-b">Vote Tx</th>
+                      <th className="col-details py-2 border-b" title="View governance metadata">Details</th>
+                      <th className="col-gov-action py-2 border-b">Governance Action</th>
+                      <th className="col-copy py-2 border-b">Copy ID</th>
+                      <th className="col-action-type py-2 border-b">Action Type</th>
+                      <th className="col-metadata py-2 border-b">Action metadata</th>
+                      <th className="col-time-left py-2 border-b">Time left</th>
+                      <th className="col-vote py-2 border-b">Vote</th>
+                      <th className="col-rationale py-2 border-b">Rationale</th>
+                      <th className="col-vote-tx py-2 border-b">Vote Tx</th>
                     </tr>
                   </thead>
                   <tbody>
                     {mergedData.map((row) => (
                       <tr key={`${row.proposalTxHash}#${row.proposalCertIndex}`} className="odd:bg-[#33240b] even:bg-[#1a1103]">
-                        <td className="px-2 py-2 border-b w-0 whitespace-nowrap align-middle text-xs">
+                        <td className="col-details py-2 border-b text-xs">
                           {row.actionMetadataAnchor.status === 'present' && row.actionMetadataAnchor.url ? (
                             <button
                               type="button"
@@ -738,7 +741,7 @@ const DRepVotingHistory = () => {
                             <span style={{ color: '#9ca3af' }}>?</span>
                           )}
                         </td>
-                        <td className="px-4 py-2 border-b font-mono text-xs">
+                        <td className="col-gov-action py-2 border-b font-mono text-xs">
                           <a
                             href={`https://cardanoscan.io/govAction/${row.proposalId}`}
                             target="_blank"
@@ -748,7 +751,7 @@ const DRepVotingHistory = () => {
                             {truncateHash(row.proposalId)}
                           </a>
                         </td>
-                        <td className="px-2 py-2 border-b w-0 whitespace-nowrap align-middle">
+                        <td className="col-copy py-2 border-b">
                           <button
                             type="button"
                             onClick={() => copyGovActionId(row.proposalId)}
@@ -758,10 +761,10 @@ const DRepVotingHistory = () => {
                             {copiedProposalId === row.proposalId ? 'Copied' : 'Copy'}
                           </button>
                         </td>
-                        <td className="px-4 py-2 border-b">
+                        <td className="col-action-type py-2 border-b">
                           {formatGovActionType(row.govActionType)}
                         </td>
-                        <td className="px-4 py-2 border-b text-xs">
+                        <td className="col-metadata py-2 border-b text-xs">
                           {row.actionMetadataAnchor.status === 'present' && row.actionMetadataAnchor.url ? (
                             <button
                               type="button"
@@ -791,7 +794,7 @@ const DRepVotingHistory = () => {
                             <span style={{ color: '#9ca3af' }}>?</span>
                           )}
                         </td>
-                        <td className="px-4 py-2 border-b whitespace-nowrap" title={governanceTimeStatusTitle(row.timeStatus)}>
+                        <td className="col-time-left py-2 border-b" title={governanceTimeStatusTitle(row.timeStatus)}>
                           <span style={{
                             color: timeRemainingColor(row.timeStatus, nowSec),
                             fontWeight: row.timeStatus.kind === 'countdown' ? 'bold' : 'normal',
@@ -799,7 +802,7 @@ const DRepVotingHistory = () => {
                             {formatGovernanceTimeRemaining(row.timeStatus, nowSec)}
                           </span>
                         </td>
-                        <td className="px-4 py-2 border-b">
+                        <td className="col-vote py-2 border-b">
                           <span style={{
                             color: voteColor(row.vote),
                             fontWeight: 'bold',
@@ -810,7 +813,7 @@ const DRepVotingHistory = () => {
                             {voteLabel(row.vote)}
                           </span>
                         </td>
-                        <td className="px-4 py-2 border-b text-xs">
+                        <td className="col-rationale py-2 border-b text-xs">
                           {!row.vote ? (
                             <span style={{ color: '#6b7280' }}>—</span>
                           ) : anchorLoading ? (
@@ -844,7 +847,7 @@ const DRepVotingHistory = () => {
                             <span style={{ color: '#9ca3af' }}>?</span>
                           )}
                         </td>
-                        <td className="px-4 py-2 border-b font-mono text-xs">
+                        <td className="col-vote-tx py-2 border-b font-mono text-xs">
                           {row.voteTxHash ? (
                             <a
                               href={`https://cardanoscan.io/vote/${row.voteTxHash}`}
@@ -865,6 +868,17 @@ const DRepVotingHistory = () => {
               </div>
             </>
           )}
+
+          <DRepVotingHistorySettingsModal
+            open={settingsModalOpen}
+            onClose={() => setSettingsModalOpen(false)}
+            cachedClosedCount={cachedClosedCount}
+            cachedMetadataDocCount={cachedMetadataDocCount}
+            onReloadClosedActions={() => void handleForceRecache()}
+            onClearMetadataDocs={() => void handleClearMetadataDocCache()}
+            reloadDisabled={loading || anchorLoading || recaching}
+            clearMetadataDisabled={cachedMetadataDocCount === 0 || loading || recaching}
+          />
 
           <ReloadingRecacheModal
             open={recacheModalOpen}

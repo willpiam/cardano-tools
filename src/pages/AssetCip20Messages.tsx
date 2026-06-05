@@ -1,11 +1,15 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Settings } from 'lucide-react';
 import { Link } from 'react-router';
 import './AssetCip20Messages.css';
+import '../components/IpfsLinkModal.css';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { setBlockfrostConfig } from '../store/blockfrostSlice';
 import { Button } from '../components/Button';
+import { ConchHistorySettingsModal } from '../components/ConchHistorySettingsModal';
 import { getAssetCip20History, type Cip20MessageRow } from '../utils/cip20AssetHistory';
 import { assetFingerprintFromUnitHex } from '../utils/cip14AssetFingerprint';
+import { clearConchTxCache, countConchTxCache } from '../utils/conchHistoryCache';
 
 const DEFAULT_TX_LIMIT = 40;
 const MAX_TX_LIMIT = 500;
@@ -32,6 +36,9 @@ const AssetCip20Messages = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasLoaded, setHasLoaded] = useState(false);
+  const [settingsModalOpen, setSettingsModalOpen] = useState(false);
+  const [cachedTxCount, setCachedTxCount] = useState(0);
+  const [lastLoadCachedCount, setLastLoadCachedCount] = useState(0);
 
   const assetFingerprint = useMemo(
     () => assetFingerprintFromUnitHex(localAssetId),
@@ -54,6 +61,16 @@ const AssetCip20Messages = () => {
   useEffect(() => {
     if (apiKey) setLocalApiKey(apiKey);
   }, [apiKey]);
+
+  useEffect(() => {
+    void countConchTxCache().then(setCachedTxCount);
+  }, []);
+
+  const handleClearCache = useCallback(async () => {
+    await clearConchTxCache();
+    setCachedTxCount(0);
+    setLastLoadCachedCount(0);
+  }, []);
 
   const syncUrlParams = (key: string, assetId: string, txLimit: number) => {
     const url = new URL(window.location.href);
@@ -87,12 +104,18 @@ const AssetCip20Messages = () => {
     const limit = parseTxLimit(localTxLimit.trim());
     setLoading(true);
     setError(null);
-    setRows([]);
 
     try {
-      const data = await getAssetCip20History(assetTrim, key, limit);
+      const { rows: data, cachedTxCount: loadCachedCount } = await getAssetCip20History(
+        assetTrim,
+        key,
+        limit
+      );
       setRows(data);
       setHasLoaded(true);
+      setLastLoadCachedCount(loadCachedCount);
+      const totalCached = await countConchTxCache();
+      setCachedTxCount(totalCached);
     } catch (err) {
       console.error('Conch protocol history', err);
       setError(err instanceof Error ? err.message : 'Failed to load history');
@@ -228,7 +251,7 @@ const AssetCip20Messages = () => {
               }}
             />
 
-            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
               <Button onClick={handleApplySettings} disabled={!localApiKey.trim() && !apiKey}>
                 Apply settings (save to URL)
               </Button>
@@ -238,6 +261,16 @@ const AssetCip20Messages = () => {
               >
                 Load history
               </Button>
+              <button
+                type="button"
+                className="voting-history-settings-icon-btn"
+                onClick={() => setSettingsModalOpen(true)}
+                disabled={loading}
+                title="Settings"
+                aria-label="Open Conch history settings"
+              >
+                <Settings size={18} aria-hidden="true" />
+              </button>
             </div>
           </div>
 
@@ -260,6 +293,11 @@ const AssetCip20Messages = () => {
 
           {!loading && !error && rows.length > 0 && (
             <div className="conch-history-frame">
+              {lastLoadCachedCount > 0 && (
+                <p style={{ margin: '0 0 0.75rem', fontSize: '0.85rem', color: '#9ca3af' }}>
+                  Cached <strong>{lastLoadCachedCount}</strong> transactions
+                </p>
+              )}
               <table className="conch-history-table">
                 <thead>
                   <tr>
@@ -299,6 +337,14 @@ const AssetCip20Messages = () => {
               Other work projects
             </a>
           </div>
+
+          <ConchHistorySettingsModal
+            open={settingsModalOpen}
+            onClose={() => setSettingsModalOpen(false)}
+            cachedTxCount={cachedTxCount}
+            onClearCache={() => void handleClearCache()}
+            clearDisabled={cachedTxCount === 0 || loading}
+          />
         </div>
       </div>
     </div>
