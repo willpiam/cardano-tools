@@ -3,10 +3,11 @@ import type { VoteAnchorStatus } from '../components/DRepVoteMetadataChart';
 import type { BlockfrostProposalExpirationFields } from './governanceExpiration';
 
 export const DREP_VOTING_HISTORY_DB_NAME = 'ctools-drep-voting-history';
-export const DREP_VOTING_HISTORY_DB_VERSION = 1;
+export const DREP_VOTING_HISTORY_DB_VERSION = 2;
 
 const STORE_PROPOSALS = 'proposals';
 const STORE_DREP_VOTES = 'drepVotes';
+export const STORE_METADATA_DOCS = 'metadataDocs';
 
 export interface CachedProposalEnrichment {
   expiration: BlockfrostProposalExpirationFields;
@@ -57,8 +58,16 @@ function openDb(): Promise<IDBDatabase> {
       if (!db.objectStoreNames.contains(STORE_DREP_VOTES)) {
         db.createObjectStore(STORE_DREP_VOTES);
       }
+      if (!db.objectStoreNames.contains(STORE_METADATA_DOCS)) {
+        db.createObjectStore(STORE_METADATA_DOCS);
+      }
     };
   });
+}
+
+/** Shared DB opener for DRep voting history caches (including metadata documents). */
+export function openDrepVotingHistoryDb(): Promise<IDBDatabase> {
+  return openDb();
 }
 
 function idbGetAll<T>(storeName: string): Promise<Map<string, T>> {

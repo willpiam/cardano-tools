@@ -14,6 +14,10 @@ import { fetchAllPages } from '../functions/governanceActionsFetch';
 import { fetchVoteTxAnchorMap, proposalKey } from '../functions/voteTxAnchors';
 import { ReloadingRecacheModal } from '../components/ReloadingRecacheModal';
 import {
+  clearGovernanceMetadataDocCache,
+  countGovernanceMetadataDocCache,
+} from '../utils/governanceMetadataDocCache';
+import {
   loadAllProposalCache,
   loadDrepVoteCache,
   proposalCacheKey,
@@ -80,6 +84,8 @@ interface MetadataModalState {
   url: string;
   hashHex?: string;
   proposalId: string;
+  proposalTxHash: string;
+  proposalCertIndex: number;
 }
 
 function voteColor(vote: string | null): string {
@@ -161,6 +167,7 @@ const DRepVotingHistory = () => {
   const [metadataModal, setMetadataModal] = useState<MetadataModalState | null>(null);
   const [nowSec, setNowSec] = useState(() => Math.floor(Date.now() / 1000));
   const [cachedClosedCount, setCachedClosedCount] = useState(0);
+  const [cachedMetadataDocCount, setCachedMetadataDocCount] = useState(0);
   const [recaching, setRecaching] = useState(false);
   const [recacheModalOpen, setRecacheModalOpen] = useState(false);
   const [recacheProgress, setRecacheProgress] = useState<RecacheProgress>({
@@ -189,6 +196,11 @@ const DRepVotingHistory = () => {
     if (!drepId || !apiKey) return;
     fetchData(drepId, apiKey);
   }, [drepId, apiKey]);
+
+  useEffect(() => {
+    if (!drepId) return;
+    void countGovernanceMetadataDocCache().then(setCachedMetadataDocCount);
+  }, [drepId]);
 
   useEffect(() => {
     if (!mergedData.some((row) => row.timeStatus.kind === 'countdown')) return;
@@ -519,6 +531,15 @@ const DRepVotingHistory = () => {
     }
   };
 
+  const refreshMetadataDocCount = () => {
+    void countGovernanceMetadataDocCache().then(setCachedMetadataDocCount);
+  };
+
+  const handleClearMetadataDocCache = async () => {
+    await clearGovernanceMetadataDocCache();
+    setCachedMetadataDocCount(0);
+  };
+
   const handleApplyKey = () => {
     if (!localApiKey.trim()) return;
     dispatch(setBlockfrostConfig({ useBlockfrost: true, apiKey: localApiKey.trim() }));
@@ -636,6 +657,12 @@ const DRepVotingHistory = () => {
                     >
                       Reload closed actions
                     </Button>
+                    <Button
+                      onClick={() => void handleClearMetadataDocCache()}
+                      disabled={cachedMetadataDocCount === 0 || loading || recaching}
+                    >
+                      Clear {cachedMetadataDocCount} cached governance metadata documents
+                    </Button>
                   </div>
                   {votedCount > 0 && (
                     <span style={{ fontSize: '0.9rem', color: '#14b8a6' }}>
@@ -696,6 +723,8 @@ const DRepVotingHistory = () => {
                                   url: row.actionMetadataAnchor.url!,
                                   hashHex: row.actionMetadataAnchor.hashHex,
                                   proposalId: row.proposalId,
+                                  proposalTxHash: row.proposalTxHash,
+                                  proposalCertIndex: row.proposalCertIndex,
                                 })
                               }
                               className="btn text-xs py-1 px-2"
@@ -845,10 +874,16 @@ const DRepVotingHistory = () => {
 
           <GovernanceActionMetadataModal
             open={metadataModal !== null}
+            cacheKey={
+              metadataModal
+                ? proposalCacheKey(metadataModal.proposalTxHash, metadataModal.proposalCertIndex)
+                : ''
+            }
             anchorUrl={metadataModal?.url ?? ''}
             hashHex={metadataModal?.hashHex}
             proposalLabel={metadataModal ? truncateHash(metadataModal.proposalId) : ''}
             onClose={() => setMetadataModal(null)}
+            onCacheUpdated={refreshMetadataDocCount}
           />
 
           <IpfsLinkModal

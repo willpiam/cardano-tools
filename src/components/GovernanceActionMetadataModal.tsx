@@ -5,6 +5,11 @@ import {
   type GovernanceMetadata,
   type MetadataError,
 } from '../functions/governanceActionsFetch';
+import {
+  getGovernanceMetadataDocCache,
+  isGovernanceMetadataDocCacheHit,
+  putGovernanceMetadataDocCache,
+} from '../utils/governanceMetadataDocCache';
 import { IPFS_GATEWAYS, parseIpfsLink } from '../utils/ipfsGateways';
 import { GovernanceMetadataView } from './GovernanceMetadataView';
 import './IpfsLinkModal.css';
@@ -15,18 +20,22 @@ type ContentView = 'formatted' | 'json';
 
 interface GovernanceActionMetadataModalProps {
   open: boolean;
+  cacheKey: string;
   anchorUrl: string;
   hashHex?: string;
   proposalLabel: string;
   onClose: () => void;
+  onCacheUpdated?: () => void;
 }
 
 export function GovernanceActionMetadataModal({
   open,
+  cacheKey,
   anchorUrl,
   hashHex,
   proposalLabel,
   onClose,
+  onCacheUpdated,
 }: GovernanceActionMetadataModalProps) {
   const [status, setStatus] = useState<ModalStatus>('idle');
   const [metadata, setMetadata] = useState<GovernanceMetadata | null>(null);
@@ -57,12 +66,40 @@ export function GovernanceActionMetadataModal({
         return;
       }
 
+      if (result.metadata) {
+        await putGovernanceMetadataDocCache(cacheKey, {
+          metadata: result.metadata,
+          rawPayload: result.rawPayload,
+          anchorUrl,
+          hashHex,
+          cachedAtSec: Math.floor(Date.now() / 1000),
+        });
+        onCacheUpdated?.();
+      }
+
       setMetadata(result.metadata);
       setRawPayload(result.rawPayload);
       setStatus('loaded');
     },
-    [anchorUrl]
+    [anchorUrl, cacheKey, hashHex, onCacheUpdated]
   );
+
+  const loadMetadata = useCallback(async () => {
+    setStatus('loading');
+    setError(null);
+    setMetadata(null);
+    setRawPayload(null);
+
+    const cached = await getGovernanceMetadataDocCache(cacheKey);
+    if (isGovernanceMetadataDocCacheHit(cached, anchorUrl)) {
+      setMetadata(cached.metadata);
+      setRawPayload(cached.rawPayload);
+      setStatus('loaded');
+      return;
+    }
+
+    await fetchMetadata(0);
+  }, [anchorUrl, cacheKey, fetchMetadata]);
 
   useEffect(() => {
     if (!open) {
@@ -77,8 +114,8 @@ export function GovernanceActionMetadataModal({
       return;
     }
 
-    void fetchMetadata(0);
-  }, [open, anchorUrl, fetchMetadata]);
+    void loadMetadata();
+  }, [open, anchorUrl, cacheKey, loadMetadata]);
 
   useEffect(() => {
     if (!open) return;
