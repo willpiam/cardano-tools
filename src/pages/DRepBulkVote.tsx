@@ -25,6 +25,9 @@ import { downloadJson } from '../functions/downloadJson';
 import { buildCip100RationaleBytes, hashGovernanceAnchorBytes } from '../functions/cip100RationaleDocument';
 import { uploadJsonToPinata } from '../functions/pinataUpload';
 import { setPinataConfig } from '../store/pinataSlice';
+import { IpfsLinkModal } from '../components/IpfsLinkModal';
+import '../components/IpfsLinkModal.css';
+import { parseIpfsLink } from '../utils/ipfsGateways';
 
 type UserVote = 'yes' | 'no' | 'abstain' | 'skip';
 
@@ -92,6 +95,23 @@ interface BulkVoteReceipt {
 
 const receiptFilename = (txHash: string) =>
   `drep_bulk_vote_receipt_${txHash.slice(0, 12)}_${Date.now()}.json`;
+
+interface IpfsModalState {
+  url: string;
+  hashHex?: string;
+  title: string;
+}
+
+const ipfsGatewayButtonStyle: React.CSSProperties = {
+  color: '#7dd3fc',
+  textDecoration: 'underline',
+  background: 'transparent',
+  border: 'none',
+  padding: 0,
+  cursor: 'pointer',
+  fontSize: 'inherit',
+  fontWeight: 500,
+};
 
 const ANCHOR_ATTACH_PARAM = 'anchor';
 const ANCHOR_URL_PARAM = 'anchorUrl';
@@ -181,6 +201,7 @@ const DRepBulkVote: React.FC = () => {
   const [rationaleUploading, setRationaleUploading] = useState(false);
   const [rationaleUploadError, setRationaleUploadError] = useState<string | null>(null);
   const [pinataUploadResult, setPinataUploadResult] = useState<{ url: string; hashHex: string } | null>(null);
+  const [ipfsModal, setIpfsModal] = useState<IpfsModalState | null>(null);
 
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -717,10 +738,22 @@ const DRepBulkVote: React.FC = () => {
                   {pinataUploadResult && (
                     <div style={{ color: '#bbf7d0', fontSize: '0.85rem', display: 'grid', gap: '0.25rem' }}>
                       <div>
-                        Uploaded:{' '}
-                        <a href={pinataUploadResult.url} target="_blank" rel="noopener noreferrer" style={{ color: '#93c5fd' }}>
-                          {pinataUploadResult.url}
-                        </a>
+                        Uploaded: <code style={{ wordBreak: 'break-all' }}>{pinataUploadResult.url}</code>
+                      </div>
+                      <div>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setIpfsModal({
+                              url: pinataUploadResult.url,
+                              hashHex: pinataUploadResult.hashHex,
+                              title: 'Open uploaded vote rationale',
+                            })
+                          }
+                          style={ipfsGatewayButtonStyle}
+                        >
+                          Open via IPFS gateways
+                        </button>
                       </div>
                       <div style={{ wordBreak: 'break-all' }}>
                         Hash: <code>{pinataUploadResult.hashHex}</code>
@@ -775,6 +808,21 @@ const DRepBulkVote: React.FC = () => {
                         fontSize: '0.85rem',
                       }}
                     />
+                    {parseIpfsLink(anchorUrl) && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setIpfsModal({
+                            url: anchorUrl,
+                            hashHex: anchorHashHex.trim() || undefined,
+                            title: 'Open vote rationale',
+                          })
+                        }
+                        style={ipfsGatewayButtonStyle}
+                      >
+                        Open via IPFS gateways
+                      </button>
+                    )}
                   </div>
                 )}
                 <label
@@ -1090,6 +1138,14 @@ const DRepBulkVote: React.FC = () => {
             </a>
           </div>
         </div>
+
+        <IpfsLinkModal
+          open={ipfsModal !== null}
+          url={ipfsModal?.url ?? ''}
+          hashHex={ipfsModal?.hashHex}
+          title={ipfsModal?.title}
+          onClose={() => setIpfsModal(null)}
+        />
       </div>
     </div>
   );

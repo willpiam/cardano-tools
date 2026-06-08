@@ -14,12 +14,13 @@ import {
   DRepVoteMetadataChart,
   type VoteAnchorStatus,
 } from '../components/DRepVoteMetadataChart';
+import { DRepVotingHistoryRow } from '../components/DRepVotingHistoryRow';
 import { fetchAllPages } from '../functions/governanceActionsFetch';
 import { fetchVoteTxAnchorMap, proposalKey } from '../functions/voteTxAnchors';
 import { ReloadingRecacheModal } from '../components/ReloadingRecacheModal';
 import {
   clearGovernanceMetadataDocCache,
-  countGovernanceMetadataDocCache,
+  loadAllMetadataDocCache,
 } from '../utils/governanceMetadataDocCache';
 import {
   loadAllProposalCache,
@@ -41,10 +42,7 @@ import {
   fetchProposalExpirationFields,
   isGovernanceActionFinalized,
   type ProposalMetadataAnchorInfo,
-  formatGovernanceTimeRemaining,
-  governanceTimeStatusTitle,
   resolveGovernanceTimeStatus,
-  timeRemainingColor,
   type GovernanceActionTimeStatus,
 } from '../utils/governanceExpiration';
 
@@ -92,28 +90,8 @@ interface MetadataModalState {
   proposalCertIndex: number;
 }
 
-function voteColor(vote: string | null): string {
-  switch (vote) {
-    case 'yes': return '#22c55e';
-    case 'no': return '#ef4444';
-    case 'abstain': return '#eab308';
-    default: return '#6b7280';
-  }
-}
-
-function voteLabel(vote: string | null): string {
-  if (!vote) return 'Did Not Vote';
-  return vote.charAt(0).toUpperCase() + vote.slice(1);
-}
-
 function truncateHash(hash: string): string {
   return hash.slice(0, 8) + '...' + hash.slice(-8);
-}
-
-function formatGovActionType(type: string): string {
-  return type
-    .replace(/_/g, ' ')
-    .replace(/\b\w/g, c => c.toUpperCase());
 }
 
 function initialVoteAnchor(vote: string | null): VoteAnchorInfo {
@@ -179,6 +157,10 @@ const DRepVotingHistory = () => {
     description: '',
   });
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
+  const [expandedRowKey, setExpandedRowKey] = useState<string | null>(null);
+  const [metadataTitleByKey, setMetadataTitleByKey] = useState<
+    Map<string, { title: string; anchorUrl: string }>
+  >(new Map());
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -198,13 +180,30 @@ const DRepVotingHistory = () => {
   }, [drepId]);
 
   useEffect(() => {
+    setExpandedRowKey(null);
+  }, [drepId]);
+
+  useEffect(() => {
     if (!drepId || !apiKey) return;
     fetchData(drepId, apiKey);
   }, [drepId, apiKey]);
 
+  const loadMetadataTitleMap = async () => {
+    const cache = await loadAllMetadataDocCache();
+    const titles = new Map<string, { title: string; anchorUrl: string }>();
+    for (const [key, entry] of cache) {
+      const title = entry.metadata?.title?.trim();
+      if (title) {
+        titles.set(key, { title, anchorUrl: entry.anchorUrl });
+      }
+    }
+    setMetadataTitleByKey(titles);
+    setCachedMetadataDocCount(cache.size);
+  };
+
   useEffect(() => {
     if (!drepId) return;
-    void countGovernanceMetadataDocCache().then(setCachedMetadataDocCount);
+    void loadMetadataTitleMap();
   }, [drepId]);
 
   useEffect(() => {
@@ -537,12 +536,25 @@ const DRepVotingHistory = () => {
   };
 
   const refreshMetadataDocCount = () => {
-    void countGovernanceMetadataDocCache().then(setCachedMetadataDocCount);
+    void loadMetadataTitleMap();
   };
 
   const handleClearMetadataDocCache = async () => {
     await clearGovernanceMetadataDocCache();
     setCachedMetadataDocCount(0);
+    setMetadataTitleByKey(new Map());
+  };
+
+  const resolveCachedTitle = (row: MergedProposal): string | undefined => {
+    if (row.actionMetadataAnchor.status !== 'present' || !row.actionMetadataAnchor.url) {
+      return undefined;
+    }
+    const key = proposalCacheKey(row.proposalTxHash, row.proposalCertIndex);
+    const cached = metadataTitleByKey.get(key);
+    if (!cached || cached.anchorUrl !== row.actionMetadataAnchor.url) {
+      return undefined;
+    }
+    return cached.title;
   };
 
   const handleApplyKey = () => {
@@ -703,166 +715,38 @@ const DRepVotingHistory = () => {
                 <table className="drep-voting-history-table text-left border-collapse">
                   <thead>
                     <tr className="bg-[#1a1103]">
-                      <th className="col-details py-2 border-b" title="View governance metadata">Details</th>
-                      <th className="col-gov-action py-2 border-b">Governance Action</th>
-                      <th className="col-copy py-2 border-b">Copy ID</th>
-                      <th className="col-action-type py-2 border-b">Action Type</th>
-                      <th className="col-metadata py-2 border-b">Action metadata</th>
+                      <th className="col-expand py-2 border-b" aria-label="Expand" />
+                      <th className="col-action py-2 border-b">Action</th>
                       <th className="col-time-left py-2 border-b">Time left</th>
                       <th className="col-vote py-2 border-b">Vote</th>
-                      <th className="col-rationale py-2 border-b">Rationale</th>
-                      <th className="col-vote-tx py-2 border-b">Vote Tx</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {mergedData.map((row) => (
-                      <tr key={`${row.proposalTxHash}#${row.proposalCertIndex}`} className="odd:bg-[#33240b] even:bg-[#1a1103]">
-                        <td className="col-details py-2 border-b text-xs">
-                          {row.actionMetadataAnchor.status === 'present' && row.actionMetadataAnchor.url ? (
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setMetadataModal({
-                                  url: row.actionMetadataAnchor.url!,
-                                  hashHex: row.actionMetadataAnchor.hashHex,
-                                  proposalId: row.proposalId,
-                                  proposalTxHash: row.proposalTxHash,
-                                  proposalCertIndex: row.proposalCertIndex,
-                                })
-                              }
-                              className="btn text-xs py-1 px-2"
-                              title="View governance metadata"
-                            >
-                              View
-                            </button>
-                          ) : row.actionMetadataAnchor.status === 'absent' ? (
-                            <span style={{ color: '#6b7280' }}>—</span>
-                          ) : (
-                            <span style={{ color: '#9ca3af' }}>?</span>
-                          )}
-                        </td>
-                        <td className="col-gov-action py-2 border-b font-mono text-xs">
-                          <a
-                            href={`https://cardanoscan.io/govAction/${row.proposalId}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            style={{ color: '#0066cc', textDecoration: 'underline' }}
-                          >
-                            {truncateHash(row.proposalId)}
-                          </a>
-                        </td>
-                        <td className="col-copy py-2 border-b">
-                          <button
-                            type="button"
-                            onClick={() => copyGovActionId(row.proposalId)}
-                            className="btn text-xs py-1 px-2"
-                            title="Copy governance action ID"
-                          >
-                            {copiedProposalId === row.proposalId ? 'Copied' : 'Copy'}
-                          </button>
-                        </td>
-                        <td className="col-action-type py-2 border-b">
-                          {formatGovActionType(row.govActionType)}
-                        </td>
-                        <td className="col-metadata py-2 border-b text-xs">
-                          {row.actionMetadataAnchor.status === 'present' && row.actionMetadataAnchor.url ? (
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setIpfsModal({
-                                  url: row.actionMetadataAnchor.url!,
-                                  hashHex: row.actionMetadataAnchor.hashHex,
-                                  title: 'Open governance action metadata',
-                                })
-                              }
-                              style={{
-                                color: '#7dd3fc',
-                                textDecoration: 'underline',
-                                background: 'transparent',
-                                border: 'none',
-                                padding: 0,
-                                cursor: 'pointer',
-                                fontSize: 'inherit',
-                                fontWeight: 500,
-                              }}
-                            >
-                              Metadata
-                            </button>
-                          ) : row.actionMetadataAnchor.status === 'absent' ? (
-                            <span style={{ color: '#6b7280' }}>—</span>
-                          ) : (
-                            <span style={{ color: '#9ca3af' }}>?</span>
-                          )}
-                        </td>
-                        <td className="col-time-left py-2 border-b" title={governanceTimeStatusTitle(row.timeStatus)}>
-                          <span style={{
-                            color: timeRemainingColor(row.timeStatus, nowSec),
-                            fontWeight: row.timeStatus.kind === 'countdown' ? 'bold' : 'normal',
-                          }}>
-                            {formatGovernanceTimeRemaining(row.timeStatus, nowSec)}
-                          </span>
-                        </td>
-                        <td className="col-vote py-2 border-b">
-                          <span style={{
-                            color: voteColor(row.vote),
-                            fontWeight: 'bold',
-                            padding: '2px 8px',
-                            borderRadius: '4px',
-                            backgroundColor: `${voteColor(row.vote)}20`,
-                          }}>
-                            {voteLabel(row.vote)}
-                          </span>
-                        </td>
-                        <td className="col-rationale py-2 border-b text-xs">
-                          {!row.vote ? (
-                            <span style={{ color: '#6b7280' }}>—</span>
-                          ) : anchorLoading ? (
-                            <span style={{ color: '#9ca3af' }}>…</span>
-                          ) : row.voteAnchor.status === 'present' && row.voteAnchor.url ? (
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setIpfsModal({
-                                  url: row.voteAnchor.url!,
-                                  hashHex: row.voteAnchor.hashHex,
-                                  title: 'Open vote rationale',
-                                })
-                              }
-                              style={{
-                                color: '#7dd3fc',
-                                textDecoration: 'underline',
-                                background: 'transparent',
-                                border: 'none',
-                                padding: 0,
-                                cursor: 'pointer',
-                                fontSize: 'inherit',
-                                fontWeight: 500,
-                              }}
-                            >
-                              Rationale
-                            </button>
-                          ) : row.voteAnchor.status === 'absent' ? (
-                            <span style={{ color: '#6b7280' }}>—</span>
-                          ) : (
-                            <span style={{ color: '#9ca3af' }}>?</span>
-                          )}
-                        </td>
-                        <td className="col-vote-tx py-2 border-b font-mono text-xs">
-                          {row.voteTxHash ? (
-                            <a
-                              href={`https://cardanoscan.io/vote/${row.voteTxHash}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              style={{ color: '#0066cc', textDecoration: 'underline' }}
-                            >
-                              {truncateHash(row.voteTxHash)}
-                            </a>
-                          ) : (
-                            <span style={{ color: '#6b7280' }}>-</span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
+                    {mergedData.map((row, index) => {
+                      const rowKey = proposalCacheKey(row.proposalTxHash, row.proposalCertIndex);
+                      const detailsId = `drep-vh-details-${rowKey}`;
+                      const stripeClass = index % 2 === 0 ? 'odd:bg-[#33240b]' : 'even:bg-[#1a1103]';
+                      return (
+                        <DRepVotingHistoryRow
+                          key={rowKey}
+                          row={row}
+                          rowKey={rowKey}
+                          detailsId={detailsId}
+                          expanded={expandedRowKey === rowKey}
+                          stripeClass={stripeClass}
+                          cachedTitle={resolveCachedTitle(row)}
+                          anchorLoading={anchorLoading}
+                          nowSec={nowSec}
+                          copiedProposalId={copiedProposalId}
+                          onToggle={() =>
+                            setExpandedRowKey((current) => (current === rowKey ? null : rowKey))
+                          }
+                          onCopyProposalId={copyGovActionId}
+                          onOpenMetadataModal={setMetadataModal}
+                          onOpenIpfsModal={setIpfsModal}
+                        />
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

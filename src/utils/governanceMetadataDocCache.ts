@@ -71,6 +71,28 @@ function idbClear(): Promise<void> {
   );
 }
 
+function idbGetAll(): Promise<Map<string, CachedGovernanceMetadataDoc>> {
+  return openDrepVotingHistoryDb().then(
+    (db) =>
+      new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_METADATA_DOCS, 'readonly');
+        const store = tx.objectStore(STORE_METADATA_DOCS);
+        const request = store.getAll();
+        const keysRequest = store.getAllKeys();
+        tx.oncomplete = () => {
+          const values = request.result as CachedGovernanceMetadataDoc[];
+          const keys = keysRequest.result as string[];
+          const map = new Map<string, CachedGovernanceMetadataDoc>();
+          for (let i = 0; i < keys.length; i++) {
+            map.set(String(keys[i]), values[i]);
+          }
+          resolve(map);
+        };
+        tx.onerror = () => reject(tx.error ?? new Error('IndexedDB read failed'));
+      })
+  );
+}
+
 export async function getGovernanceMetadataDocCache(
   key: string
 ): Promise<CachedGovernanceMetadataDoc | null> {
@@ -91,6 +113,16 @@ export async function putGovernanceMetadataDocCache(
     await idbPut(key, entry);
   } catch (err) {
     console.warn('Failed to write governance metadata doc cache', key, err);
+  }
+}
+
+/** All cached governance metadata documents (keyed by proposal cache key). */
+export async function loadAllMetadataDocCache(): Promise<Map<string, CachedGovernanceMetadataDoc>> {
+  try {
+    return await idbGetAll();
+  } catch (err) {
+    console.warn('Failed to load governance metadata doc cache', err);
+    return new Map();
   }
 }
 
