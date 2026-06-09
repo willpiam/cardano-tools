@@ -8,6 +8,7 @@ import { DRepVotingHistorySettingsModal } from '../components/DRepVotingHistoryS
 import '../components/IpfsLinkModal.css';
 import './DRepVotingHistory.css';
 import { GovernanceActionMetadataModal } from '../components/GovernanceActionMetadataModal';
+import { VoteRationaleMetadataModal } from '../components/VoteRationaleMetadataModal';
 import { IpfsLinkModal } from '../components/IpfsLinkModal';
 import { DRepVoteSummaryChart } from '../components/DRepVoteSummaryChart';
 import {
@@ -15,7 +16,7 @@ import {
   type VoteAnchorStatus,
 } from '../components/DRepVoteMetadataChart';
 import { DRepVotingHistoryRow } from '../components/DRepVotingHistoryRow';
-import { fetchAllPages } from '../functions/governanceActionsFetch';
+import { fetchAllPages, formatGovActionType } from '../functions/governanceActionsFetch';
 import { fetchVoteTxAnchorMap, proposalKey } from '../functions/voteTxAnchors';
 import { ReloadingRecacheModal } from '../components/ReloadingRecacheModal';
 import {
@@ -26,10 +27,20 @@ import {
 } from '../utils/governanceMetadataDocCache';
 import { prefetchUncachedGovernanceMetadataDocs } from '../utils/governanceMetadataDocFetch';
 import {
+  clearVoteRationaleDocCache,
+  isVoteRationaleDocCacheHit,
+  loadVoteRationaleDocCacheForDrep,
+  type CachedVoteRationaleDoc,
+} from '../utils/voteRationaleDocCache';
+import { prefetchUncachedVoteRationaleDocs } from '../utils/voteRationaleDocFetch';
+import {
   formatMetadataPrefetchDescription,
+  formatVoteRationalePrefetchDescription,
   METADATA_PREFETCH_MODAL_TITLE,
+  VOTE_RATIONALE_PREFETCH_MODAL_TITLE,
 } from '../utils/drepVotingHistoryRecacheHelpers';
 import {
+  drepVoteCacheKey,
   loadAllProposalCache,
   loadDrepVoteCache,
   proposalCacheKey,
@@ -83,6 +94,13 @@ interface MergedProposal {
   timeStatus: GovernanceActionTimeStatus;
 }
 
+function actionSearchHaystack(row: MergedProposal, cachedTitle?: string): string {
+  const parts = [formatGovActionType(row.govActionType), cachedTitle, row.proposalId].filter(
+    Boolean
+  );
+  return parts.join(' ').toLowerCase();
+}
+
 interface IpfsModalState {
   url: string;
   hashHex?: string;
@@ -90,6 +108,14 @@ interface IpfsModalState {
 }
 
 interface MetadataModalState {
+  url: string;
+  hashHex?: string;
+  proposalId: string;
+  proposalTxHash: string;
+  proposalCertIndex: number;
+}
+
+interface VoteRationaleModalState {
   url: string;
   hashHex?: string;
   proposalId: string;
@@ -154,13 +180,19 @@ const DRepVotingHistory = () => {
   const [copiedProposalId, setCopiedProposalId] = useState<string | null>(null);
   const [ipfsModal, setIpfsModal] = useState<IpfsModalState | null>(null);
   const [metadataModal, setMetadataModal] = useState<MetadataModalState | null>(null);
+  const [voteRationaleModal, setVoteRationaleModal] = useState<VoteRationaleModalState | null>(
+    null
+  );
   const [nowSec, setNowSec] = useState(() => Math.floor(Date.now() / 1000));
   const [cachedClosedCount, setCachedClosedCount] = useState(0);
   const [cachedMetadataDocCount, setCachedMetadataDocCount] = useState(0);
+  const [cachedVoteRationaleDocCount, setCachedVoteRationaleDocCount] = useState(0);
   const [recaching, setRecaching] = useState(false);
   const [prefetchingMetadata, setPrefetchingMetadata] = useState(false);
+  const [prefetchingVoteRationale, setPrefetchingVoteRationale] = useState(false);
   const [recacheModalOpen, setRecacheModalOpen] = useState(false);
   const [prefetchModalOpen, setPrefetchModalOpen] = useState(false);
+  const [votePrefetchModalOpen, setVotePrefetchModalOpen] = useState(false);
   const [recacheProgress, setRecacheProgress] = useState<RecacheProgress>({
     title: RECACHE_MODAL_TITLE,
     description: '',
@@ -169,13 +201,24 @@ const DRepVotingHistory = () => {
     title: METADATA_PREFETCH_MODAL_TITLE,
     description: '',
   });
+  const [votePrefetchProgress, setVotePrefetchProgress] = useState<RecacheProgress>({
+    title: VOTE_RATIONALE_PREFETCH_MODAL_TITLE,
+    description: '',
+  });
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
   const [expandedRowKey, setExpandedRowKey] = useState<string | null>(null);
+  const [titleSearchQuery, setTitleSearchQuery] = useState('');
   const [metadataDocCache, setMetadataDocCache] = useState<
     Map<string, CachedGovernanceMetadataDoc>
   >(new Map());
   const [metadataTitleByKey, setMetadataTitleByKey] = useState<
     Map<string, { title: string; anchorUrl: string }>
+  >(new Map());
+  const [voteRationaleDocCache, setVoteRationaleDocCache] = useState<
+    Map<string, CachedVoteRationaleDoc>
+  >(new Map());
+  const [voteRationaleExcerptByKey, setVoteRationaleExcerptByKey] = useState<
+    Map<string, { excerpt: string; anchorUrl: string }>
   >(new Map());
 
   useEffect(() => {
@@ -197,6 +240,7 @@ const DRepVotingHistory = () => {
 
   useEffect(() => {
     setExpandedRowKey(null);
+    setTitleSearchQuery('');
   }, [drepId]);
 
   useEffect(() => {
@@ -218,9 +262,25 @@ const DRepVotingHistory = () => {
     setCachedMetadataDocCount(cache.size);
   };
 
+  const refreshVoteRationaleDocCacheState = async () => {
+    if (!drepId) return;
+    const cache = await loadVoteRationaleDocCacheForDrep(drepId);
+    const excerpts = new Map<string, { excerpt: string; anchorUrl: string }>();
+    for (const [key, entry] of cache) {
+      const comment = entry.metadata?.comment?.trim();
+      if (comment) {
+        excerpts.set(key, { excerpt: comment, anchorUrl: entry.anchorUrl });
+      }
+    }
+    setVoteRationaleDocCache(cache);
+    setVoteRationaleExcerptByKey(excerpts);
+    setCachedVoteRationaleDocCount(cache.size);
+  };
+
   useEffect(() => {
     if (!drepId) return;
     void refreshMetadataDocCacheState();
+    void refreshVoteRationaleDocCacheState();
   }, [drepId]);
 
   const uncachedMetadataCount = useMemo(
@@ -237,6 +297,17 @@ const DRepVotingHistory = () => {
       }).length,
     [mergedData, metadataDocCache]
   );
+
+  const uncachedVoteRationaleCount = useMemo(() => {
+    if (!drepId) return 0;
+    return mergedData.filter((row) => {
+      if (!row.vote || row.voteAnchor.status !== 'present' || !row.voteAnchor.url) {
+        return false;
+      }
+      const key = drepVoteCacheKey(drepId, proposalCacheKey(row.proposalTxHash, row.proposalCertIndex));
+      return !isVoteRationaleDocCacheHit(voteRationaleDocCache.get(key), row.voteAnchor.url);
+    }).length;
+  }, [mergedData, voteRationaleDocCache, drepId]);
 
   useEffect(() => {
     if (!mergedData.some((row) => row.timeStatus.kind === 'countdown')) return;
@@ -571,6 +642,10 @@ const DRepVotingHistory = () => {
     void refreshMetadataDocCacheState();
   };
 
+  const refreshVoteRationaleDocCount = () => {
+    void refreshVoteRationaleDocCacheState();
+  };
+
   const handleClearMetadataDocCache = async () => {
     await clearGovernanceMetadataDocCache();
     setCachedMetadataDocCount(0);
@@ -578,8 +653,15 @@ const DRepVotingHistory = () => {
     setMetadataTitleByKey(new Map());
   };
 
+  const handleClearVoteRationaleDocCache = async () => {
+    await clearVoteRationaleDocCache();
+    setCachedVoteRationaleDocCount(0);
+    setVoteRationaleDocCache(new Map());
+    setVoteRationaleExcerptByKey(new Map());
+  };
+
   const handleLoadUncachedMetadata = async () => {
-    if (prefetchingMetadata || recaching) return;
+    if (prefetchingMetadata || prefetchingVoteRationale || recaching) return;
 
     const items = mergedData
       .filter((row) => {
@@ -659,6 +741,111 @@ const DRepVotingHistory = () => {
       return undefined;
     }
     return cached.title;
+  };
+
+  const resolveCachedRationaleExcerpt = (row: MergedProposal): string | undefined => {
+    if (!drepId || !row.vote || row.voteAnchor.status !== 'present' || !row.voteAnchor.url) {
+      return undefined;
+    }
+    const key = drepVoteCacheKey(drepId, proposalCacheKey(row.proposalTxHash, row.proposalCertIndex));
+    const cached = voteRationaleExcerptByKey.get(key);
+    if (!cached || cached.anchorUrl !== row.voteAnchor.url) {
+      return undefined;
+    }
+    return cached.excerpt;
+  };
+
+  const filteredMergedData = useMemo(() => {
+    const query = titleSearchQuery.trim().toLowerCase();
+    if (!query) return mergedData;
+    return mergedData.filter((row) => {
+      const cachedTitle = resolveCachedTitle(row);
+      return actionSearchHaystack(row, cachedTitle).includes(query);
+    });
+  }, [mergedData, titleSearchQuery, metadataTitleByKey]);
+
+  useEffect(() => {
+    if (!expandedRowKey) return;
+    const stillVisible = filteredMergedData.some(
+      (row) => proposalCacheKey(row.proposalTxHash, row.proposalCertIndex) === expandedRowKey
+    );
+    if (!stillVisible) {
+      setExpandedRowKey(null);
+    }
+  }, [filteredMergedData, expandedRowKey]);
+
+  const handleLoadUncachedVoteRationale = async () => {
+    if (!drepId || prefetchingVoteRationale || recaching) return;
+
+    const items = mergedData
+      .filter((row) => {
+        if (!row.vote || row.voteAnchor.status !== 'present' || !row.voteAnchor.url) {
+          return false;
+        }
+        const key = drepVoteCacheKey(
+          drepId,
+          proposalCacheKey(row.proposalTxHash, row.proposalCertIndex)
+        );
+        return !isVoteRationaleDocCacheHit(voteRationaleDocCache.get(key), row.voteAnchor.url);
+      })
+      .map((row) => ({
+        cacheKey: drepVoteCacheKey(
+          drepId,
+          proposalCacheKey(row.proposalTxHash, row.proposalCertIndex)
+        ),
+        anchorUrl: row.voteAnchor.url!,
+        hashHex: row.voteAnchor.hashHex,
+      }));
+
+    setPrefetchingVoteRationale(true);
+    setVotePrefetchModalOpen(true);
+
+    if (items.length === 0) {
+      setVotePrefetchProgress({
+        title: VOTE_RATIONALE_PREFETCH_MODAL_TITLE,
+        description: 'All vote rationales with anchors are already cached.',
+      });
+      await new Promise((r) => window.setTimeout(r, 2500));
+      setPrefetchingVoteRationale(false);
+      setVotePrefetchModalOpen(false);
+      return;
+    }
+
+    try {
+      setVotePrefetchProgress({
+        title: VOTE_RATIONALE_PREFETCH_MODAL_TITLE,
+        description: formatVoteRationalePrefetchDescription(0, items.length, 0),
+      });
+
+      const result = await prefetchUncachedVoteRationaleDocs(items, {
+        onProgress: (progress) => {
+          setVotePrefetchProgress({
+            title: VOTE_RATIONALE_PREFETCH_MODAL_TITLE,
+            description: formatVoteRationalePrefetchDescription(
+              progress.current,
+              progress.total,
+              progress.failed
+            ),
+          });
+        },
+      });
+
+      await refreshVoteRationaleDocCacheState();
+
+      if (result.failed > 0) {
+        setVotePrefetchProgress({
+          title: VOTE_RATIONALE_PREFETCH_MODAL_TITLE,
+          description: `Finished: ${result.fetched} loaded, ${result.failed} failed, ${result.skipped} already cached.`,
+        });
+        await new Promise((r) => window.setTimeout(r, 2500));
+      }
+    } catch (err) {
+      console.error('Vote rationale prefetch failed', err);
+      setError(err instanceof Error ? err.message : 'Vote rationale prefetch failed');
+    } finally {
+      setPrefetchingVoteRationale(false);
+      setVotePrefetchModalOpen(false);
+    }
   };
 
   const handleApplyKey = () => {
@@ -776,7 +963,9 @@ const DRepVotingHistory = () => {
                       type="button"
                       className="voting-history-settings-icon-btn"
                       onClick={() => setSettingsModalOpen(true)}
-                      disabled={loading || recaching || prefetchingMetadata}
+                      disabled={
+                        loading || recaching || prefetchingMetadata || prefetchingVoteRationale
+                      }
                       title="Settings"
                       aria-label="Open voting history settings"
                     >
@@ -815,45 +1004,73 @@ const DRepVotingHistory = () => {
                 </div>
               </div>
 
-              <div className="overflow-x-auto drep-voting-history-table-wrap">
-                <table className="drep-voting-history-table text-left border-collapse">
-                  <thead>
-                    <tr className="bg-[#1a1103]">
-                      <th className="col-expand py-2 border-b" aria-label="Expand" />
-                      <th className="col-action py-2 border-b">Action</th>
-                      <th className="col-time-left py-2 border-b">Time left</th>
-                      <th className="col-vote py-2 border-b">Vote</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {mergedData.map((row, index) => {
-                      const rowKey = proposalCacheKey(row.proposalTxHash, row.proposalCertIndex);
-                      const detailsId = `drep-vh-details-${rowKey}`;
-                      const stripeClass = index % 2 === 0 ? 'odd:bg-[#33240b]' : 'even:bg-[#1a1103]';
-                      return (
-                        <DRepVotingHistoryRow
-                          key={rowKey}
-                          row={row}
-                          rowKey={rowKey}
-                          detailsId={detailsId}
-                          expanded={expandedRowKey === rowKey}
-                          stripeClass={stripeClass}
-                          cachedTitle={resolveCachedTitle(row)}
-                          anchorLoading={anchorLoading}
-                          nowSec={nowSec}
-                          copiedProposalId={copiedProposalId}
-                          onToggle={() =>
-                            setExpandedRowKey((current) => (current === rowKey ? null : rowKey))
-                          }
-                          onCopyProposalId={copyGovActionId}
-                          onOpenMetadataModal={setMetadataModal}
-                          onOpenIpfsModal={setIpfsModal}
-                        />
-                      );
-                    })}
-                  </tbody>
-                </table>
+              <div className="drep-voting-history-search-bar">
+                <input
+                  type="search"
+                  className="drep-voting-history-search-input"
+                  placeholder="Search proposals..."
+                  value={titleSearchQuery}
+                  onChange={(e) => setTitleSearchQuery(e.target.value)}
+                  aria-label="Search proposals by title, type, or ID"
+                />
+                {titleSearchQuery.trim() ? (
+                  <span className="drep-voting-history-search-count">
+                    Showing {filteredMergedData.length} of {mergedData.length}
+                  </span>
+                ) : uncachedMetadataCount > 0 ? (
+                  <span className="drep-voting-history-search-hint">
+                    Titles appear after metadata is loaded via Settings.
+                  </span>
+                ) : null}
               </div>
+
+              {filteredMergedData.length === 0 && mergedData.length > 0 && (
+                <p className="drep-voting-history-search-empty">No proposals match your search.</p>
+              )}
+
+              {filteredMergedData.length > 0 && (
+                <div className="overflow-x-auto drep-voting-history-table-wrap">
+                  <table className="drep-voting-history-table text-left border-collapse">
+                    <thead>
+                      <tr className="bg-[#1a1103]">
+                        <th className="col-expand py-2 border-b" aria-label="Expand" />
+                        <th className="col-action py-2 border-b">Action</th>
+                        <th className="col-time-left py-2 border-b">Time left</th>
+                        <th className="col-vote py-2 border-b">Vote</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredMergedData.map((row, index) => {
+                        const rowKey = proposalCacheKey(row.proposalTxHash, row.proposalCertIndex);
+                        const detailsId = `drep-vh-details-${rowKey}`;
+                        const stripeClass = index % 2 === 0 ? 'odd:bg-[#33240b]' : 'even:bg-[#1a1103]';
+                        return (
+                          <DRepVotingHistoryRow
+                            key={rowKey}
+                            row={row}
+                            rowKey={rowKey}
+                            detailsId={detailsId}
+                            expanded={expandedRowKey === rowKey}
+                            stripeClass={stripeClass}
+                            cachedTitle={resolveCachedTitle(row)}
+                            cachedRationaleExcerpt={resolveCachedRationaleExcerpt(row)}
+                            anchorLoading={anchorLoading}
+                            nowSec={nowSec}
+                            copiedProposalId={copiedProposalId}
+                            onToggle={() =>
+                              setExpandedRowKey((current) => (current === rowKey ? null : rowKey))
+                            }
+                            onCopyProposalId={copyGovActionId}
+                            onOpenMetadataModal={setMetadataModal}
+                            onOpenVoteRationaleModal={setVoteRationaleModal}
+                            onOpenIpfsModal={setIpfsModal}
+                          />
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </>
           )}
 
@@ -863,19 +1080,49 @@ const DRepVotingHistory = () => {
             cachedClosedCount={cachedClosedCount}
             cachedMetadataDocCount={cachedMetadataDocCount}
             uncachedMetadataCount={uncachedMetadataCount}
+            cachedVoteRationaleDocCount={cachedVoteRationaleDocCount}
+            uncachedVoteRationaleCount={uncachedVoteRationaleCount}
             onReloadClosedActions={() => void handleForceRecache()}
             onLoadUncachedMetadata={() => void handleLoadUncachedMetadata()}
             onClearMetadataDocs={() => void handleClearMetadataDocCache()}
-            reloadDisabled={loading || anchorLoading || recaching || prefetchingMetadata}
+            onLoadUncachedVoteRationale={() => void handleLoadUncachedVoteRationale()}
+            onClearVoteRationaleDocs={() => void handleClearVoteRationaleDocCache()}
+            reloadDisabled={
+              loading ||
+              anchorLoading ||
+              recaching ||
+              prefetchingMetadata ||
+              prefetchingVoteRationale
+            }
             loadUncachedDisabled={
               uncachedMetadataCount === 0 ||
               loading ||
               anchorLoading ||
               recaching ||
-              prefetchingMetadata
+              prefetchingMetadata ||
+              prefetchingVoteRationale
             }
             clearMetadataDisabled={
-              cachedMetadataDocCount === 0 || loading || recaching || prefetchingMetadata
+              cachedMetadataDocCount === 0 ||
+              loading ||
+              recaching ||
+              prefetchingMetadata ||
+              prefetchingVoteRationale
+            }
+            loadUncachedVoteRationaleDisabled={
+              uncachedVoteRationaleCount === 0 ||
+              loading ||
+              anchorLoading ||
+              recaching ||
+              prefetchingMetadata ||
+              prefetchingVoteRationale
+            }
+            clearVoteRationaleDisabled={
+              cachedVoteRationaleDocCount === 0 ||
+              loading ||
+              recaching ||
+              prefetchingMetadata ||
+              prefetchingVoteRationale
             }
           />
 
@@ -891,6 +1138,12 @@ const DRepVotingHistory = () => {
             description={prefetchProgress.description}
           />
 
+          <ReloadingRecacheModal
+            open={votePrefetchModalOpen}
+            title={votePrefetchProgress.title}
+            description={votePrefetchProgress.description}
+          />
+
           <GovernanceActionMetadataModal
             open={metadataModal !== null}
             cacheKey={
@@ -903,6 +1156,28 @@ const DRepVotingHistory = () => {
             proposalLabel={metadataModal ? truncateHash(metadataModal.proposalId) : ''}
             onClose={() => setMetadataModal(null)}
             onCacheUpdated={refreshMetadataDocCount}
+          />
+
+          <VoteRationaleMetadataModal
+            open={voteRationaleModal !== null}
+            cacheKey={
+              voteRationaleModal && drepId
+                ? drepVoteCacheKey(
+                    drepId,
+                    proposalCacheKey(
+                      voteRationaleModal.proposalTxHash,
+                      voteRationaleModal.proposalCertIndex
+                    )
+                  )
+                : ''
+            }
+            anchorUrl={voteRationaleModal?.url ?? ''}
+            hashHex={voteRationaleModal?.hashHex}
+            proposalLabel={
+              voteRationaleModal ? truncateHash(voteRationaleModal.proposalId) : ''
+            }
+            onClose={() => setVoteRationaleModal(null)}
+            onCacheUpdated={refreshVoteRationaleDocCount}
           />
 
           <IpfsLinkModal

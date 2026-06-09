@@ -22,6 +22,14 @@ export interface MetadataModalRequest {
   proposalCertIndex: number;
 }
 
+export interface VoteRationaleModalRequest {
+  url: string;
+  hashHex?: string;
+  proposalId: string;
+  proposalTxHash: string;
+  proposalCertIndex: number;
+}
+
 export interface DRepVotingHistoryRowData {
   proposalId: string;
   proposalTxHash: string;
@@ -74,9 +82,17 @@ interface DRepVotingHistoryRowDetailsProps {
   anchorLoading: boolean;
   nowSec: number;
   copiedProposalId: string | null;
+  cachedRationaleExcerpt?: string;
   onCopyProposalId: (id: string) => void;
   onOpenMetadataModal: (request: MetadataModalRequest) => void;
+  onOpenVoteRationaleModal: (request: VoteRationaleModalRequest) => void;
   onOpenIpfsModal: (request: IpfsModalRequest) => void;
+}
+
+function truncateExcerpt(text: string, maxLen = 200): string {
+  const normalized = text.replace(/\s+/g, ' ').trim();
+  if (normalized.length <= maxLen) return normalized;
+  return `${normalized.slice(0, maxLen).trimEnd()}…`;
 }
 
 export function DRepVotingHistoryRowDetails({
@@ -85,8 +101,10 @@ export function DRepVotingHistoryRowDetails({
   anchorLoading,
   nowSec,
   copiedProposalId,
+  cachedRationaleExcerpt,
   onCopyProposalId,
   onOpenMetadataModal,
+  onOpenVoteRationaleModal,
   onOpenIpfsModal,
 }: DRepVotingHistoryRowDetailsProps) {
   return (
@@ -206,19 +224,42 @@ export function DRepVotingHistoryRowDetails({
           ) : anchorLoading ? (
             <span className="drep-voting-history-row-details-unknown">…</span>
           ) : row.voteAnchor.status === 'present' && row.voteAnchor.url ? (
-            <button
-              type="button"
-              onClick={() =>
-                onOpenIpfsModal({
-                  url: row.voteAnchor.url!,
-                  hashHex: row.voteAnchor.hashHex,
-                  title: 'Open vote rationale',
-                })
-              }
-              className="drep-voting-history-row-details-text-btn"
-            >
-              Rationale
-            </button>
+            <div className="drep-voting-history-row-details-actions drep-voting-history-rationale-cell">
+              {cachedRationaleExcerpt && (
+                <p className="drep-voting-history-rationale-excerpt">{truncateExcerpt(cachedRationaleExcerpt)}</p>
+              )}
+              <div className="drep-voting-history-row-details-actions">
+                <button
+                  type="button"
+                  onClick={() =>
+                    onOpenIpfsModal({
+                      url: row.voteAnchor.url!,
+                      hashHex: row.voteAnchor.hashHex,
+                      title: 'Open vote rationale',
+                    })
+                  }
+                  className="drep-voting-history-row-details-text-btn"
+                >
+                  Rationale
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    onOpenVoteRationaleModal({
+                      url: row.voteAnchor.url!,
+                      hashHex: row.voteAnchor.hashHex,
+                      proposalId: row.proposalId,
+                      proposalTxHash: row.proposalTxHash,
+                      proposalCertIndex: row.proposalCertIndex,
+                    })
+                  }
+                  className="btn text-xs py-1 px-2"
+                  title="View vote rationale"
+                >
+                  View full rationale
+                </button>
+              </div>
+            </div>
           ) : row.voteAnchor.status === 'absent' ? (
             <span className="drep-voting-history-row-details-muted">—</span>
           ) : (

@@ -16,6 +16,17 @@ export function formatMetadataPrefetchDescription(
   return failed > 0 ? `${base} (${failed} failed)` : base;
 }
 
+export const VOTE_RATIONALE_PREFETCH_MODAL_TITLE = 'Loading vote rationales';
+
+export function formatVoteRationalePrefetchDescription(
+  current: number,
+  total: number,
+  failed: number
+): string {
+  const base = `Fetching vote rationales ${current} of ${total}…`;
+  return failed > 0 ? `${base} (${failed} failed)` : base;
+}
+
 /** Split items into fixed-size batches (exported for tests). */
 export function splitIntoBatches<T>(items: T[], batchSize: number): T[][] {
   if (batchSize <= 0) return items.length > 0 ? [items] : [];

@@ -81,3 +81,30 @@ export const hashGovernanceAnchorBytes = (bytes: Uint8Array): string =>
 /** Parse UTF-8 bytes as a CIP-100 vote-comment document (for tests). */
 export const parseCip100RationaleBytes = (bytes: Uint8Array): unknown =>
   JSON.parse(new TextDecoder().decode(bytes));
+
+export interface VoteRationaleMetadata {
+  comment: string | null;
+}
+
+function asObject(value: unknown): Record<string, unknown> | null {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) return null;
+  return value as Record<string, unknown>;
+}
+
+function asText(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+/** Parse a fetched CIP-100 vote rationale document (body.comment, legacy body.rationale fallback). */
+export function parseCip100RationaleMetadata(payload: unknown): VoteRationaleMetadata | null {
+  const root = asObject(payload);
+  if (!root) return null;
+
+  const body = asObject(root.body) ?? root;
+  const comment = asText(body.comment) ?? asText(body.rationale);
+  if (!comment) return null;
+
+  return { comment };
+}

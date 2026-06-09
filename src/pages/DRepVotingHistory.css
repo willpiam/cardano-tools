@@ -194,3 +194,49 @@
 .drep-voting-history-row-details-unknown {
   color: #9ca3af;
 }
+
+.drep-voting-history-rationale-cell {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.45rem;
+}
+
+.drep-voting-history-rationale-excerpt {
+  margin: 0;
+  color: #d1d5db;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  word-break: break-word;
+  max-width: 100%;
+}
+
+.drep-voting-history-search-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  width: 100%;
+  border: 1px solid #4b5563;
+  padding: 0.85rem 1rem;
+  border-radius: 4px;
+}
+
+.drep-voting-history-search-input {
+  flex: 1;
+  min-width: min(100%, 16rem);
+  padding: 0.5rem;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+}
+
+.drep-voting-history-search-count,
+.drep-voting-history-search-hint {
+  font-size: 0.85rem;
+  color: #9ca3af;
+}
+
+.drep-voting-history-search-empty {
+  margin: 0;
+  color: #9ca3af;
+  font-size: 0.9rem;
+}

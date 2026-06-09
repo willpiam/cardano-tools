@@ -10,6 +10,7 @@ import {
   type DRepVotingHistoryRowData,
   type IpfsModalRequest,
   type MetadataModalRequest,
+  type VoteRationaleModalRequest,
 } from './DRepVotingHistoryRowDetails';
 
 function govActionTypeColor(type: string): { bg: string; fg: string } {
@@ -58,12 +59,14 @@ interface DRepVotingHistoryRowProps {
   expanded: boolean;
   stripeClass: string;
   cachedTitle?: string;
+  cachedRationaleExcerpt?: string;
   anchorLoading: boolean;
   nowSec: number;
   copiedProposalId: string | null;
   onToggle: () => void;
   onCopyProposalId: (id: string) => void;
   onOpenMetadataModal: (request: MetadataModalRequest) => void;
+  onOpenVoteRationaleModal: (request: VoteRationaleModalRequest) => void;
   onOpenIpfsModal: (request: IpfsModalRequest) => void;
 }
 
@@ -74,12 +77,14 @@ export function DRepVotingHistoryRow({
   expanded,
   stripeClass,
   cachedTitle,
+  cachedRationaleExcerpt,
   anchorLoading,
   nowSec,
   copiedProposalId,
   onToggle,
   onCopyProposalId,
   onOpenMetadataModal,
+  onOpenVoteRationaleModal,
   onOpenIpfsModal,
 }: DRepVotingHistoryRowProps) {
   const typeColors = govActionTypeColor(row.govActionType);
@@ -173,8 +178,10 @@ export function DRepVotingHistoryRow({
               anchorLoading={anchorLoading}
               nowSec={nowSec}
               copiedProposalId={copiedProposalId}
+              cachedRationaleExcerpt={cachedRationaleExcerpt}
               onCopyProposalId={onCopyProposalId}
               onOpenMetadataModal={onOpenMetadataModal}
+              onOpenVoteRationaleModal={onOpenVoteRationaleModal}
               onOpenIpfsModal={onOpenIpfsModal}
             />
           </td>

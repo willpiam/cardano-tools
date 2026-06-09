@@ -3,6 +3,7 @@ import {
   buildCip100RationaleBytes,
   hashGovernanceAnchorBytes,
   parseCip100RationaleBytes,
+  parseCip100RationaleMetadata,
 } from './cip100RationaleDocument';
 
 Object.assign(global, { TextEncoder, TextDecoder });
@@ -44,5 +45,26 @@ describe('buildCip100RationaleBytes', () => {
     const hash2 = hashGovernanceAnchorBytes(buildCip100RationaleBytes('test'));
     expect(hash1).toBe(hash2);
     expect(hash1).toMatch(/^[0-9a-f]{64}$/);
+  });
+});
+
+describe('parseCip100RationaleMetadata', () => {
+  it('parses body.comment from CIP-100 documents', () => {
+    const payload = parseCip100RationaleBytes(buildCip100RationaleBytes('Hello world'));
+    expect(parseCip100RationaleMetadata(payload)).toEqual({ comment: 'Hello world' });
+  });
+
+  it('falls back to body.rationale for legacy documents', () => {
+    expect(
+      parseCip100RationaleMetadata({
+        body: { rationale: 'Legacy rationale text' },
+      })
+    ).toEqual({ comment: 'Legacy rationale text' });
+  });
+
+  it('returns null when no comment or rationale text', () => {
+    expect(parseCip100RationaleMetadata({ body: {} })).toBeNull();
+    expect(parseCip100RationaleMetadata(null)).toBeNull();
+    expect(parseCip100RationaleMetadata('not json')).toBeNull();
   });
 });
