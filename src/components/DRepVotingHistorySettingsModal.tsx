@@ -8,9 +8,12 @@ export interface DRepVotingHistorySettingsModalProps {
   onClose: () => void;
   cachedClosedCount: number;
   cachedMetadataDocCount: number;
+  uncachedMetadataCount: number;
   onReloadClosedActions: () => void;
+  onLoadUncachedMetadata: () => void;
   onClearMetadataDocs: () => void;
   reloadDisabled: boolean;
+  loadUncachedDisabled: boolean;
   clearMetadataDisabled: boolean;
 }
 
@@ -19,9 +22,12 @@ export function DRepVotingHistorySettingsModal({
   onClose,
   cachedClosedCount,
   cachedMetadataDocCount,
+  uncachedMetadataCount,
   onReloadClosedActions,
+  onLoadUncachedMetadata,
   onClearMetadataDocs,
   reloadDisabled,
+  loadUncachedDisabled,
   clearMetadataDisabled,
 }: DRepVotingHistorySettingsModalProps) {
   useEffect(() => {
@@ -64,6 +70,9 @@ export function DRepVotingHistorySettingsModal({
           <div>
             Governance metadata documents cached: <strong>{cachedMetadataDocCount}</strong>
           </div>
+          <div>
+            Uncached metadata documents: <strong>{uncachedMetadataCount}</strong>
+          </div>
         </div>
 
         <div className="voting-history-settings-actions">
@@ -75,6 +84,15 @@ export function DRepVotingHistorySettingsModal({
             disabled={reloadDisabled}
           >
             Reload closed actions
+          </Button>
+          <Button
+            onClick={() => {
+              onLoadUncachedMetadata();
+              onClose();
+            }}
+            disabled={loadUncachedDisabled}
+          >
+            Load {uncachedMetadataCount} uncached governance metadata documents
           </Button>
           <Button
             onClick={() => {

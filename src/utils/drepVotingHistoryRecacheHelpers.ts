@@ -5,6 +5,17 @@ export const BATCH_COOLDOWN_MS = 10_000;
 
 export const RECACHE_MODAL_TITLE = 'Reloading & Recaching';
 
+export const METADATA_PREFETCH_MODAL_TITLE = 'Loading governance metadata';
+
+export function formatMetadataPrefetchDescription(
+  current: number,
+  total: number,
+  failed: number
+): string {
+  const base = `Fetching metadata ${current} of ${total}…`;
+  return failed > 0 ? `${base} (${failed} failed)` : base;
+}
+
 /** Split items into fixed-size batches (exported for tests). */
 export function splitIntoBatches<T>(items: T[], batchSize: number): T[][] {
   if (batchSize <= 0) return items.length > 0 ? [items] : [];

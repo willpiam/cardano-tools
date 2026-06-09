@@ -20,8 +20,15 @@ import { fetchVoteTxAnchorMap, proposalKey } from '../functions/voteTxAnchors';
 import { ReloadingRecacheModal } from '../components/ReloadingRecacheModal';
 import {
   clearGovernanceMetadataDocCache,
+  isGovernanceMetadataDocCacheHit,
   loadAllMetadataDocCache,
+  type CachedGovernanceMetadataDoc,
 } from '../utils/governanceMetadataDocCache';
+import { prefetchUncachedGovernanceMetadataDocs } from '../utils/governanceMetadataDocFetch';
+import {
+  formatMetadataPrefetchDescription,
+  METADATA_PREFETCH_MODAL_TITLE,
+} from '../utils/drepVotingHistoryRecacheHelpers';
 import {
   loadAllProposalCache,
   loadDrepVoteCache,
@@ -151,13 +158,22 @@ const DRepVotingHistory = () => {
   const [cachedClosedCount, setCachedClosedCount] = useState(0);
   const [cachedMetadataDocCount, setCachedMetadataDocCount] = useState(0);
   const [recaching, setRecaching] = useState(false);
+  const [prefetchingMetadata, setPrefetchingMetadata] = useState(false);
   const [recacheModalOpen, setRecacheModalOpen] = useState(false);
+  const [prefetchModalOpen, setPrefetchModalOpen] = useState(false);
   const [recacheProgress, setRecacheProgress] = useState<RecacheProgress>({
     title: RECACHE_MODAL_TITLE,
     description: '',
   });
+  const [prefetchProgress, setPrefetchProgress] = useState<RecacheProgress>({
+    title: METADATA_PREFETCH_MODAL_TITLE,
+    description: '',
+  });
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
   const [expandedRowKey, setExpandedRowKey] = useState<string | null>(null);
+  const [metadataDocCache, setMetadataDocCache] = useState<
+    Map<string, CachedGovernanceMetadataDoc>
+  >(new Map());
   const [metadataTitleByKey, setMetadataTitleByKey] = useState<
     Map<string, { title: string; anchorUrl: string }>
   >(new Map());
@@ -188,7 +204,7 @@ const DRepVotingHistory = () => {
     fetchData(drepId, apiKey);
   }, [drepId, apiKey]);
 
-  const loadMetadataTitleMap = async () => {
+  const refreshMetadataDocCacheState = async () => {
     const cache = await loadAllMetadataDocCache();
     const titles = new Map<string, { title: string; anchorUrl: string }>();
     for (const [key, entry] of cache) {
@@ -197,14 +213,30 @@ const DRepVotingHistory = () => {
         titles.set(key, { title, anchorUrl: entry.anchorUrl });
       }
     }
+    setMetadataDocCache(cache);
     setMetadataTitleByKey(titles);
     setCachedMetadataDocCount(cache.size);
   };
 
   useEffect(() => {
     if (!drepId) return;
-    void loadMetadataTitleMap();
+    void refreshMetadataDocCacheState();
   }, [drepId]);
+
+  const uncachedMetadataCount = useMemo(
+    () =>
+      mergedData.filter((row) => {
+        if (row.actionMetadataAnchor.status !== 'present' || !row.actionMetadataAnchor.url) {
+          return false;
+        }
+        const key = proposalCacheKey(row.proposalTxHash, row.proposalCertIndex);
+        return !isGovernanceMetadataDocCacheHit(
+          metadataDocCache.get(key),
+          row.actionMetadataAnchor.url
+        );
+      }).length,
+    [mergedData, metadataDocCache]
+  );
 
   useEffect(() => {
     if (!mergedData.some((row) => row.timeStatus.kind === 'countdown')) return;
@@ -536,13 +568,85 @@ const DRepVotingHistory = () => {
   };
 
   const refreshMetadataDocCount = () => {
-    void loadMetadataTitleMap();
+    void refreshMetadataDocCacheState();
   };
 
   const handleClearMetadataDocCache = async () => {
     await clearGovernanceMetadataDocCache();
     setCachedMetadataDocCount(0);
+    setMetadataDocCache(new Map());
     setMetadataTitleByKey(new Map());
+  };
+
+  const handleLoadUncachedMetadata = async () => {
+    if (prefetchingMetadata || recaching) return;
+
+    const items = mergedData
+      .filter((row) => {
+        if (row.actionMetadataAnchor.status !== 'present' || !row.actionMetadataAnchor.url) {
+          return false;
+        }
+        const key = proposalCacheKey(row.proposalTxHash, row.proposalCertIndex);
+        return !isGovernanceMetadataDocCacheHit(
+          metadataDocCache.get(key),
+          row.actionMetadataAnchor.url
+        );
+      })
+      .map((row) => ({
+        cacheKey: proposalCacheKey(row.proposalTxHash, row.proposalCertIndex),
+        anchorUrl: row.actionMetadataAnchor.url!,
+        hashHex: row.actionMetadataAnchor.hashHex,
+      }));
+
+    setPrefetchingMetadata(true);
+    setPrefetchModalOpen(true);
+
+    if (items.length === 0) {
+      setPrefetchProgress({
+        title: METADATA_PREFETCH_MODAL_TITLE,
+        description: 'All governance metadata with anchors is already cached.',
+      });
+      await new Promise((r) => window.setTimeout(r, 2500));
+      setPrefetchingMetadata(false);
+      setPrefetchModalOpen(false);
+      return;
+    }
+
+    try {
+      setPrefetchProgress({
+        title: METADATA_PREFETCH_MODAL_TITLE,
+        description: formatMetadataPrefetchDescription(0, items.length, 0),
+      });
+
+      const result = await prefetchUncachedGovernanceMetadataDocs(items, {
+        onProgress: (progress) => {
+          setPrefetchProgress({
+            title: METADATA_PREFETCH_MODAL_TITLE,
+            description: formatMetadataPrefetchDescription(
+              progress.current,
+              progress.total,
+              progress.failed
+            ),
+          });
+        },
+      });
+
+      await refreshMetadataDocCacheState();
+
+      if (result.failed > 0) {
+        setPrefetchProgress({
+          title: METADATA_PREFETCH_MODAL_TITLE,
+          description: `Finished: ${result.fetched} loaded, ${result.failed} failed, ${result.skipped} already cached.`,
+        });
+        await new Promise((r) => window.setTimeout(r, 2500));
+      }
+    } catch (err) {
+      console.error('Metadata prefetch failed', err);
+      setError(err instanceof Error ? err.message : 'Metadata prefetch failed');
+    } finally {
+      setPrefetchingMetadata(false);
+      setPrefetchModalOpen(false);
+    }
   };
 
   const resolveCachedTitle = (row: MergedProposal): string | undefined => {
@@ -672,7 +776,7 @@ const DRepVotingHistory = () => {
                       type="button"
                       className="voting-history-settings-icon-btn"
                       onClick={() => setSettingsModalOpen(true)}
-                      disabled={loading || recaching}
+                      disabled={loading || recaching || prefetchingMetadata}
                       title="Settings"
                       aria-label="Open voting history settings"
                     >
@@ -758,16 +862,33 @@ const DRepVotingHistory = () => {
             onClose={() => setSettingsModalOpen(false)}
             cachedClosedCount={cachedClosedCount}
             cachedMetadataDocCount={cachedMetadataDocCount}
+            uncachedMetadataCount={uncachedMetadataCount}
             onReloadClosedActions={() => void handleForceRecache()}
+            onLoadUncachedMetadata={() => void handleLoadUncachedMetadata()}
             onClearMetadataDocs={() => void handleClearMetadataDocCache()}
-            reloadDisabled={loading || anchorLoading || recaching}
-            clearMetadataDisabled={cachedMetadataDocCount === 0 || loading || recaching}
+            reloadDisabled={loading || anchorLoading || recaching || prefetchingMetadata}
+            loadUncachedDisabled={
+              uncachedMetadataCount === 0 ||
+              loading ||
+              anchorLoading ||
+              recaching ||
+              prefetchingMetadata
+            }
+            clearMetadataDisabled={
+              cachedMetadataDocCount === 0 || loading || recaching || prefetchingMetadata
+            }
           />
 
           <ReloadingRecacheModal
             open={recacheModalOpen}
             title={recacheProgress.title}
             description={recacheProgress.description}
+          />
+
+          <ReloadingRecacheModal
+            open={prefetchModalOpen}
+            title={prefetchProgress.title}
+            description={prefetchProgress.description}
           />
 
           <GovernanceActionMetadataModal

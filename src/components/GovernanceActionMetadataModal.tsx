@@ -1,15 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
+import type { GovernanceMetadata, MetadataError } from '../functions/governanceActionsFetch';
 import {
-  loadActionMetadataViaGateway,
-  type GovernanceMetadata,
-  type MetadataError,
-} from '../functions/governanceActionsFetch';
-import {
-  getGovernanceMetadataDocCache,
-  isGovernanceMetadataDocCacheHit,
-  putGovernanceMetadataDocCache,
-} from '../utils/governanceMetadataDocCache';
+  ensureGovernanceMetadataDocCached,
+  fetchGovernanceMetadataDocAtGatewayIndex,
+} from '../utils/governanceMetadataDocFetch';
+import { putGovernanceMetadataDocCache } from '../utils/governanceMetadataDocCache';
 import { IPFS_GATEWAYS, parseIpfsLink } from '../utils/ipfsGateways';
 import { GovernanceMetadataView } from './GovernanceMetadataView';
 import './IpfsLinkModal.css';
@@ -55,8 +51,7 @@ export function GovernanceActionMetadataModal({
       setMetadata(null);
       setRawPayload(null);
 
-      const gateway = IPFS_GATEWAYS[gatewayIndex] ?? IPFS_GATEWAYS[0];
-      const result = await loadActionMetadataViaGateway(anchorUrl, gateway);
+      const result = await fetchGovernanceMetadataDocAtGatewayIndex(anchorUrl, gatewayIndex);
       setLastFetchUrl(result.fetchUrl);
 
       if (result.metadataError) {
@@ -90,16 +85,27 @@ export function GovernanceActionMetadataModal({
     setMetadata(null);
     setRawPayload(null);
 
-    const cached = await getGovernanceMetadataDocCache(cacheKey);
-    if (isGovernanceMetadataDocCacheHit(cached, anchorUrl)) {
-      setMetadata(cached.metadata);
-      setRawPayload(cached.rawPayload);
+    const result = await ensureGovernanceMetadataDocCached({
+      cacheKey,
+      anchorUrl,
+      hashHex,
+      gatewayIndex: 0,
+    });
+
+    if (result.outcome === 'cached' || result.outcome === 'fetched') {
+      if (result.outcome === 'fetched') onCacheUpdated?.();
+      setMetadata(result.metadata);
+      setRawPayload(result.rawPayload);
+      setLastFetchUrl(result.fetchUrl);
       setStatus('loaded');
       return;
     }
 
-    await fetchMetadata(0);
-  }, [anchorUrl, cacheKey, fetchMetadata]);
+    setError(result.metadataError);
+    setRawPayload(result.rawPayload);
+    setLastFetchUrl(result.fetchUrl);
+    setStatus('error');
+  }, [anchorUrl, cacheKey, hashHex, onCacheUpdated]);
 
   useEffect(() => {
     if (!open) {
