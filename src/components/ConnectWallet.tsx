@@ -20,9 +20,14 @@ import { setIsWalletConnected } from '../store/isWalletConnectedSlice';
 import { Button } from './Button';
 import { Blockfrost, Koios } from '@lucid-evolution/provider';
 import { setUseBlockfrost, setApiKey, setBlockfrostConfig } from '../store/blockfrostSlice';
+import {
+  hasBlockfrostApiKeyInUrl,
+  saveBlockfrostApiKeyToStorage,
+} from '../utils/toolConfigStorage';
 
 function ConnectWallet() {
   const [isConnectDialogOpen, setIsConnectDialogOpen] = useState(false);
+  const [persistBlockfrostInUrl, setPersistBlockfrostInUrl] = useState(hasBlockfrostApiKeyInUrl);
   const dispatch = useAppDispatch();
   const walletAddress = useAppSelector((state) => state.wallet.address);
   const selectedWallet = useAppSelector((state) => state.wallet.selectedWallet);
@@ -44,11 +49,18 @@ function ConnectWallet() {
     
     if (blockfrostApiKey) {
       dispatch(setBlockfrostConfig({ useBlockfrost: true, apiKey: blockfrostApiKey }));
+      saveBlockfrostApiKeyToStorage(blockfrostApiKey);
     }
   }, [dispatch]);
 
-  // Update URL when Blockfrost config changes
   useEffect(() => {
+    if (useBlockfrost && apiKey?.trim()) {
+      saveBlockfrostApiKeyToStorage(apiKey);
+    }
+  }, [useBlockfrost, apiKey]);
+
+  useEffect(() => {
+    if (!persistBlockfrostInUrl) return;
     const url = new URL(window.location.href);
     if (useBlockfrost && apiKey) {
       url.searchParams.set('blockfrostApiKey', apiKey);
@@ -56,7 +68,7 @@ function ConnectWallet() {
       url.searchParams.delete('blockfrostApiKey');
     }
     window.history.replaceState({}, '', url.toString());
-  }, [useBlockfrost, apiKey]);
+  }, [persistBlockfrostInUrl, useBlockfrost, apiKey]);
 
   useEffect(() => {
     if (typeof (window as any).cardano === 'undefined') {
@@ -189,9 +201,18 @@ function ConnectWallet() {
                         <p className="text-xs text-gray-600 mt-1">
                           Get your API key from <a href="https://blockfrost.io" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">blockfrost.io</a>
                         </p>
+                        <label className="flex items-center gap-2 mt-2 text-xs text-gray-700">
+                          <input
+                            type="checkbox"
+                            checked={persistBlockfrostInUrl}
+                            onChange={(e) => setPersistBlockfrostInUrl(e.target.checked)}
+                            className="rounded"
+                          />
+                          <span>Save API key to URL (survives refresh)</span>
+                        </label>
                         {apiKey && apiKey.trim() && (
                           <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-800" style={{maxWidth: '400px'}}>
-                            ⚠️ <strong>Security Notice:</strong> Your API key will be stored in the URL. Be careful when screensharing or sharing URLs.
+                            ⚠️ <strong>Security Notice:</strong> Your API key is saved in this browser and may be stored in the URL if enabled above. Be careful when screensharing or sharing links.
                           </div>
                         )}
                       </div>

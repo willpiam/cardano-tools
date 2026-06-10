@@ -3,6 +3,13 @@ import { Settings } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router';
 import { useAppSelector, useAppDispatch } from '../store/hooks';
 import { setBlockfrostConfig } from '../store/blockfrostSlice';
+import {
+  getBlockfrostApiKeyFromStorage,
+  getDRepHistoryConfigFromStorage,
+  hasBlockfrostApiKeyInUrl,
+  saveBlockfrostApiKeyToStorage,
+  saveDRepHistoryConfigToStorage,
+} from '../utils/toolConfigStorage';
 import { Button } from '../components/Button';
 import { DRepVotingHistorySettingsModal } from '../components/DRepVotingHistorySettingsModal';
 import '../components/IpfsLinkModal.css';
@@ -171,7 +178,11 @@ const DRepVotingHistory = () => {
   const { apiKey } = useAppSelector((state) => state.blockfrost);
 
   const [localApiKey, setLocalApiKey] = useState(apiKey || '');
+  const [loadedDrepId, setLoadedDrepId] = useState<string | null>(null);
+  const [persistBlockfrostInUrl, setPersistBlockfrostInUrl] = useState(hasBlockfrostApiKeyInUrl);
+  const [showLoadCachedSettings, setShowLoadCachedSettings] = useState(false);
   const [drepInput, setDrepInput] = useState(drepId || '');
+  const activeDrepId = drepId ?? loadedDrepId ?? null;
   const [mergedData, setMergedData] = useState<MergedProposal[]>([]);
   const [loading, setLoading] = useState(false);
   const [anchorLoading, setAnchorLoading] = useState(false);
@@ -227,26 +238,49 @@ const DRepVotingHistory = () => {
     if (blockfrostApiKey) {
       dispatch(setBlockfrostConfig({ useBlockfrost: true, apiKey: blockfrostApiKey }));
       setLocalApiKey(blockfrostApiKey);
+      saveBlockfrostApiKeyToStorage(blockfrostApiKey);
     }
   }, [dispatch]);
 
   useEffect(() => {
-    if (apiKey) setLocalApiKey(apiKey);
+    if (apiKey) {
+      setLocalApiKey(apiKey);
+      saveBlockfrostApiKeyToStorage(apiKey);
+    }
   }, [apiKey]);
 
   useEffect(() => {
-    if (drepId) setDrepInput(drepId);
+    if (drepId) {
+      setLoadedDrepId(null);
+      setDrepInput(drepId);
+      saveDRepHistoryConfigToStorage({ drepId });
+    }
   }, [drepId]);
+
+  useEffect(() => {
+    if (loadedDrepId) {
+      setDrepInput(loadedDrepId);
+    }
+  }, [loadedDrepId]);
 
   useEffect(() => {
     setExpandedRowKey(null);
     setTitleSearchQuery('');
-  }, [drepId]);
+  }, [activeDrepId]);
 
   useEffect(() => {
-    if (!drepId || !apiKey) return;
-    fetchData(drepId, apiKey);
-  }, [drepId, apiKey]);
+    if (!activeDrepId || !apiKey) return;
+    fetchData(activeDrepId, apiKey);
+  }, [activeDrepId, apiKey]);
+
+  useEffect(() => {
+    const cachedBlockfrost = getBlockfrostApiKeyFromStorage();
+    const cachedHistory = getDRepHistoryConfigFromStorage();
+    const urlHadBlockfrost = hasBlockfrostApiKeyInUrl();
+    const canLoadBlockfrost = !apiKey && Boolean(cachedBlockfrost) && !urlHadBlockfrost;
+    const canLoadDrep = !activeDrepId && Boolean(cachedHistory?.drepId);
+    setShowLoadCachedSettings(canLoadBlockfrost || canLoadDrep);
+  }, [apiKey, activeDrepId]);
 
   const refreshMetadataDocCacheState = async () => {
     const cache = await loadAllMetadataDocCache();
@@ -263,8 +297,8 @@ const DRepVotingHistory = () => {
   };
 
   const refreshVoteRationaleDocCacheState = async () => {
-    if (!drepId) return;
-    const cache = await loadVoteRationaleDocCacheForDrep(drepId);
+    if (!activeDrepId) return;
+    const cache = await loadVoteRationaleDocCacheForDrep(activeDrepId);
     const excerpts = new Map<string, { excerpt: string; anchorUrl: string }>();
     for (const [key, entry] of cache) {
       const comment = entry.metadata?.comment?.trim();
@@ -278,10 +312,10 @@ const DRepVotingHistory = () => {
   };
 
   useEffect(() => {
-    if (!drepId) return;
+    if (!activeDrepId) return;
     void refreshMetadataDocCacheState();
     void refreshVoteRationaleDocCacheState();
-  }, [drepId]);
+  }, [activeDrepId]);
 
   const uncachedMetadataCount = useMemo(
     () =>
@@ -299,15 +333,18 @@ const DRepVotingHistory = () => {
   );
 
   const uncachedVoteRationaleCount = useMemo(() => {
-    if (!drepId) return 0;
+    if (!activeDrepId) return 0;
     return mergedData.filter((row) => {
       if (!row.vote || row.voteAnchor.status !== 'present' || !row.voteAnchor.url) {
         return false;
       }
-      const key = drepVoteCacheKey(drepId, proposalCacheKey(row.proposalTxHash, row.proposalCertIndex));
+      const key = drepVoteCacheKey(
+        activeDrepId,
+        proposalCacheKey(row.proposalTxHash, row.proposalCertIndex)
+      );
       return !isVoteRationaleDocCacheHit(voteRationaleDocCache.get(key), row.voteAnchor.url);
     }).length;
-  }, [mergedData, voteRationaleDocCache, drepId]);
+  }, [mergedData, voteRationaleDocCache, activeDrepId]);
 
   useEffect(() => {
     if (!mergedData.some((row) => row.timeStatus.kind === 'countdown')) return;
@@ -549,7 +586,7 @@ const DRepVotingHistory = () => {
   };
 
   const handleForceRecache = async () => {
-    if (!drepId || !apiKey || recaching) return;
+    if (!activeDrepId || !apiKey || recaching) return;
 
     setRecaching(true);
     setRecacheModalOpen(true);
@@ -558,7 +595,7 @@ const DRepVotingHistory = () => {
     try {
       const [proposals, votes, ctx, proposalCache] = await Promise.all([
         fetchAllPages<BlockfrostProposal>('/governance/proposals', apiKey),
-        fetchAllPages<BlockfrostDRepVote>(`/governance/dreps/${drepId}/votes`, apiKey),
+        fetchAllPages<BlockfrostDRepVote>(`/governance/dreps/${activeDrepId}/votes`, apiKey),
         fetchGovernanceEpochContext(apiKey),
         loadAllProposalCache(),
       ]);
@@ -620,7 +657,7 @@ const DRepVotingHistory = () => {
 
       await runPhasedRecache({
         apiKey,
-        drepId,
+        drepId: activeDrepId,
         ctx,
         proposals: finalizedProposals,
         votes: recacheVotes,
@@ -628,7 +665,7 @@ const DRepVotingHistory = () => {
       });
 
       setRecacheProgress({ title: RECACHE_MODAL_TITLE, description: 'Refreshing table…' });
-      await fetchData(drepId, apiKey);
+      await fetchData(activeDrepId, apiKey);
     } catch (err) {
       console.error('Force recache failed', err);
       setError(err instanceof Error ? err.message : 'Recache failed');
@@ -744,10 +781,13 @@ const DRepVotingHistory = () => {
   };
 
   const resolveCachedRationaleExcerpt = (row: MergedProposal): string | undefined => {
-    if (!drepId || !row.vote || row.voteAnchor.status !== 'present' || !row.voteAnchor.url) {
+    if (!activeDrepId || !row.vote || row.voteAnchor.status !== 'present' || !row.voteAnchor.url) {
       return undefined;
     }
-    const key = drepVoteCacheKey(drepId, proposalCacheKey(row.proposalTxHash, row.proposalCertIndex));
+    const key = drepVoteCacheKey(
+      activeDrepId,
+      proposalCacheKey(row.proposalTxHash, row.proposalCertIndex)
+    );
     const cached = voteRationaleExcerptByKey.get(key);
     if (!cached || cached.anchorUrl !== row.voteAnchor.url) {
       return undefined;
@@ -775,7 +815,7 @@ const DRepVotingHistory = () => {
   }, [filteredMergedData, expandedRowKey]);
 
   const handleLoadUncachedVoteRationale = async () => {
-    if (!drepId || prefetchingVoteRationale || recaching) return;
+    if (!activeDrepId || prefetchingVoteRationale || recaching) return;
 
     const items = mergedData
       .filter((row) => {
@@ -783,14 +823,14 @@ const DRepVotingHistory = () => {
           return false;
         }
         const key = drepVoteCacheKey(
-          drepId,
+          activeDrepId,
           proposalCacheKey(row.proposalTxHash, row.proposalCertIndex)
         );
         return !isVoteRationaleDocCacheHit(voteRationaleDocCache.get(key), row.voteAnchor.url);
       })
       .map((row) => ({
         cacheKey: drepVoteCacheKey(
-          drepId,
+          activeDrepId,
           proposalCacheKey(row.proposalTxHash, row.proposalCertIndex)
         ),
         anchorUrl: row.voteAnchor.url!,
@@ -850,15 +890,34 @@ const DRepVotingHistory = () => {
 
   const handleApplyKey = () => {
     if (!localApiKey.trim()) return;
-    dispatch(setBlockfrostConfig({ useBlockfrost: true, apiKey: localApiKey.trim() }));
-    const url = new URL(window.location.href);
-    url.searchParams.set('blockfrostApiKey', localApiKey.trim());
-    window.history.replaceState({}, '', url.toString());
+    const trimmed = localApiKey.trim();
+    dispatch(setBlockfrostConfig({ useBlockfrost: true, apiKey: trimmed }));
+    saveBlockfrostApiKeyToStorage(trimmed);
+    if (persistBlockfrostInUrl) {
+      const url = new URL(window.location.href);
+      url.searchParams.set('blockfrostApiKey', trimmed);
+      window.history.replaceState({}, '', url.toString());
+    }
   };
 
   const handleLookup = () => {
-    if (!drepInput.trim()) return;
-    navigate(`/drephistory/${encodeURIComponent(drepInput.trim())}`);
+    const trimmed = drepInput.trim();
+    if (!trimmed) return;
+    saveDRepHistoryConfigToStorage({ drepId: trimmed });
+    navigate(`/drephistory/${encodeURIComponent(trimmed)}`);
+  };
+
+  const handleLoadCachedSettings = () => {
+    const cachedBlockfrost = getBlockfrostApiKeyFromStorage();
+    if (cachedBlockfrost && !apiKey) {
+      dispatch(setBlockfrostConfig({ useBlockfrost: true, apiKey: cachedBlockfrost }));
+      setLocalApiKey(cachedBlockfrost);
+    }
+    const cachedHistory = getDRepHistoryConfigFromStorage();
+    if (cachedHistory?.drepId && !drepId) {
+      setLoadedDrepId(cachedHistory.drepId);
+      setDrepInput(cachedHistory.drepId);
+    }
   };
 
   const copyGovActionId = (id: string) => {
@@ -889,6 +948,15 @@ const DRepVotingHistory = () => {
         <div className="main-section drep-voting-history-page" style={{ display: 'flex', flexDirection: 'column', gap: '1rem', alignItems: 'flex-start', justifyContent: 'center' }}>
           <h1>DRep Voting History</h1>
 
+          {showLoadCachedSettings && (
+            <div style={{ border: '1px solid #ccc', padding: '1rem', borderRadius: '4px', width: '100%' }}>
+              <p style={{ margin: '0 0 0.75rem' }}>
+                Saved settings from a previous visit are available in this browser.
+              </p>
+              <Button onClick={handleLoadCachedSettings}>Load saved settings from this browser</Button>
+            </div>
+          )}
+
           {!apiKey && (
             <div style={{ border: '1px solid #ccc', padding: '1rem', borderRadius: '4px', width: '100%' }}>
               <p style={{ marginBottom: '0.5rem' }}>
@@ -908,6 +976,18 @@ const DRepVotingHistory = () => {
                 />
                 <Button onClick={handleApplyKey}>Set Key</Button>
               </div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.75rem', fontSize: '0.85rem' }}>
+                <input
+                  type="checkbox"
+                  checked={persistBlockfrostInUrl}
+                  onChange={(e) => setPersistBlockfrostInUrl(e.target.checked)}
+                />
+                <span>Save API key to URL (survives refresh)</span>
+              </label>
+              <p style={{ margin: '0.5rem 0 0', fontSize: '0.8rem', color: '#666' }}>
+                Your API key is saved in this browser and may be stored in the URL if enabled above. Be careful when
+                screensharing or sharing links.
+              </p>
             </div>
           )}
 
@@ -930,10 +1010,10 @@ const DRepVotingHistory = () => {
             </div>
           </div>
 
-          {drepId && (
+          {activeDrepId && (
             <div style={{ width: '100%' }}>
               <code style={{ fontSize: '0.8rem', wordBreak: 'break-all', display: 'block', marginBottom: '0.5rem' }}>
-                {drepId}
+                {activeDrepId}
               </code>
             </div>
           )}
@@ -1161,9 +1241,9 @@ const DRepVotingHistory = () => {
           <VoteRationaleMetadataModal
             open={voteRationaleModal !== null}
             cacheKey={
-              voteRationaleModal && drepId
+              voteRationaleModal && activeDrepId
                 ? drepVoteCacheKey(
-                    drepId,
+                    activeDrepId,
                     proposalCacheKey(
                       voteRationaleModal.proposalTxHash,
                       voteRationaleModal.proposalCertIndex
@@ -1188,7 +1268,7 @@ const DRepVotingHistory = () => {
             onClose={() => setIpfsModal(null)}
           />
 
-          {!loading && !error && drepId && apiKey && mergedData.length === 0 && (
+          {!loading && !error && activeDrepId && apiKey && mergedData.length === 0 && (
             <p>No governance proposals found.</p>
           )}
 

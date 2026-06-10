@@ -24,7 +24,14 @@ import { buildAndSubmitBulkVotes, type BulkVoteAnchor, type BulkVoteEntry } from
 import { downloadJson } from '../functions/downloadJson';
 import { buildCip100RationaleBytes, hashGovernanceAnchorBytes } from '../functions/cip100RationaleDocument';
 import { uploadJsonToPinata } from '../functions/pinataUpload';
+import { setBlockfrostConfig } from '../store/blockfrostSlice';
 import { setPinataConfig } from '../store/pinataSlice';
+import {
+  getBlockfrostApiKeyFromStorage,
+  getBulkVoteConfigFromStorage,
+  hasBlockfrostApiKeyInUrl,
+  saveBulkVoteConfigToStorage,
+} from '../utils/toolConfigStorage';
 import { IpfsLinkModal } from '../components/IpfsLinkModal';
 import '../components/IpfsLinkModal.css';
 import { parseIpfsLink } from '../utils/ipfsGateways';
@@ -159,6 +166,7 @@ function syncAnchorToUrl(
 }
 
 const initialAnchorFromUrl = readAnchorFromUrl();
+const initialUrlHadPinataJwt = new URLSearchParams(window.location.search).has(PINATA_JWT_PARAM);
 
 const DRepBulkVote: React.FC = () => {
   const dispatch = useAppDispatch();
@@ -194,6 +202,8 @@ const DRepBulkVote: React.FC = () => {
   const [anchorUrl, setAnchorUrl] = useState(initialAnchorFromUrl.anchorUrl);
   const [anchorHashHex, setAnchorHashHex] = useState(initialAnchorFromUrl.anchorHashHex);
   const [persistAnchorInUrl, setPersistAnchorInUrl] = useState(initialAnchorFromUrl.hasAnchorParams);
+  const [persistPinataInUrl, setPersistPinataInUrl] = useState(initialUrlHadPinataJwt);
+  const [showLoadCachedSettings, setShowLoadCachedSettings] = useState(false);
   const [includeNote, setIncludeNote] = useState(false);
   const [noteText, setNoteText] = useState("casting drep votes - using $computerman bulk vote tool");
   const [localPinataJwt, setLocalPinataJwt] = useState(pinataJwt ?? '');
@@ -227,6 +237,16 @@ const DRepBulkVote: React.FC = () => {
     if (urlPinataJwt) {
       dispatch(setPinataConfig({ usePinata: true, jwt: urlPinataJwt }));
       setLocalPinataJwt(urlPinataJwt);
+      saveBulkVoteConfigToStorage({ pinataJwt: urlPinataJwt });
+    }
+    if (initialAnchorFromUrl.hasAnchorParams) {
+      saveBulkVoteConfigToStorage({
+        anchor: {
+          attachAnchor: initialAnchorFromUrl.attachAnchor,
+          anchorUrl: initialAnchorFromUrl.anchorUrl,
+          anchorHashHex: initialAnchorFromUrl.anchorHashHex,
+        },
+      });
     }
   }, [dispatch]);
 
@@ -235,8 +255,30 @@ const DRepBulkVote: React.FC = () => {
   }, [pinataJwt]);
 
   useEffect(() => {
+    if (attachAnchor && (anchorUrl.trim() || anchorHashHex.trim())) {
+      saveBulkVoteConfigToStorage({
+        anchor: { attachAnchor, anchorUrl, anchorHashHex },
+      });
+    }
+  }, [attachAnchor, anchorUrl, anchorHashHex]);
+
+  useEffect(() => {
     syncAnchorToUrl(persistAnchorInUrl, attachAnchor, anchorUrl, anchorHashHex);
   }, [persistAnchorInUrl, attachAnchor, anchorUrl, anchorHashHex]);
+
+  useEffect(() => {
+    const cachedBlockfrost = getBlockfrostApiKeyFromStorage();
+    const cachedBulk = getBulkVoteConfigFromStorage();
+    const urlHadBlockfrost = hasBlockfrostApiKeyInUrl();
+    const anchorActive =
+      attachAnchor && Boolean(anchorUrl.trim() || anchorHashHex.trim());
+    const canLoadBlockfrost = !blockfrostReady && Boolean(cachedBlockfrost) && !urlHadBlockfrost;
+    const canLoadPinata =
+      !pinataReady && Boolean(cachedBulk?.pinataJwt) && !initialUrlHadPinataJwt;
+    const canLoadAnchor =
+      Boolean(cachedBulk?.anchor) && !initialAnchorFromUrl.hasAnchorParams && !anchorActive;
+    setShowLoadCachedSettings(canLoadBlockfrost || canLoadPinata || canLoadAnchor);
+  }, [blockfrostReady, pinataReady, attachAnchor, anchorUrl, anchorHashHex]);
 
   useEffect(() => {
     if (!blockfrostReady || !apiKey) {
@@ -390,10 +432,32 @@ const DRepBulkVote: React.FC = () => {
   const handleApplyPinataJwt = () => {
     const nextJwt = localPinataJwt.trim();
     dispatch(setPinataConfig({ usePinata: Boolean(nextJwt), jwt: nextJwt || null }));
-    const url = new URL(window.location.href);
-    if (nextJwt) url.searchParams.set(PINATA_JWT_PARAM, nextJwt);
-    else url.searchParams.delete(PINATA_JWT_PARAM);
-    window.history.replaceState({}, '', url.toString());
+    if (nextJwt) {
+      saveBulkVoteConfigToStorage({ pinataJwt: nextJwt });
+    }
+    if (persistPinataInUrl) {
+      const url = new URL(window.location.href);
+      if (nextJwt) url.searchParams.set(PINATA_JWT_PARAM, nextJwt);
+      else url.searchParams.delete(PINATA_JWT_PARAM);
+      window.history.replaceState({}, '', url.toString());
+    }
+  };
+
+  const handleLoadCachedSettings = () => {
+    const cachedBlockfrost = getBlockfrostApiKeyFromStorage();
+    if (cachedBlockfrost && !blockfrostReady) {
+      dispatch(setBlockfrostConfig({ useBlockfrost: true, apiKey: cachedBlockfrost }));
+    }
+    const cachedBulk = getBulkVoteConfigFromStorage();
+    if (cachedBulk?.pinataJwt && !pinataReady) {
+      dispatch(setPinataConfig({ usePinata: true, jwt: cachedBulk.pinataJwt }));
+      setLocalPinataJwt(cachedBulk.pinataJwt);
+    }
+    if (cachedBulk?.anchor) {
+      setAttachAnchor(cachedBulk.anchor.attachAnchor);
+      setAnchorUrl(cachedBulk.anchor.anchorUrl);
+      setAnchorHashHex(cachedBulk.anchor.anchorHashHex);
+    }
   };
 
   const handleUploadRationale = async () => {
@@ -580,6 +644,23 @@ const DRepBulkVote: React.FC = () => {
             transaction. Your wallet must sign with its DRep key (CIP-95). Script DReps are not supported yet.
           </p>
 
+          {showLoadCachedSettings && (
+            <div
+              style={{
+                border: '1px solid #4b5563',
+                borderRadius: '8px',
+                padding: '1rem',
+                backgroundColor: '#0f172a',
+                width: '100%',
+              }}
+            >
+              <p style={{ margin: '0 0 0.75rem', color: '#d1d5db', fontSize: '0.9rem' }}>
+                Saved settings from a previous visit are available in this browser.
+              </p>
+              <Button onClick={handleLoadCachedSettings}>Load saved settings from this browser</Button>
+            </div>
+          )}
+
           {!isWalletConnected && (
             <div style={{ width: '100%' }}>
               <ConnectWallet />
@@ -677,6 +758,14 @@ const DRepBulkVote: React.FC = () => {
                     />
                     <Button onClick={handleApplyPinataJwt}>Set Key</Button>
                   </div>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem' }}>
+                    <input
+                      type="checkbox"
+                      checked={persistPinataInUrl}
+                      onChange={() => setPersistPinataInUrl(!persistPinataInUrl)}
+                    />
+                    <span>Save Pinata JWT to URL (survives refresh)</span>
+                  </label>
                   <p style={{ margin: 0, fontSize: '0.8rem', color: '#9ca3af' }}>
                     Get a JWT from{' '}
                     <a
@@ -700,8 +789,8 @@ const DRepBulkVote: React.FC = () => {
                         fontSize: '0.8rem',
                       }}
                     >
-                      Security notice: your Pinata JWT is stored in the URL. Be careful when screensharing or sharing
-                      links.
+                      Security notice: your Pinata JWT is saved in this browser and may be stored in the URL if
+                      enabled above. Be careful when screensharing or sharing links.
                     </div>
                   )}
                   <label style={{ display: 'block', fontWeight: 600, marginTop: '0.5rem' }}>Rationale text</label>
