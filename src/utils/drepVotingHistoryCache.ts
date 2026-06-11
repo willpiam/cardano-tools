@@ -3,12 +3,13 @@ import type { VoteAnchorStatus } from '../components/DRepVoteMetadataChart';
 import type { BlockfrostProposalExpirationFields } from './governanceExpiration';
 
 export const DREP_VOTING_HISTORY_DB_NAME = 'ctools-drep-voting-history';
-export const DREP_VOTING_HISTORY_DB_VERSION = 3;
+export const DREP_VOTING_HISTORY_DB_VERSION = 4;
 
 const STORE_PROPOSALS = 'proposals';
 const STORE_DREP_VOTES = 'drepVotes';
 export const STORE_METADATA_DOCS = 'metadataDocs';
 export const STORE_VOTE_METADATA_DOCS = 'voteMetadataDocs';
+export const STORE_DREP_METADATA_DOCS = 'drepMetadataDocs';
 
 export interface CachedProposalEnrichment {
   expiration: BlockfrostProposalExpirationFields;
@@ -64,6 +65,9 @@ function openDb(): Promise<IDBDatabase> {
       }
       if (!db.objectStoreNames.contains(STORE_VOTE_METADATA_DOCS)) {
         db.createObjectStore(STORE_VOTE_METADATA_DOCS);
+      }
+      if (!db.objectStoreNames.contains(STORE_DREP_METADATA_DOCS)) {
+        db.createObjectStore(STORE_DREP_METADATA_DOCS);
       }
     };
   });

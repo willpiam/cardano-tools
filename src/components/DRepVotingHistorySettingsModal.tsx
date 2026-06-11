@@ -11,16 +11,19 @@ export interface DRepVotingHistorySettingsModalProps {
   uncachedMetadataCount: number;
   cachedVoteRationaleDocCount: number;
   uncachedVoteRationaleCount: number;
+  cachedDrepMetadataDocCount: number;
   onReloadClosedActions: () => void;
   onLoadUncachedMetadata: () => void;
   onClearMetadataDocs: () => void;
   onLoadUncachedVoteRationale: () => void;
   onClearVoteRationaleDocs: () => void;
+  onClearDrepMetadataDocs: () => void;
   reloadDisabled: boolean;
   loadUncachedDisabled: boolean;
   clearMetadataDisabled: boolean;
   loadUncachedVoteRationaleDisabled: boolean;
   clearVoteRationaleDisabled: boolean;
+  clearDrepMetadataDisabled: boolean;
 }
 
 export function DRepVotingHistorySettingsModal({
@@ -31,16 +34,19 @@ export function DRepVotingHistorySettingsModal({
   uncachedMetadataCount,
   cachedVoteRationaleDocCount,
   uncachedVoteRationaleCount,
+  cachedDrepMetadataDocCount,
   onReloadClosedActions,
   onLoadUncachedMetadata,
   onClearMetadataDocs,
   onLoadUncachedVoteRationale,
   onClearVoteRationaleDocs,
+  onClearDrepMetadataDocs,
   reloadDisabled,
   loadUncachedDisabled,
   clearMetadataDisabled,
   loadUncachedVoteRationaleDisabled,
   clearVoteRationaleDisabled,
+  clearDrepMetadataDisabled,
 }: DRepVotingHistorySettingsModalProps) {
   useEffect(() => {
     if (!open) return;
@@ -72,8 +78,8 @@ export function DRepVotingHistorySettingsModal({
         </div>
 
         <p className="ipfs-link-modal-muted" style={{ marginBottom: '1rem' }}>
-          Manage locally cached voting history, governance metadata (CIP-108), and vote rationale
-          documents (CIP-100).
+          Manage locally cached voting history, governance metadata (CIP-108), vote rationale
+          documents (CIP-100), and DRep profile metadata (CIP-119).
         </p>
 
         <div className="voting-history-settings-stats">
@@ -91,6 +97,9 @@ export function DRepVotingHistorySettingsModal({
           </div>
           <div>
             Uncached vote rationale documents: <strong>{uncachedVoteRationaleCount}</strong>
+          </div>
+          <div>
+            DRep profile documents cached: <strong>{cachedDrepMetadataDocCount}</strong>
           </div>
         </div>
 
@@ -139,6 +148,15 @@ export function DRepVotingHistorySettingsModal({
             disabled={clearVoteRationaleDisabled}
           >
             Clear {cachedVoteRationaleDocCount} cached vote rationale documents
+          </Button>
+          <Button
+            onClick={() => {
+              onClearDrepMetadataDocs();
+              onClose();
+            }}
+            disabled={clearDrepMetadataDisabled}
+          >
+            Clear {cachedDrepMetadataDocCount} cached DRep profile documents
           </Button>
         </div>
       </div>

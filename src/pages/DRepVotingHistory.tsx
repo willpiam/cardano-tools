@@ -14,6 +14,7 @@ import { Button } from '../components/Button';
 import { DRepVotingHistorySettingsModal } from '../components/DRepVotingHistorySettingsModal';
 import '../components/IpfsLinkModal.css';
 import './DRepVotingHistory.css';
+import { DRepMetadataModal } from '../components/DRepMetadataModal';
 import { GovernanceActionMetadataModal } from '../components/GovernanceActionMetadataModal';
 import { VoteRationaleMetadataModal } from '../components/VoteRationaleMetadataModal';
 import { IpfsLinkModal } from '../components/IpfsLinkModal';
@@ -40,6 +41,12 @@ import {
   type CachedVoteRationaleDoc,
 } from '../utils/voteRationaleDocCache';
 import { prefetchUncachedVoteRationaleDocs } from '../utils/voteRationaleDocFetch';
+import type { DrepMetadata } from '../functions/drepMetadata';
+import {
+  clearDrepMetadataDocCache,
+  countDrepMetadataDocCache,
+} from '../utils/drepMetadataDocCache';
+import { ensureDrepMetadataDocCached } from '../utils/drepMetadataDocFetch';
 import {
   formatMetadataPrefetchDescription,
   formatVoteRationalePrefetchDescription,
@@ -231,6 +238,13 @@ const DRepVotingHistory = () => {
   const [voteRationaleExcerptByKey, setVoteRationaleExcerptByKey] = useState<
     Map<string, { excerpt: string; anchorUrl: string }>
   >(new Map());
+  const [cachedDrepMetadataDocCount, setCachedDrepMetadataDocCount] = useState(0);
+  const [drepProfileModalOpen, setDrepProfileModalOpen] = useState(false);
+  const [drepProfileStatus, setDrepProfileStatus] = useState<
+    'idle' | 'loading' | 'present' | 'absent' | 'failed'
+  >('idle');
+  const [drepProfileMetadata, setDrepProfileMetadata] = useState<DrepMetadata | null>(null);
+  const [drepProfileError, setDrepProfileError] = useState<string | null>(null);
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -266,6 +280,9 @@ const DRepVotingHistory = () => {
   useEffect(() => {
     setExpandedRowKey(null);
     setTitleSearchQuery('');
+    setDrepProfileStatus('idle');
+    setDrepProfileMetadata(null);
+    setDrepProfileError(null);
   }, [activeDrepId]);
 
   useEffect(() => {
@@ -315,7 +332,39 @@ const DRepVotingHistory = () => {
     if (!activeDrepId) return;
     void refreshMetadataDocCacheState();
     void refreshVoteRationaleDocCacheState();
+    void countDrepMetadataDocCache().then(setCachedDrepMetadataDocCount);
   }, [activeDrepId]);
+
+  const loadDrepProfileMetadata = async (drepId: string, key: string) => {
+    setDrepProfileStatus('loading');
+    setDrepProfileMetadata(null);
+    setDrepProfileError(null);
+
+    const result = await ensureDrepMetadataDocCached({ drepId, apiKey: key });
+
+    if (result.outcome === 'fetched') {
+      void countDrepMetadataDocCache().then(setCachedDrepMetadataDocCount);
+    }
+
+    if (result.outcome === 'cached' || result.outcome === 'fetched') {
+      setDrepProfileMetadata(result.metadata);
+      setDrepProfileStatus('present');
+      return;
+    }
+
+    if (result.outcome === 'absent') {
+      setDrepProfileStatus('absent');
+      return;
+    }
+
+    setDrepProfileError(result.metadataError?.message ?? 'Failed to load DRep profile metadata');
+    setDrepProfileStatus('failed');
+  };
+
+  useEffect(() => {
+    if (!activeDrepId || !apiKey) return;
+    void loadDrepProfileMetadata(activeDrepId, apiKey);
+  }, [activeDrepId, apiKey]);
 
   const uncachedMetadataCount = useMemo(
     () =>
@@ -697,6 +746,22 @@ const DRepVotingHistory = () => {
     setVoteRationaleExcerptByKey(new Map());
   };
 
+  const refreshDrepMetadataDocCount = () => {
+    void countDrepMetadataDocCache().then(setCachedDrepMetadataDocCount);
+  };
+
+  const handleClearDrepMetadataDocCache = async () => {
+    await clearDrepMetadataDocCache();
+    setCachedDrepMetadataDocCount(0);
+    if (activeDrepId && apiKey) {
+      await loadDrepProfileMetadata(activeDrepId, apiKey);
+    } else {
+      setDrepProfileStatus('idle');
+      setDrepProfileMetadata(null);
+      setDrepProfileError(null);
+    }
+  };
+
   const handleLoadUncachedMetadata = async () => {
     if (prefetchingMetadata || prefetchingVoteRationale || recaching) return;
 
@@ -1011,10 +1076,99 @@ const DRepVotingHistory = () => {
           </div>
 
           {activeDrepId && (
-            <div style={{ width: '100%' }}>
-              <code style={{ fontSize: '0.8rem', wordBreak: 'break-all', display: 'block', marginBottom: '0.5rem' }}>
-                {activeDrepId}
-              </code>
+            <div
+              className="drep-voting-history-profile-card"
+              style={{
+                width: '100%',
+                border: '1px solid #ccc',
+                borderRadius: '4px',
+                padding: '1rem',
+              }}
+            >
+              {drepProfileStatus === 'loading' && (
+                <p style={{ margin: 0, color: '#6b7280' }}>Loading DRep profile…</p>
+              )}
+
+              {drepProfileStatus === 'present' && drepProfileMetadata && (
+                <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                  {drepProfileMetadata.image?.contentUrl && (
+                    <img
+                      src={drepProfileMetadata.image.contentUrl}
+                      alt={
+                        drepProfileMetadata.givenName
+                          ? `${drepProfileMetadata.givenName} profile`
+                          : 'DRep profile'
+                      }
+                      style={{
+                        width: '48px',
+                        height: '48px',
+                        borderRadius: '8px',
+                        objectFit: 'cover',
+                        flexShrink: 0,
+                      }}
+                    />
+                  )}
+                  <div style={{ flex: 1, minWidth: '12rem' }}>
+                    {drepProfileMetadata.givenName && (
+                      <div style={{ fontWeight: 'bold', fontSize: '1.1rem', marginBottom: '0.35rem' }}>
+                        {drepProfileMetadata.givenName}
+                      </div>
+                    )}
+                    <code
+                      style={{
+                        fontSize: '0.75rem',
+                        wordBreak: 'break-all',
+                        display: 'block',
+                        color: '#6b7280',
+                        marginBottom: '0.5rem',
+                      }}
+                    >
+                      {activeDrepId}
+                    </code>
+                    <Button onClick={() => setDrepProfileModalOpen(true)}>View profile</Button>
+                  </div>
+                </div>
+              )}
+
+              {drepProfileStatus === 'absent' && (
+                <div>
+                  <p style={{ margin: '0 0 0.5rem', color: '#6b7280' }}>
+                    No CIP-119 profile metadata
+                  </p>
+                  <code style={{ fontSize: '0.75rem', wordBreak: 'break-all', display: 'block' }}>
+                    {activeDrepId}
+                  </code>
+                </div>
+              )}
+
+              {drepProfileStatus === 'failed' && (
+                <div>
+                  <p style={{ margin: '0 0 0.5rem', color: '#c00' }}>
+                    {drepProfileError ?? 'Failed to load DRep profile metadata'}
+                  </p>
+                  <code
+                    style={{
+                      fontSize: '0.75rem',
+                      wordBreak: 'break-all',
+                      display: 'block',
+                      marginBottom: '0.5rem',
+                    }}
+                  >
+                    {activeDrepId}
+                  </code>
+                  {apiKey && (
+                    <Button onClick={() => void loadDrepProfileMetadata(activeDrepId, apiKey)}>
+                      Retry
+                    </Button>
+                  )}
+                </div>
+              )}
+
+              {drepProfileStatus === 'idle' && (
+                <code style={{ fontSize: '0.8rem', wordBreak: 'break-all', display: 'block' }}>
+                  {activeDrepId}
+                </code>
+              )}
             </div>
           )}
 
@@ -1162,11 +1316,13 @@ const DRepVotingHistory = () => {
             uncachedMetadataCount={uncachedMetadataCount}
             cachedVoteRationaleDocCount={cachedVoteRationaleDocCount}
             uncachedVoteRationaleCount={uncachedVoteRationaleCount}
+            cachedDrepMetadataDocCount={cachedDrepMetadataDocCount}
             onReloadClosedActions={() => void handleForceRecache()}
             onLoadUncachedMetadata={() => void handleLoadUncachedMetadata()}
             onClearMetadataDocs={() => void handleClearMetadataDocCache()}
             onLoadUncachedVoteRationale={() => void handleLoadUncachedVoteRationale()}
             onClearVoteRationaleDocs={() => void handleClearVoteRationaleDocCache()}
+            onClearDrepMetadataDocs={() => void handleClearDrepMetadataDocCache()}
             reloadDisabled={
               loading ||
               anchorLoading ||
@@ -1204,7 +1360,27 @@ const DRepVotingHistory = () => {
               prefetchingMetadata ||
               prefetchingVoteRationale
             }
+            clearDrepMetadataDisabled={
+              cachedDrepMetadataDocCount === 0 ||
+              loading ||
+              recaching ||
+              prefetchingMetadata ||
+              prefetchingVoteRationale
+            }
           />
+
+          {activeDrepId && apiKey && (
+            <DRepMetadataModal
+              open={drepProfileModalOpen}
+              drepId={activeDrepId}
+              apiKey={apiKey}
+              onClose={() => setDrepProfileModalOpen(false)}
+              onCacheUpdated={() => {
+                refreshDrepMetadataDocCount();
+                void loadDrepProfileMetadata(activeDrepId, apiKey);
+              }}
+            />
+          )}
 
           <ReloadingRecacheModal
             open={recacheModalOpen}
