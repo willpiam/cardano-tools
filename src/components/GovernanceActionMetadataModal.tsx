@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { downloadJson } from '../functions/downloadJson';
 import type { GovernanceMetadata, MetadataError } from '../functions/governanceActionsFetch';
+import { governanceMetadataDownloadFilename } from '../functions/governanceMetadataDownload';
 import {
   ensureGovernanceMetadataDocCached,
   fetchGovernanceMetadataDocAtGatewayIndex,
@@ -138,6 +140,14 @@ export function GovernanceActionMetadataModal({
     void fetchMetadata(selectedGatewayIndex);
   };
 
+  const handleDownload = () => {
+    if (rawPayload === null) return;
+    downloadJson(
+      rawPayload,
+      governanceMetadataDownloadFilename(metadata?.title, proposalLabel),
+    );
+  };
+
   const panelClass = wideView
     ? 'ipfs-link-modal-panel governance-metadata-panel governance-metadata-panel-wide'
     : 'ipfs-link-modal-panel governance-metadata-panel';
@@ -209,6 +219,14 @@ export function GovernanceActionMetadataModal({
               >
                 View JSON
               </button>
+              <button
+                type="button"
+                className="governance-metadata-toolbar-btn"
+                onClick={handleDownload}
+                disabled={rawPayload === null}
+              >
+                Download
+              </button>
             </div>
 
             {contentView === 'formatted' ? (
@@ -257,6 +275,14 @@ export function GovernanceActionMetadataModal({
                     onClick={() => setContentView(contentView === 'json' ? 'formatted' : 'json')}
                   >
                     {contentView === 'json' ? 'Hide JSON' : 'View JSON'}
+                  </button>
+                  <button
+                    type="button"
+                    className="governance-metadata-toolbar-btn"
+                    onClick={handleDownload}
+                    disabled={rawPayload === null}
+                  >
+                    Download
                   </button>
                 </div>
                 {contentView === 'json' && <pre className="governance-metadata-json">{jsonText}</pre>}
