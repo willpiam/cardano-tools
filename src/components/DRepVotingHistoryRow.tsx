@@ -68,6 +68,7 @@ interface DRepVotingHistoryRowProps {
   onOpenMetadataModal: (request: MetadataModalRequest) => void;
   onOpenVoteRationaleModal: (request: VoteRationaleModalRequest) => void;
   onOpenIpfsModal: (request: IpfsModalRequest) => void;
+  onOpenCastVoteWizard?: (row: DRepVotingHistoryRowData) => void;
 }
 
 export function DRepVotingHistoryRow({
@@ -86,6 +87,7 @@ export function DRepVotingHistoryRow({
   onOpenMetadataModal,
   onOpenVoteRationaleModal,
   onOpenIpfsModal,
+  onOpenCastVoteWizard,
 }: DRepVotingHistoryRowProps) {
   const typeColors = govActionTypeColor(row.govActionType);
   const alternateClass = alternateStripe ? 'drep-voting-history-row--alternate' : '';
@@ -187,6 +189,7 @@ export function DRepVotingHistoryRow({
               onOpenMetadataModal={onOpenMetadataModal}
               onOpenVoteRationaleModal={onOpenVoteRationaleModal}
               onOpenIpfsModal={onOpenIpfsModal}
+              onOpenCastVoteWizard={onOpenCastVoteWizard}
             />
           </td>
         </tr>

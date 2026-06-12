@@ -24,6 +24,10 @@ import {
   type VoteAnchorStatus,
 } from '../components/DRepVoteMetadataChart';
 import { DRepVotingHistoryRow } from '../components/DRepVotingHistoryRow';
+import {
+  DRepCastVoteWizardModal,
+  type CastVoteActionTarget,
+} from '../components/DRepCastVoteWizardModal';
 import { fetchAllPages, formatGovActionType } from '../functions/governanceActionsFetch';
 import { fetchVoteTxAnchorMap, proposalKey } from '../functions/voteTxAnchors';
 import { ReloadingRecacheModal } from '../components/ReloadingRecacheModal';
@@ -245,6 +249,7 @@ const DRepVotingHistory = () => {
   >('idle');
   const [drepProfileMetadata, setDrepProfileMetadata] = useState<DrepMetadata | null>(null);
   const [drepProfileError, setDrepProfileError] = useState<string | null>(null);
+  const [castVoteWizardAction, setCastVoteWizardAction] = useState<CastVoteActionTarget | null>(null);
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -994,6 +999,22 @@ const DRepVotingHistory = () => {
     });
   };
 
+  const openCastVoteWizard = (row: MergedProposal) => {
+    setCastVoteWizardAction({
+      proposalId: row.proposalId,
+      proposalTxHash: row.proposalTxHash,
+      proposalCertIndex: row.proposalCertIndex,
+      govActionType: row.govActionType,
+      cachedTitle: resolveCachedTitle(row),
+    });
+  };
+
+  const handleVoteSubmitted = () => {
+    if (activeDrepId && apiKey) {
+      void fetchData(activeDrepId, apiKey);
+    }
+  };
+
   const votedCount = mergedData.filter((m) => m.vote !== null).length;
   const missedCount = mergedData.filter((m) => m.vote === null).length;
 
@@ -1360,6 +1381,7 @@ const DRepVotingHistory = () => {
                             onOpenMetadataModal={setMetadataModal}
                             onOpenVoteRationaleModal={setVoteRationaleModal}
                             onOpenIpfsModal={setIpfsModal}
+                            onOpenCastVoteWizard={openCastVoteWizard}
                           />
                         );
                       })}
@@ -1504,6 +1526,14 @@ const DRepVotingHistory = () => {
             hashHex={ipfsModal?.hashHex}
             title={ipfsModal?.title}
             onClose={() => setIpfsModal(null)}
+          />
+
+          <DRepCastVoteWizardModal
+            open={castVoteWizardAction !== null}
+            action={castVoteWizardAction}
+            viewedDrepId={activeDrepId}
+            onClose={() => setCastVoteWizardAction(null)}
+            onVoteSubmitted={handleVoteSubmitted}
           />
 
           {!loading && !error && activeDrepId && apiKey && mergedData.length === 0 && (

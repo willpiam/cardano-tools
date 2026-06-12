@@ -7,6 +7,7 @@ import {
   type GovernanceActionTimeStatus,
 } from '../utils/governanceExpiration';
 import type { CachedVoteAnchorInfo } from '../utils/drepVotingHistoryCache';
+import { isGovernanceActionFinalized } from '../utils/governanceExpiration';
 
 export interface IpfsModalRequest {
   url: string;
@@ -87,6 +88,7 @@ interface DRepVotingHistoryRowDetailsProps {
   onOpenMetadataModal: (request: MetadataModalRequest) => void;
   onOpenVoteRationaleModal: (request: VoteRationaleModalRequest) => void;
   onOpenIpfsModal: (request: IpfsModalRequest) => void;
+  onOpenCastVoteWizard?: (row: DRepVotingHistoryRowData) => void;
 }
 
 function truncateExcerpt(text: string, maxLen = 200): string {
@@ -106,7 +108,10 @@ export function DRepVotingHistoryRowDetails({
   onOpenMetadataModal,
   onOpenVoteRationaleModal,
   onOpenIpfsModal,
+  onOpenCastVoteWizard,
 }: DRepVotingHistoryRowDetailsProps) {
+  const actionOpen = !isGovernanceActionFinalized(row.timeStatus);
+
   return (
     <div id={detailsId} className="drep-voting-history-row-details">
       <section className="drep-voting-history-row-details-section">
@@ -198,6 +203,17 @@ export function DRepVotingHistoryRowDetails({
 
       <section className="drep-voting-history-row-details-section">
         <h3 className="drep-voting-history-row-details-heading">Your vote</h3>
+        {actionOpen && onOpenCastVoteWizard && (
+          <div className="drep-voting-history-row-details-field">
+            <button
+              type="button"
+              className="btn text-xs py-1 px-2 drep-voting-history-cast-vote-btn"
+              onClick={() => onOpenCastVoteWizard(row)}
+            >
+              {row.vote ? 'Update vote' : 'Cast vote'}
+            </button>
+          </div>
+        )}
         <div className="drep-voting-history-row-details-field">
           <span className="drep-voting-history-row-details-label">Vote</span>
           <VoteBadge vote={row.vote} />

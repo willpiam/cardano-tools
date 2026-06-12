@@ -310,3 +310,164 @@
   text-decoration: underline;
   width: fit-content;
 }
+
+.drep-voting-history-cast-vote-btn {
+  margin-top: 0.5rem;
+}
+
+.cast-vote-wizard-panel {
+  max-width: min(560px, 95vw);
+}
+
+.cast-vote-wizard-action-summary {
+  display: grid;
+  gap: 0.35rem;
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+  border-radius: 8px;
+  border: 1px solid #374151;
+  background: #0f172a;
+}
+
+.cast-vote-wizard-action-type {
+  font-weight: 700;
+  color: #ffa722;
+}
+
+.cast-vote-wizard-action-title {
+  color: #e5e7eb;
+  font-size: 0.95rem;
+}
+
+.cast-vote-wizard-action-id {
+  font-size: 0.75rem;
+  word-break: break-all;
+  color: #9ca3af;
+}
+
+.cast-vote-wizard-step {
+  display: grid;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.cast-vote-wizard-vote-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.cast-vote-wizard-field-group {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.cast-vote-wizard-label {
+  font-weight: 600;
+  color: #f3f4f6;
+}
+
+.cast-vote-wizard-input,
+.cast-vote-wizard-textarea {
+  width: 100%;
+  padding: 0.5rem;
+  border-radius: 6px;
+  border: 1px solid #4b5563;
+  background-color: #1e293b;
+  color: #e5e7eb;
+  font-family: inherit;
+  font-size: 0.9rem;
+}
+
+.cast-vote-wizard-input-mono {
+  font-family: ui-monospace, monospace;
+  font-size: 0.85rem;
+}
+
+.cast-vote-wizard-inline-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.cast-vote-wizard-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #e5e7eb;
+  font-size: 0.9rem;
+}
+
+.cast-vote-wizard-text-btn {
+  background: transparent;
+  border: none;
+  color: #7dd3fc;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0;
+  font-size: 0.85rem;
+  width: fit-content;
+}
+
+.cast-vote-wizard-anchor-preview {
+  font-size: 0.8rem;
+  color: #bbf7d0;
+  display: grid;
+  gap: 0.25rem;
+  word-break: break-all;
+}
+
+.cast-vote-wizard-review {
+  margin: 0;
+  display: grid;
+  gap: 0.65rem;
+}
+
+.cast-vote-wizard-review > div {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.cast-vote-wizard-review dt {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #9ca3af;
+  font-weight: 600;
+}
+
+.cast-vote-wizard-review dd {
+  margin: 0;
+  color: #f3f4f6;
+}
+
+.cast-vote-wizard-warning {
+  margin: 0;
+  padding: 0.65rem;
+  border-radius: 6px;
+  border: 1px solid #d97706;
+  background: #3a2a05;
+  color: #fde68a;
+  font-size: 0.85rem;
+}
+
+.cast-vote-wizard-error {
+  margin: 0;
+  color: #fca5a5;
+  font-size: 0.85rem;
+  white-space: pre-wrap;
+}
+
+.cast-vote-wizard-tx-link {
+  color: #7dd3fc;
+  font-weight: 600;
+}
+
+.cast-vote-wizard-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  padding-top: 0.5rem;
+  border-top: 1px solid #374151;
+}
