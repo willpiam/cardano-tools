@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Settings } from 'lucide-react';
-import { useParams, useNavigate } from 'react-router';
+import { Link, useParams, useNavigate } from 'react-router';
 import { useAppSelector, useAppDispatch } from '../store/hooks';
 import { setBlockfrostConfig } from '../store/blockfrostSlice';
 import {
@@ -997,6 +997,18 @@ const DRepVotingHistory = () => {
   const votedCount = mergedData.filter((m) => m.vote !== null).length;
   const missedCount = mergedData.filter((m) => m.vote === null).length;
 
+  const liveVoteStats = useMemo(() => {
+    let live = 0;
+    let liveUnvoted = 0;
+    for (const row of mergedData) {
+      if (!isGovernanceActionFinalized(row.timeStatus)) {
+        live += 1;
+        if (row.vote === null) liveUnvoted += 1;
+      }
+    }
+    return { live, liveUnvoted };
+  }, [mergedData]);
+
   const withAnchorCount = useMemo(
     () => mergedData.filter((m) => m.voteAnchor.status === 'present').length,
     [mergedData]
@@ -1182,6 +1194,56 @@ const DRepVotingHistory = () => {
 
           {!loading && !error && mergedData.length > 0 && (
             <>
+              {liveVoteStats.live > 0 && (
+                <div
+                  className={`drep-voting-history-live-widget${
+                    liveVoteStats.liveUnvoted > 0 ? ' drep-voting-history-live-widget--attention' : ''
+                  }`}
+                >
+                  <div
+                    className={`drep-voting-history-live-widget-count${
+                      liveVoteStats.liveUnvoted === 0
+                        ? ' drep-voting-history-live-widget-count--complete'
+                        : ''
+                    }`}
+                  >
+                    {liveVoteStats.liveUnvoted}
+                  </div>
+                  <div className="drep-voting-history-live-widget-body">
+                    <p className="drep-voting-history-live-widget-title">
+                      {liveVoteStats.liveUnvoted === 0
+                        ? 'All live actions voted on'
+                        : liveVoteStats.liveUnvoted === 1
+                          ? 'Live action not yet voted on'
+                          : 'Live actions not yet voted on'}
+                    </p>
+                    <p className="drep-voting-history-live-widget-detail">
+                      {liveVoteStats.liveUnvoted === 0 ? (
+                        <>
+                          This DRep has voted on all {liveVoteStats.live} currently live governance
+                          actions.
+                        </>
+                      ) : liveVoteStats.liveUnvoted === liveVoteStats.live ? (
+                        <>
+                          {liveVoteStats.liveUnvoted === 1 ? 'This action is' : 'These actions are'}{' '}
+                          still open for voting and this DRep has not cast a vote.
+                        </>
+                      ) : (
+                        <>
+                          This DRep has not voted on {liveVoteStats.liveUnvoted} of{' '}
+                          {liveVoteStats.live} live actions still open for voting.
+                        </>
+                      )}
+                    </p>
+                    {liveVoteStats.liveUnvoted > 0 && (
+                      <Link to="/bulk-vote" className="drep-voting-history-live-widget-link">
+                        Open bulk vote tool
+                      </Link>
+                    )}
+                  </div>
+                </div>
+              )}
+
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', width: '100%' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
                   <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
@@ -1277,7 +1339,7 @@ const DRepVotingHistory = () => {
                       {filteredMergedData.map((row, index) => {
                         const rowKey = proposalCacheKey(row.proposalTxHash, row.proposalCertIndex);
                         const detailsId = `drep-vh-details-${rowKey}`;
-                        const stripeClass = index % 2 === 0 ? 'odd:bg-[#33240b]' : 'even:bg-[#1a1103]';
+                        const alternateStripe = index % 2 === 1;
                         return (
                           <DRepVotingHistoryRow
                             key={rowKey}
@@ -1285,7 +1347,7 @@ const DRepVotingHistory = () => {
                             rowKey={rowKey}
                             detailsId={detailsId}
                             expanded={expandedRowKey === rowKey}
-                            stripeClass={stripeClass}
+                            alternateStripe={alternateStripe}
                             cachedTitle={resolveCachedTitle(row)}
                             cachedRationaleExcerpt={resolveCachedRationaleExcerpt(row)}
                             anchorLoading={anchorLoading}

@@ -50,6 +50,15 @@
   background: rgba(255, 167, 34, 0.15);
 }
 
+.drep-voting-history-summary-row,
+.drep-voting-history-details-row {
+  background-color: #1a1103;
+}
+
+.drep-voting-history-row--alternate {
+  background-color: color-mix(in srgb, #1a1103 82%, #3d2a10 18%);
+}
+
 .drep-voting-history-summary-row {
   cursor: pointer;
 }
@@ -239,4 +248,65 @@
   margin: 0;
   color: #9ca3af;
   font-size: 0.9rem;
+}
+
+.drep-voting-history-live-widget {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  width: 100%;
+  border: 1px solid #4b5563;
+  border-radius: 8px;
+  padding: 1rem 1.15rem;
+  background-color: #1a1103;
+}
+
+.drep-voting-history-live-widget--attention {
+  border-color: #ffa722;
+  background: linear-gradient(135deg, rgba(255, 167, 34, 0.12), rgba(26, 17, 3, 0.95));
+}
+
+.drep-voting-history-live-widget-count {
+  flex-shrink: 0;
+  min-width: 3rem;
+  font-size: 2rem;
+  font-weight: 800;
+  line-height: 1;
+  color: #ffa722;
+}
+
+.drep-voting-history-live-widget--attention .drep-voting-history-live-widget-count {
+  color: #fbbf24;
+}
+
+.drep-voting-history-live-widget-count--complete {
+  color: #22c55e;
+}
+
+.drep-voting-history-live-widget-body {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.drep-voting-history-live-widget-title {
+  margin: 0;
+  font-weight: 700;
+  font-size: 1rem;
+  color: #f8fafc;
+}
+
+.drep-voting-history-live-widget-detail {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #cbd5e1;
+  line-height: 1.45;
+}
+
+.drep-voting-history-live-widget-link {
+  margin-top: 0.25rem;
+  color: #7dd3fc;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-decoration: underline;
+  width: fit-content;
 }

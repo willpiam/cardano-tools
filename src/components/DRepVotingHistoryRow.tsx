@@ -57,7 +57,7 @@ interface DRepVotingHistoryRowProps {
   rowKey: string;
   detailsId: string;
   expanded: boolean;
-  stripeClass: string;
+  alternateStripe: boolean;
   cachedTitle?: string;
   cachedRationaleExcerpt?: string;
   anchorLoading: boolean;
@@ -75,7 +75,7 @@ export function DRepVotingHistoryRow({
   rowKey,
   detailsId,
   expanded,
-  stripeClass,
+  alternateStripe,
   cachedTitle,
   cachedRationaleExcerpt,
   anchorLoading,
@@ -88,11 +88,12 @@ export function DRepVotingHistoryRow({
   onOpenIpfsModal,
 }: DRepVotingHistoryRowProps) {
   const typeColors = govActionTypeColor(row.govActionType);
+  const alternateClass = alternateStripe ? 'drep-voting-history-row--alternate' : '';
 
   return (
     <>
       <tr
-        className={`${stripeClass} drep-voting-history-summary-row`}
+        className={`drep-voting-history-summary-row ${alternateClass}`.trim()}
         onClick={onToggle}
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') {
@@ -170,7 +171,10 @@ export function DRepVotingHistoryRow({
         </td>
       </tr>
       {expanded && (
-        <tr className={`${stripeClass} drep-voting-history-details-row`} data-row-key={rowKey}>
+        <tr
+          className={`drep-voting-history-details-row ${alternateClass}`.trim()}
+          data-row-key={rowKey}
+        >
           <td colSpan={4} className="py-2 border-b">
             <DRepVotingHistoryRowDetails
               row={row}
