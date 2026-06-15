@@ -76,6 +76,7 @@ import {
 import {
   fetchGovernanceEpochContext,
   fetchProposalExpirationFields,
+  hasGovernanceVotingDeadline,
   isGovernanceActionFinalized,
   type ProposalMetadataAnchorInfo,
   resolveGovernanceTimeStatus,
@@ -401,7 +402,7 @@ const DRepVotingHistory = () => {
   }, [mergedData, voteRationaleDocCache, activeDrepId]);
 
   useEffect(() => {
-    if (!mergedData.some((row) => row.timeStatus.kind === 'countdown')) return;
+    if (!mergedData.some((row) => hasGovernanceVotingDeadline(row.timeStatus))) return;
     const id = window.setInterval(() => {
       setNowSec(Math.floor(Date.now() / 1000));
     }, 60_000);

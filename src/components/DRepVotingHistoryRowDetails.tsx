@@ -3,6 +3,7 @@ import type { ProposalMetadataAnchorInfo } from '../utils/governanceExpiration';
 import {
   formatGovernanceTimeRemaining,
   governanceTimeStatusTitle,
+  hasGovernanceVotingDeadline,
   timeRemainingColor,
   type GovernanceActionTimeStatus,
 } from '../utils/governanceExpiration';
@@ -140,7 +141,7 @@ export function DRepVotingHistoryRowDetails({
             title={governanceTimeStatusTitle(row.timeStatus)}
             style={{
               color: timeRemainingColor(row.timeStatus, nowSec),
-              fontWeight: row.timeStatus.kind === 'countdown' ? 'bold' : 'normal',
+              fontWeight: hasGovernanceVotingDeadline(row.timeStatus) ? 'bold' : 'normal',
             }}
           >
             {formatGovernanceTimeRemaining(row.timeStatus, nowSec)}

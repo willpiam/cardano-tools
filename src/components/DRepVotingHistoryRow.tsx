@@ -3,6 +3,7 @@ import { formatGovActionType, truncateHash } from '../functions/governanceAction
 import {
   formatGovernanceTimeRemaining,
   governanceTimeStatusTitle,
+  hasGovernanceVotingDeadline,
   timeRemainingColor,
 } from '../utils/governanceExpiration';
 import {
@@ -152,7 +153,7 @@ export function DRepVotingHistoryRow({
           <span
             style={{
               color: timeRemainingColor(row.timeStatus, nowSec),
-              fontWeight: row.timeStatus.kind === 'countdown' ? 'bold' : 'normal',
+              fontWeight: hasGovernanceVotingDeadline(row.timeStatus) ? 'bold' : 'normal',
             }}
           >
             {formatGovernanceTimeRemaining(row.timeStatus, nowSec)}

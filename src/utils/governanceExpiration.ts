@@ -31,11 +31,18 @@ export interface GovernanceEpochContext {
 
 export type GovernanceActionTimeStatus =
   | { kind: 'countdown'; deadlineSec: number }
+  | { kind: 'ratified_countdown'; deadlineSec: number }
   | { kind: 'expired' }
   | { kind: 'ratified' }
   | { kind: 'enacted' }
   | { kind: 'dropped' }
   | { kind: 'unknown' };
+
+export function hasGovernanceVotingDeadline(
+  status: GovernanceActionTimeStatus
+): status is { kind: 'countdown' | 'ratified_countdown'; deadlineSec: number } {
+  return status.kind === 'countdown' || status.kind === 'ratified_countdown';
+}
 
 export async function fetchGovernanceEpochContext(apiKey: string): Promise<GovernanceEpochContext> {
   const res = await fetch(`${BLOCKFROST_BASE}/epochs/latest`, {
@@ -70,15 +77,22 @@ export function resolveGovernanceTimeStatus(
   if (detail.dropped_epoch !== null) return { kind: 'dropped' };
   if (detail.enacted_epoch !== null) return { kind: 'enacted' };
   if (detail.expired_epoch !== null) return { kind: 'expired' };
-  if (detail.ratified_epoch !== null) return { kind: 'ratified' };
 
   const expiration = detail.expiration;
-  if (expiration === null || !Number.isFinite(expiration)) {
+  const hasExpiration = expiration !== null && Number.isFinite(expiration);
+  const deadlineSec = hasExpiration ? expirationDeadlineSec(ctx, expiration) : null;
+  const votingOpen = deadlineSec !== null && nowSec < deadlineSec;
+
+  if (detail.ratified_epoch !== null) {
+    if (votingOpen) return { kind: 'ratified_countdown', deadlineSec };
+    return { kind: 'ratified' };
+  }
+
+  if (!hasExpiration) {
     return { kind: 'unknown' };
   }
 
-  const deadlineSec = expirationDeadlineSec(ctx, expiration);
-  if (nowSec >= deadlineSec) return { kind: 'expired' };
+  if (!votingOpen) return { kind: 'expired' };
   return { kind: 'countdown', deadlineSec };
 }
 
@@ -116,10 +130,12 @@ export function formatGovernanceTimeRemaining(
       return '—';
     case 'countdown':
       return formatDurationSeconds(status.deadlineSec - nowSec);
+    case 'ratified_countdown':
+      return `Ratified · ${formatDurationSeconds(status.deadlineSec - nowSec)}`;
   }
 }
 
-/** Voting has ended (ratified, enacted, expired, or dropped). Excludes live countdown and unknown. */
+/** Voting has ended (ratified after window close, enacted, expired, or dropped). */
 export function isGovernanceActionFinalized(status: GovernanceActionTimeStatus): boolean {
   return (
     status.kind === 'expired' ||
@@ -133,16 +149,20 @@ export function governanceTimeStatusTitle(status: GovernanceActionTimeStatus): s
   if (status.kind === 'countdown') {
     return `Voting ends ${new Date(status.deadlineSec * 1000).toLocaleString()}`;
   }
+  if (status.kind === 'ratified_countdown') {
+    return `Ratified — voting ends ${new Date(status.deadlineSec * 1000).toLocaleString()}`;
+  }
   return undefined;
 }
 
 export function timeRemainingColor(status: GovernanceActionTimeStatus, nowSec = Math.floor(Date.now() / 1000)): string {
   switch (status.kind) {
-    case 'countdown': {
+    case 'countdown':
+    case 'ratified_countdown': {
       const secondsLeft = status.deadlineSec - nowSec;
       if (secondsLeft < 86400) return '#ef4444';
       if (secondsLeft < 3 * 86400) return '#eab308';
-      return '#22c55e';
+      return status.kind === 'ratified_countdown' ? '#38bdf8' : '#22c55e';
     }
     case 'ratified':
       return '#38bdf8';
