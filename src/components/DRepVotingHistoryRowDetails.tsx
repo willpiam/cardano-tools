@@ -32,6 +32,12 @@ export interface VoteRationaleModalRequest {
   proposalCertIndex: number;
 }
 
+export interface CcVotesModalRequest {
+  proposalId: string;
+  proposalTxHash: string;
+  proposalCertIndex: number;
+}
+
 export interface DRepVotingHistoryRowData {
   proposalId: string;
   proposalTxHash: string;
@@ -89,6 +95,7 @@ interface DRepVotingHistoryRowDetailsProps {
   onOpenMetadataModal: (request: MetadataModalRequest) => void;
   onOpenVoteRationaleModal: (request: VoteRationaleModalRequest) => void;
   onOpenIpfsModal: (request: IpfsModalRequest) => void;
+  onOpenCcVotesModal: (request: CcVotesModalRequest) => void;
   onOpenCastVoteWizard?: (row: DRepVotingHistoryRowData) => void;
 }
 
@@ -109,6 +116,7 @@ export function DRepVotingHistoryRowDetails({
   onOpenMetadataModal,
   onOpenVoteRationaleModal,
   onOpenIpfsModal,
+  onOpenCcVotesModal,
   onOpenCastVoteWizard,
 }: DRepVotingHistoryRowDetailsProps) {
   const actionOpen = !isGovernanceActionFinalized(row.timeStatus);
@@ -199,6 +207,23 @@ export function DRepVotingHistoryRowDetails({
               <span className="drep-voting-history-row-details-unknown">?</span>
             )}
           </div>
+        </div>
+        <div className="drep-voting-history-row-details-field">
+          <span className="drep-voting-history-row-details-label">Constitutional committee</span>
+          <button
+            type="button"
+            onClick={() =>
+              onOpenCcVotesModal({
+                proposalId: row.proposalId,
+                proposalTxHash: row.proposalTxHash,
+                proposalCertIndex: row.proposalCertIndex,
+              })
+            }
+            className="btn text-xs py-1 px-2"
+            title="View constitutional committee votes"
+          >
+            View CC votes
+          </button>
         </div>
       </section>
 

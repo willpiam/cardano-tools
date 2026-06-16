@@ -12,18 +12,24 @@ export interface DRepVotingHistorySettingsModalProps {
   cachedVoteRationaleDocCount: number;
   uncachedVoteRationaleCount: number;
   cachedDrepMetadataDocCount: number;
+  cachedCcVotesByProposalCount: number;
+  cachedCcVoteMetadataDocCount: number;
   onReloadClosedActions: () => void;
   onLoadUncachedMetadata: () => void;
   onClearMetadataDocs: () => void;
   onLoadUncachedVoteRationale: () => void;
   onClearVoteRationaleDocs: () => void;
   onClearDrepMetadataDocs: () => void;
+  onClearCcVotesByProposal: () => void;
+  onClearCcVoteMetadataDocs: () => void;
   reloadDisabled: boolean;
   loadUncachedDisabled: boolean;
   clearMetadataDisabled: boolean;
   loadUncachedVoteRationaleDisabled: boolean;
   clearVoteRationaleDisabled: boolean;
   clearDrepMetadataDisabled: boolean;
+  clearCcVotesByProposalDisabled: boolean;
+  clearCcVoteMetadataDisabled: boolean;
 }
 
 export function DRepVotingHistorySettingsModal({
@@ -35,18 +41,24 @@ export function DRepVotingHistorySettingsModal({
   cachedVoteRationaleDocCount,
   uncachedVoteRationaleCount,
   cachedDrepMetadataDocCount,
+  cachedCcVotesByProposalCount,
+  cachedCcVoteMetadataDocCount,
   onReloadClosedActions,
   onLoadUncachedMetadata,
   onClearMetadataDocs,
   onLoadUncachedVoteRationale,
   onClearVoteRationaleDocs,
   onClearDrepMetadataDocs,
+  onClearCcVotesByProposal,
+  onClearCcVoteMetadataDocs,
   reloadDisabled,
   loadUncachedDisabled,
   clearMetadataDisabled,
   loadUncachedVoteRationaleDisabled,
   clearVoteRationaleDisabled,
   clearDrepMetadataDisabled,
+  clearCcVotesByProposalDisabled,
+  clearCcVoteMetadataDisabled,
 }: DRepVotingHistorySettingsModalProps) {
   useEffect(() => {
     if (!open) return;
@@ -79,7 +91,8 @@ export function DRepVotingHistorySettingsModal({
 
         <p className="ipfs-link-modal-muted" style={{ marginBottom: '1rem' }}>
           Manage locally cached voting history, governance metadata (CIP-108), vote rationale
-          documents (CIP-100), and DRep profile metadata (CIP-119).
+          documents (CIP-100), DRep profile metadata (CIP-119), and constitutional committee
+          vote data (CIP-136).
         </p>
 
         <div className="voting-history-settings-stats">
@@ -100,6 +113,12 @@ export function DRepVotingHistorySettingsModal({
           </div>
           <div>
             DRep profile documents cached: <strong>{cachedDrepMetadataDocCount}</strong>
+          </div>
+          <div>
+            CC vote lists cached: <strong>{cachedCcVotesByProposalCount}</strong>
+          </div>
+          <div>
+            CC vote metadata documents cached: <strong>{cachedCcVoteMetadataDocCount}</strong>
           </div>
         </div>
 
@@ -157,6 +176,24 @@ export function DRepVotingHistorySettingsModal({
             disabled={clearDrepMetadataDisabled}
           >
             Clear {cachedDrepMetadataDocCount} cached DRep profile documents
+          </Button>
+          <Button
+            onClick={() => {
+              onClearCcVotesByProposal();
+              onClose();
+            }}
+            disabled={clearCcVotesByProposalDisabled}
+          >
+            Clear {cachedCcVotesByProposalCount} cached CC vote lists
+          </Button>
+          <Button
+            onClick={() => {
+              onClearCcVoteMetadataDocs();
+              onClose();
+            }}
+            disabled={clearCcVoteMetadataDisabled}
+          >
+            Clear {cachedCcVoteMetadataDocCount} cached CC vote metadata documents
           </Button>
         </div>
       </div>

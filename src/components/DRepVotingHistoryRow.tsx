@@ -12,6 +12,7 @@ import {
   type IpfsModalRequest,
   type MetadataModalRequest,
   type VoteRationaleModalRequest,
+  type CcVotesModalRequest,
 } from './DRepVotingHistoryRowDetails';
 
 function govActionTypeColor(type: string): { bg: string; fg: string } {
@@ -69,6 +70,7 @@ interface DRepVotingHistoryRowProps {
   onOpenMetadataModal: (request: MetadataModalRequest) => void;
   onOpenVoteRationaleModal: (request: VoteRationaleModalRequest) => void;
   onOpenIpfsModal: (request: IpfsModalRequest) => void;
+  onOpenCcVotesModal: (request: CcVotesModalRequest) => void;
   onOpenCastVoteWizard?: (row: DRepVotingHistoryRowData) => void;
 }
 
@@ -88,6 +90,7 @@ export function DRepVotingHistoryRow({
   onOpenMetadataModal,
   onOpenVoteRationaleModal,
   onOpenIpfsModal,
+  onOpenCcVotesModal,
   onOpenCastVoteWizard,
 }: DRepVotingHistoryRowProps) {
   const typeColors = govActionTypeColor(row.govActionType);
@@ -190,6 +193,7 @@ export function DRepVotingHistoryRow({
               onOpenMetadataModal={onOpenMetadataModal}
               onOpenVoteRationaleModal={onOpenVoteRationaleModal}
               onOpenIpfsModal={onOpenIpfsModal}
+              onOpenCcVotesModal={onOpenCcVotesModal}
               onOpenCastVoteWizard={onOpenCastVoteWizard}
             />
           </td>

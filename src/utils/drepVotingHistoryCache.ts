@@ -3,13 +3,15 @@ import type { VoteAnchorStatus } from '../components/DRepVoteMetadataChart';
 import type { BlockfrostProposalExpirationFields } from './governanceExpiration';
 
 export const DREP_VOTING_HISTORY_DB_NAME = 'ctools-drep-voting-history';
-export const DREP_VOTING_HISTORY_DB_VERSION = 4;
+export const DREP_VOTING_HISTORY_DB_VERSION = 5;
 
 const STORE_PROPOSALS = 'proposals';
 const STORE_DREP_VOTES = 'drepVotes';
 export const STORE_METADATA_DOCS = 'metadataDocs';
 export const STORE_VOTE_METADATA_DOCS = 'voteMetadataDocs';
 export const STORE_DREP_METADATA_DOCS = 'drepMetadataDocs';
+export const STORE_CC_VOTES_BY_PROPOSAL = 'ccVotesByProposal';
+export const STORE_CC_VOTE_METADATA_DOCS = 'ccVoteMetadataDocs';
 
 export interface CachedProposalEnrichment {
   expiration: BlockfrostProposalExpirationFields;
@@ -69,8 +71,18 @@ function openDb(): Promise<IDBDatabase> {
       if (!db.objectStoreNames.contains(STORE_DREP_METADATA_DOCS)) {
         db.createObjectStore(STORE_DREP_METADATA_DOCS);
       }
+      if (!db.objectStoreNames.contains(STORE_CC_VOTES_BY_PROPOSAL)) {
+        db.createObjectStore(STORE_CC_VOTES_BY_PROPOSAL);
+      }
+      if (!db.objectStoreNames.contains(STORE_CC_VOTE_METADATA_DOCS)) {
+        db.createObjectStore(STORE_CC_VOTE_METADATA_DOCS);
+      }
     };
   });
+}
+
+export function ccVoteMetadataDocCacheKey(proposalKey: string, voteTxHash: string): string {
+  return `${proposalKey}|${normalizeHex(voteTxHash)}`;
 }
 
 /** Shared DB opener for DRep voting history caches (including metadata documents). */

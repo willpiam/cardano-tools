@@ -15,6 +15,7 @@ import { DRepVotingHistorySettingsModal } from '../components/DRepVotingHistoryS
 import '../components/IpfsLinkModal.css';
 import './DRepVotingHistory.css';
 import { DRepMetadataModal } from '../components/DRepMetadataModal';
+import { CommitteeVotesModal } from '../components/CommitteeVotesModal';
 import { GovernanceActionMetadataModal } from '../components/GovernanceActionMetadataModal';
 import { VoteRationaleMetadataModal } from '../components/VoteRationaleMetadataModal';
 import { IpfsLinkModal } from '../components/IpfsLinkModal';
@@ -51,6 +52,14 @@ import {
   countDrepMetadataDocCache,
 } from '../utils/drepMetadataDocCache';
 import { ensureDrepMetadataDocCached } from '../utils/drepMetadataDocFetch';
+import {
+  clearCcVoteMetadataDocCache,
+  countCcVoteMetadataDocCache,
+} from '../utils/ccVoteMetadataDocCache';
+import {
+  clearCcVotesByProposalCache,
+  countCcVotesByProposalCache,
+} from '../utils/ccVotesByProposalCache';
 import {
   formatMetadataPrefetchDescription,
   formatVoteRationalePrefetchDescription,
@@ -142,6 +151,12 @@ interface VoteRationaleModalState {
   proposalCertIndex: number;
 }
 
+interface CcVotesModalState {
+  proposalId: string;
+  proposalTxHash: string;
+  proposalCertIndex: number;
+}
+
 function truncateHash(hash: string): string {
   return hash.slice(0, 8) + '...' + hash.slice(-8);
 }
@@ -206,6 +221,7 @@ const DRepVotingHistory = () => {
   const [voteRationaleModal, setVoteRationaleModal] = useState<VoteRationaleModalState | null>(
     null
   );
+  const [ccVotesModal, setCcVotesModal] = useState<CcVotesModalState | null>(null);
   const [nowSec, setNowSec] = useState(() => Math.floor(Date.now() / 1000));
   const [cachedClosedCount, setCachedClosedCount] = useState(0);
   const [cachedMetadataDocCount, setCachedMetadataDocCount] = useState(0);
@@ -244,6 +260,8 @@ const DRepVotingHistory = () => {
     Map<string, { excerpt: string; anchorUrl: string }>
   >(new Map());
   const [cachedDrepMetadataDocCount, setCachedDrepMetadataDocCount] = useState(0);
+  const [cachedCcVotesByProposalCount, setCachedCcVotesByProposalCount] = useState(0);
+  const [cachedCcVoteMetadataDocCount, setCachedCcVoteMetadataDocCount] = useState(0);
   const [drepProfileModalOpen, setDrepProfileModalOpen] = useState(false);
   const [drepProfileStatus, setDrepProfileStatus] = useState<
     'idle' | 'loading' | 'present' | 'absent' | 'failed'
@@ -339,6 +357,8 @@ const DRepVotingHistory = () => {
     void refreshMetadataDocCacheState();
     void refreshVoteRationaleDocCacheState();
     void countDrepMetadataDocCache().then(setCachedDrepMetadataDocCount);
+    void countCcVotesByProposalCache().then(setCachedCcVotesByProposalCount);
+    void countCcVoteMetadataDocCache().then(setCachedCcVoteMetadataDocCount);
   }, [activeDrepId]);
 
   const loadDrepProfileMetadata = async (drepId: string, key: string) => {
@@ -766,6 +786,21 @@ const DRepVotingHistory = () => {
       setDrepProfileMetadata(null);
       setDrepProfileError(null);
     }
+  };
+
+  const refreshCcVoteCacheCounts = () => {
+    void countCcVotesByProposalCache().then(setCachedCcVotesByProposalCount);
+    void countCcVoteMetadataDocCache().then(setCachedCcVoteMetadataDocCount);
+  };
+
+  const handleClearCcVotesByProposalCache = async () => {
+    await clearCcVotesByProposalCache();
+    setCachedCcVotesByProposalCount(0);
+  };
+
+  const handleClearCcVoteMetadataDocCache = async () => {
+    await clearCcVoteMetadataDocCache();
+    setCachedCcVoteMetadataDocCount(0);
   };
 
   const handleLoadUncachedMetadata = async () => {
@@ -1382,6 +1417,7 @@ const DRepVotingHistory = () => {
                             onOpenMetadataModal={setMetadataModal}
                             onOpenVoteRationaleModal={setVoteRationaleModal}
                             onOpenIpfsModal={setIpfsModal}
+                            onOpenCcVotesModal={setCcVotesModal}
                             onOpenCastVoteWizard={openCastVoteWizard}
                           />
                         );
@@ -1402,12 +1438,16 @@ const DRepVotingHistory = () => {
             cachedVoteRationaleDocCount={cachedVoteRationaleDocCount}
             uncachedVoteRationaleCount={uncachedVoteRationaleCount}
             cachedDrepMetadataDocCount={cachedDrepMetadataDocCount}
+            cachedCcVotesByProposalCount={cachedCcVotesByProposalCount}
+            cachedCcVoteMetadataDocCount={cachedCcVoteMetadataDocCount}
             onReloadClosedActions={() => void handleForceRecache()}
             onLoadUncachedMetadata={() => void handleLoadUncachedMetadata()}
             onClearMetadataDocs={() => void handleClearMetadataDocCache()}
             onLoadUncachedVoteRationale={() => void handleLoadUncachedVoteRationale()}
             onClearVoteRationaleDocs={() => void handleClearVoteRationaleDocCache()}
             onClearDrepMetadataDocs={() => void handleClearDrepMetadataDocCache()}
+            onClearCcVotesByProposal={() => void handleClearCcVotesByProposalCache()}
+            onClearCcVoteMetadataDocs={() => void handleClearCcVoteMetadataDocCache()}
             reloadDisabled={
               loading ||
               anchorLoading ||
@@ -1447,6 +1487,20 @@ const DRepVotingHistory = () => {
             }
             clearDrepMetadataDisabled={
               cachedDrepMetadataDocCount === 0 ||
+              loading ||
+              recaching ||
+              prefetchingMetadata ||
+              prefetchingVoteRationale
+            }
+            clearCcVotesByProposalDisabled={
+              cachedCcVotesByProposalCount === 0 ||
+              loading ||
+              recaching ||
+              prefetchingMetadata ||
+              prefetchingVoteRationale
+            }
+            clearCcVoteMetadataDisabled={
+              cachedCcVoteMetadataDocCount === 0 ||
               loading ||
               recaching ||
               prefetchingMetadata ||
@@ -1520,6 +1574,19 @@ const DRepVotingHistory = () => {
             onClose={() => setVoteRationaleModal(null)}
             onCacheUpdated={refreshVoteRationaleDocCount}
           />
+
+          {ccVotesModal && apiKey && (
+            <CommitteeVotesModal
+              open={ccVotesModal !== null}
+              proposalId={ccVotesModal.proposalId}
+              proposalTxHash={ccVotesModal.proposalTxHash}
+              proposalCertIndex={ccVotesModal.proposalCertIndex}
+              proposalLabel={truncateHash(ccVotesModal.proposalId)}
+              apiKey={apiKey}
+              onClose={() => setCcVotesModal(null)}
+              onCacheUpdated={refreshCcVoteCacheCounts}
+            />
+          )}
 
           <IpfsLinkModal
             open={ipfsModal !== null}
