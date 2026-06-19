@@ -195,3 +195,11 @@ Created wiki scaffold with raw sources nested under wiki/.
 ## [2026-06-05] ingest | Conch transaction metadata cache
 - Added `src/utils/conchHistoryCache.ts` (IndexedDB `ctools-conch-history`) and cache-first metadata loading in `cip20AssetHistory.ts`; Conch settings modal to clear cached transaction lookups; updated `wiki/pages/ctools-drep-voting-history-blockfrost.md`.
 
+## [2026-06-19] ingest | DRep voting history treasury withdrawal display
+- Updated `wiki/pages/ctools-drep-voting-history-blockfrost.md` with treasury withdrawal fetch, cache, badge, and detail display.
+
+## [2026-06-19] query | Treasury withdrawal governance amounts
+- Question asked: How does a withdrawal governance action indicate to the ledger how much it withdraws from the treasury, and how can we query this value?
+- Pages consulted: `wiki/pages/cardano-governance-cip1694.md`, `wiki/pages/source-cip1694.md`, `wiki/pages/cip95-wallet-bridge.md`, `wiki/pages/ctools-governance-actions-live.md`, `wiki/pages/cardano-multiplatform-lib-cml.md`.
+- New page created: `wiki/pages/treasury-withdrawal-governance-amounts.md`
+

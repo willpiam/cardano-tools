@@ -139,7 +139,7 @@ export async function runPhasedRecache(params: RunPhasedRecacheParams): Promise<
       fetchSingleProposalEnrichment(apiKey, proposal)
     );
 
-    for (const { key, fields, metadataAnchor } of results) {
+    for (const { key, fields, metadataAnchor, treasuryWithdrawal } of results) {
       if (!fields || !metadataAnchor) {
         proposalFailures += 1;
         continue;
@@ -151,6 +151,12 @@ export async function runPhasedRecache(params: RunPhasedRecacheParams): Promise<
       proposalCacheWrites.set(key, {
         expiration: fields,
         metadataAnchor,
+        ...(treasuryWithdrawal
+          ? {
+              treasuryWithdrawalTotalLovelace: treasuryWithdrawal.totalLovelace,
+              treasuryWithdrawalRecipientCount: treasuryWithdrawal.recipientCount,
+            }
+          : {}),
         cachedAtSec: nowSec,
       });
     }

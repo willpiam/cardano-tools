@@ -1,5 +1,6 @@
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { formatGovActionType, truncateHash } from '../functions/governanceActionsFetch';
+import { formatAdaCompact } from '../utils/formatAda';
 import {
   formatGovernanceTimeRemaining,
   governanceTimeStatusTitle,
@@ -135,6 +136,12 @@ export function DRepVotingHistoryRow({
             >
               {formatGovActionType(row.govActionType)}
             </span>
+            {row.govActionType === 'treasury_withdrawals' &&
+              row.treasuryWithdrawalTotalLovelace != null && (
+                <span className="drep-voting-history-treasury-badge">
+                  {formatAdaCompact(row.treasuryWithdrawalTotalLovelace)}
+                </span>
+              )}
             {cachedTitle && (
               <span className="drep-voting-history-action-title">{cachedTitle}</span>
             )}

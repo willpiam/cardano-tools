@@ -1,11 +1,15 @@
 import {
+  computeTreasuryWithdrawalSummary,
   fetchBlockfrostProposalMetadataAnchor,
+  fetchProposalTreasuryWithdrawals,
   mapWithConcurrency,
   resolveProposalMetadataAnchorInfo,
   type ProposalMetadataAnchorInfo,
+  type TreasuryWithdrawalSummary,
 } from '../functions/governanceActionsFetch';
+import { proposalKey } from '../functions/voteTxAnchors';
 
-export type { ProposalMetadataAnchorInfo } from '../functions/governanceActionsFetch';
+export type { ProposalMetadataAnchorInfo, TreasuryWithdrawalSummary } from '../functions/governanceActionsFetch';
 
 const BLOCKFROST_BASE = 'https://cardano-mainnet.blockfrost.io/api/v0';
 
@@ -186,13 +190,14 @@ export interface SingleProposalEnrichmentResult {
   key: string;
   fields: BlockfrostProposalExpirationFields | null;
   metadataAnchor: ProposalMetadataAnchorInfo | null;
+  treasuryWithdrawal: TreasuryWithdrawalSummary | null;
 }
 
 export async function fetchSingleProposalEnrichment(
   apiKey: string,
   proposal: ProposalEnrichmentInput
 ): Promise<SingleProposalEnrichmentResult> {
-  const key = `${proposal.tx_hash}#${proposal.cert_index}`;
+  const key = proposalKey(proposal.tx_hash, proposal.cert_index);
   try {
     const [detailRes, blockfrostAnchor] = await Promise.all([
       fetch(
@@ -202,13 +207,26 @@ export async function fetchSingleProposalEnrichment(
       fetchBlockfrostProposalMetadataAnchor(apiKey, proposal),
     ]);
     if (!detailRes.ok) {
-      return { key, fields: null, metadataAnchor: null };
+      return { key, fields: null, metadataAnchor: null, treasuryWithdrawal: null };
     }
     const detail = await detailRes.json();
     const metadataAnchor = resolveProposalMetadataAnchorInfo(
       blockfrostAnchor,
       detail.governance_description
     );
+
+    let treasuryWithdrawal: TreasuryWithdrawalSummary | null = null;
+    if (detail.governance_type === 'treasury_withdrawals') {
+      const preloaded = await fetchProposalTreasuryWithdrawals(
+        apiKey,
+        proposal.tx_hash,
+        proposal.cert_index
+      );
+      treasuryWithdrawal = computeTreasuryWithdrawalSummary(
+        detail.governance_description,
+        preloaded
+      );
+    }
 
     return {
       key,
@@ -220,9 +238,10 @@ export async function fetchSingleProposalEnrichment(
         dropped_epoch: detail.dropped_epoch ?? null,
       },
       metadataAnchor,
+      treasuryWithdrawal,
     };
   } catch {
-    return { key, fields: null, metadataAnchor: null };
+    return { key, fields: null, metadataAnchor: null, treasuryWithdrawal: null };
   }
 }
 
@@ -233,6 +252,7 @@ export async function fetchProposalExpirationFields(
 ): Promise<{
   expirationByKey: Map<string, BlockfrostProposalExpirationFields>;
   metadataAnchorByKey: Map<string, ProposalMetadataAnchorInfo>;
+  treasuryWithdrawalByKey: Map<string, TreasuryWithdrawalSummary>;
 }> {
   const details = await mapWithConcurrency(proposals, concurrency, (proposal) =>
     fetchSingleProposalEnrichment(apiKey, proposal)
@@ -240,9 +260,11 @@ export async function fetchProposalExpirationFields(
 
   const expirationByKey = new Map<string, BlockfrostProposalExpirationFields>();
   const metadataAnchorByKey = new Map<string, ProposalMetadataAnchorInfo>();
-  for (const { key, fields, metadataAnchor } of details) {
+  const treasuryWithdrawalByKey = new Map<string, TreasuryWithdrawalSummary>();
+  for (const { key, fields, metadataAnchor, treasuryWithdrawal } of details) {
     if (fields) expirationByKey.set(key, fields);
     if (metadataAnchor) metadataAnchorByKey.set(key, metadataAnchor);
+    if (treasuryWithdrawal) treasuryWithdrawalByKey.set(key, treasuryWithdrawal);
   }
-  return { expirationByKey, metadataAnchorByKey };
+  return { expirationByKey, metadataAnchorByKey, treasuryWithdrawalByKey };
 }

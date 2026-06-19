@@ -41,10 +41,20 @@ The results table adds a **Rationale** column (link when an anchor URL is presen
 
 For governance actions where voting has ended (expired, ratified, enacted, or dropped), the DRep Voting History page stores enrichment in the browser **IndexedDB** (`ctools-drep-voting-history`):
 
-- **Global per proposal** (`tx_hash#cert_index`): expiration epochs and governance-action metadata anchor from Blockfrost detail + metadata endpoints.
+- **Global per proposal** (`tx_hash#cert_index`): expiration epochs, governance-action metadata anchor, and (for `treasury_withdrawals`) total withdrawal lovelace + recipient count from Blockfrost detail + `/withdrawals`.
 - **Per DRep**: vote disposition, vote transaction hash, and CIP-100 vote rationale anchor (from `/txs/{hash}/cbor` parsing).
 
-On refresh, paginated proposal and vote lists still load from Blockfrost, but detail/metadata and vote-CBOR calls are skipped for closed actions when cache entries exist. Open actions (`countdown` / unknown status) always refetch.
+On refresh, paginated proposal and vote lists still load from Blockfrost, but detail/metadata and vote-CBOR calls are skipped for closed actions when cache entries exist. Open actions (`countdown` / unknown status) always refetch. Legacy cache entries without treasury totals trigger a refetch for `treasury_withdrawals` proposals.
+
+## Treasury withdrawal amounts
+
+For governance actions with `governance_type === 'treasury_withdrawals'`, the page fetches on-chain withdrawal totals via Blockfrost `GET /governance/proposals/{tx_hash}/{cert_index}/withdrawals` (falling back to parsing `governance_description`). See [Treasury withdrawal governance amounts](treasury-withdrawal-governance-amounts.md) for ledger encoding.
+
+- **Summary row:** compact badge (e.g. `₳70M`, `₳6.3K`) via `src/utils/formatAda.ts`.
+- **Expanded details:** exact ADA amount and recipient count.
+- **Search:** compact badge text is included in the title search haystack.
+
+Shared parsing lives in `computeTreasuryWithdrawalSummary` / `fetchProposalTreasuryWithdrawals` in `src/functions/governanceActionsFetch.ts` (same helpers as [Live Governance Actions](ctools-governance-actions-live.md)).
 
 **Reload closed actions** runs a phased recache: batched proposal requests, a cooldown between batches, then batched vote-CBOR fetches, with a modal titled **Reloading & Recaching** showing the current step (e.g. `Requesting batch 2 of 12`, `Waiting 10 seconds between batch 3 and 4`). Helpers: `src/utils/drepVotingHistoryCache.ts`, `src/utils/drepVotingHistoryRecache.ts`, `src/components/ReloadingRecacheModal.tsx`.
 

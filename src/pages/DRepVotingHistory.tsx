@@ -30,6 +30,7 @@ import {
   type CastVoteActionTarget,
 } from '../components/DRepCastVoteWizardModal';
 import { fetchAllPages, formatGovActionType } from '../functions/governanceActionsFetch';
+import { formatAdaCompact } from '../utils/formatAda';
 import { fetchVoteTxAnchorMap, proposalKey } from '../functions/voteTxAnchors';
 import { ReloadingRecacheModal } from '../components/ReloadingRecacheModal';
 import {
@@ -120,12 +121,22 @@ interface MergedProposal {
   voteAnchor: VoteAnchorInfo;
   actionMetadataAnchor: ProposalMetadataAnchorInfo;
   timeStatus: GovernanceActionTimeStatus;
+  treasuryWithdrawalTotalLovelace: number | null;
+  treasuryWithdrawalRecipientCount: number | null;
 }
 
-function actionSearchHaystack(row: MergedProposal, cachedTitle?: string): string {
-  const parts = [formatGovActionType(row.govActionType), cachedTitle, row.proposalId].filter(
-    Boolean
-  );
+function actionSearchHaystack(
+  row: MergedProposal,
+  cachedTitle?: string
+): string {
+  const parts = [
+    formatGovActionType(row.govActionType),
+    cachedTitle,
+    row.proposalId,
+    row.treasuryWithdrawalTotalLovelace != null
+      ? formatAdaCompact(row.treasuryWithdrawalTotalLovelace)
+      : null,
+  ].filter(Boolean);
   return parts.join(' ').toLowerCase();
 }
 
@@ -544,6 +555,13 @@ const DRepVotingHistory = () => {
         const status = resolveGovernanceTimeStatus(cached.expiration, ctx);
         if (!isGovernanceActionFinalized(status)) {
           needsDetail.push(p);
+          continue;
+        }
+        if (
+          p.governance_type === 'treasury_withdrawals' &&
+          cached.treasuryWithdrawalTotalLovelace === undefined
+        ) {
+          needsDetail.push(p);
         }
       }
 
@@ -560,16 +578,30 @@ const DRepVotingHistory = () => {
           : {
               expirationByKey: new Map<string, import('../utils/governanceExpiration').BlockfrostProposalExpirationFields>(),
               metadataAnchorByKey: new Map<string, ProposalMetadataAnchorInfo>(),
+              treasuryWithdrawalByKey: new Map<
+                string,
+                import('../functions/governanceActionsFetch').TreasuryWithdrawalSummary
+              >(),
             };
 
       const expirationByKey = new Map(fetched.expirationByKey);
       const metadataAnchorByKey = new Map(fetched.metadataAnchorByKey);
+      const treasuryWithdrawalByKey = new Map(fetched.treasuryWithdrawalByKey);
       for (const [cacheKey, cached] of proposalCache) {
         if (!expirationByKey.has(cacheKey)) {
           expirationByKey.set(cacheKey, cached.expiration);
         }
         if (!metadataAnchorByKey.has(cacheKey)) {
           metadataAnchorByKey.set(cacheKey, cached.metadataAnchor);
+        }
+        if (
+          cached.treasuryWithdrawalTotalLovelace !== undefined &&
+          !treasuryWithdrawalByKey.has(cacheKey)
+        ) {
+          treasuryWithdrawalByKey.set(cacheKey, {
+            totalLovelace: cached.treasuryWithdrawalTotalLovelace,
+            recipientCount: cached.treasuryWithdrawalRecipientCount ?? 0,
+          });
         }
       }
 
@@ -598,9 +630,16 @@ const DRepVotingHistory = () => {
         if (finalized && fetchedFields && expirationFields) {
           const meta = metadataAnchorByKey.get(proposalKeyStr);
           if (meta) {
+            const treasury = treasuryWithdrawalByKey.get(proposalKeyStr);
             proposalCacheWrites.set(proposalKeyStr, {
               expiration: expirationFields,
               metadataAnchor: meta,
+              ...(treasury
+                ? {
+                    treasuryWithdrawalTotalLovelace: treasury.totalLovelace,
+                    treasuryWithdrawalRecipientCount: treasury.recipientCount,
+                  }
+                : {}),
               cachedAtSec: nowSec,
             });
           }
@@ -632,6 +671,11 @@ const DRepVotingHistory = () => {
           voteAnchor = cachedVote.voteAnchor;
         }
 
+        const treasury =
+          p.governance_type === 'treasury_withdrawals'
+            ? treasuryWithdrawalByKey.get(proposalKeyStr) ?? null
+            : null;
+
         return {
           proposalId: p.id,
           proposalTxHash: p.tx_hash,
@@ -642,6 +686,8 @@ const DRepVotingHistory = () => {
           voteAnchor,
           actionMetadataAnchor: metadataAnchorByKey.get(proposalKeyStr) ?? { status: 'unknown' },
           timeStatus,
+          treasuryWithdrawalTotalLovelace: treasury?.totalLovelace ?? null,
+          treasuryWithdrawalRecipientCount: treasury?.recipientCount ?? null,
         };
       });
 

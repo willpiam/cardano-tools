@@ -1,4 +1,5 @@
 import { formatGovActionType, truncateHash } from '../functions/governanceActionsFetch';
+import { formatAdaExact } from '../utils/formatAda';
 import type { ProposalMetadataAnchorInfo } from '../utils/governanceExpiration';
 import {
   formatGovernanceTimeRemaining,
@@ -48,6 +49,8 @@ export interface DRepVotingHistoryRowData {
   voteAnchor: CachedVoteAnchorInfo;
   actionMetadataAnchor: ProposalMetadataAnchorInfo;
   timeStatus: GovernanceActionTimeStatus;
+  treasuryWithdrawalTotalLovelace: number | null;
+  treasuryWithdrawalRecipientCount: number | null;
 }
 
 function voteColor(vote: string | null): string {
@@ -143,6 +146,21 @@ export function DRepVotingHistoryRowDetails({
           <span className="drep-voting-history-row-details-label">Type</span>
           <span>{formatGovActionType(row.govActionType)}</span>
         </div>
+        {row.govActionType === 'treasury_withdrawals' &&
+          row.treasuryWithdrawalTotalLovelace != null && (
+            <div className="drep-voting-history-row-details-field">
+              <span className="drep-voting-history-row-details-label">Withdrawal</span>
+              <div>
+                <span>{formatAdaExact(row.treasuryWithdrawalTotalLovelace)}</span>
+                {row.treasuryWithdrawalRecipientCount != null && (
+                  <div className="drep-voting-history-row-details-muted">
+                    {row.treasuryWithdrawalRecipientCount} recipient
+                    {row.treasuryWithdrawalRecipientCount === 1 ? '' : 's'}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         <div className="drep-voting-history-row-details-field">
           <span className="drep-voting-history-row-details-label">Status</span>
           <span

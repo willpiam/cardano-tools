@@ -16,6 +16,8 @@ export const STORE_CC_VOTE_METADATA_DOCS = 'ccVoteMetadataDocs';
 export interface CachedProposalEnrichment {
   expiration: BlockfrostProposalExpirationFields;
   metadataAnchor: ProposalMetadataAnchorInfo;
+  treasuryWithdrawalTotalLovelace?: number;
+  treasuryWithdrawalRecipientCount?: number;
   cachedAtSec: number;
 }
 

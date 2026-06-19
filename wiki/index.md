@@ -32,3 +32,4 @@
 ## ctools application
 - [DRep voting history: Blockfrost key and URL params](pages/ctools-drep-voting-history-blockfrost.md) - Blockfrost key URL/Redux flow; vote summary + CIP-100 anchor charts (CBOR enrichment via `voteTxAnchors.ts`).
 - [Live Governance Actions](pages/ctools-governance-actions-live.md) - Blockfrost-backed browser for live mainnet proposals: type filters, treasury sort, two-step metadata (anchor + CIP-108 fetch), Cardanoscan links.
+- [Treasury withdrawal governance amounts](pages/treasury-withdrawal-governance-amounts.md) - How CIP-1694 encodes treasury withdrawal lovelace on-chain (credential map in `proposal_procedure`) and how to query totals via Blockfrost/ctools.

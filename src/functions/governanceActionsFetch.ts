@@ -214,7 +214,12 @@ function parseNumericValue(value: unknown): number | null {
   return null;
 }
 
-function summarizeWithdrawals(rawWithdrawals: unknown): { totalLovelace: number; recipientCount: number } {
+export interface TreasuryWithdrawalSummary {
+  totalLovelace: number;
+  recipientCount: number;
+}
+
+function summarizeWithdrawals(rawWithdrawals: unknown): TreasuryWithdrawalSummary {
   if (!rawWithdrawals) return { totalLovelace: 0, recipientCount: 0 };
 
   if (Array.isArray(rawWithdrawals)) {
@@ -265,6 +270,51 @@ function summarizeWithdrawals(rawWithdrawals: unknown): { totalLovelace: number;
   return { totalLovelace: 0, recipientCount: 0 };
 }
 
+export function computeTreasuryWithdrawalSummary(
+  governanceDescription: unknown,
+  preloadedWithdrawals?: { stake_address: string; amount: string }[] | null
+): TreasuryWithdrawalSummary {
+  if (preloadedWithdrawals && preloadedWithdrawals.length > 0) {
+    let totalLovelace = 0;
+    let recipientCount = 0;
+    for (const w of preloadedWithdrawals) {
+      const amount = parseNumericValue(w.amount);
+      if (amount !== null) {
+        totalLovelace += amount;
+        recipientCount += 1;
+      }
+    }
+    return { totalLovelace, recipientCount };
+  }
+
+  const desc = governanceDescription as Record<string, unknown> | null;
+  const rawWithdrawals =
+    desc?.withdrawals ??
+    desc?.treasury_withdrawals ??
+    (desc?.action as Record<string, unknown> | undefined)?.withdrawals ??
+    (desc?.contents as Record<string, unknown> | undefined)?.withdrawals;
+  return summarizeWithdrawals(rawWithdrawals);
+}
+
+export async function fetchProposalTreasuryWithdrawals(
+  apiKey: string,
+  txHash: string,
+  certIndex: number
+): Promise<{ stake_address: string; amount: string }[] | null> {
+  try {
+    const wRes = await fetch(
+      `${BLOCKFROST_BASE}/governance/proposals/${txHash}/${certIndex}/withdrawals?count=100`,
+      { headers: { project_id: apiKey } }
+    );
+    if (wRes.ok) {
+      return await wRes.json();
+    }
+  } catch (wErr) {
+    console.warn('Failed to fetch treasury withdrawal amounts', wErr);
+  }
+  return null;
+}
+
 function parseSummary(
   type: GovernanceType,
   rawDescription: unknown,
@@ -273,27 +323,10 @@ function parseSummary(
   const desc = rawDescription as Record<string, unknown> | null;
 
   if (type === 'treasury_withdrawals') {
-    let totalLovelace = 0;
-    let recipientCount = 0;
-
-    if (preloadedWithdrawals && preloadedWithdrawals.length > 0) {
-      for (const w of preloadedWithdrawals) {
-        const amount = parseNumericValue(w.amount);
-        if (amount !== null) {
-          totalLovelace += amount;
-          recipientCount += 1;
-        }
-      }
-    } else {
-      const rawWithdrawals =
-        desc?.withdrawals ??
-        desc?.treasury_withdrawals ??
-        (desc?.action as Record<string, unknown> | undefined)?.withdrawals ??
-        (desc?.contents as Record<string, unknown> | undefined)?.withdrawals;
-      const summary = summarizeWithdrawals(rawWithdrawals);
-      totalLovelace = summary.totalLovelace;
-      recipientCount = summary.recipientCount;
-    }
+    const { totalLovelace, recipientCount } = computeTreasuryWithdrawalSummary(
+      rawDescription,
+      preloadedWithdrawals
+    );
 
     return {
       summary: `${recipientCount} recipient${recipientCount === 1 ? '' : 's'} · ${(totalLovelace / 1_000_000).toLocaleString()} ADA`,
@@ -762,20 +795,10 @@ export async function fetchLiveGovernanceActions(
       }
       const detail: BlockfrostProposalDetail = await res.json();
 
-      let withdrawals: { stake_address: string; amount: string }[] | null = null;
-      if (proposal.governance_type === 'treasury_withdrawals') {
-        try {
-          const wRes = await fetch(
-            `${BLOCKFROST_BASE}/governance/proposals/${proposal.tx_hash}/${proposal.cert_index}/withdrawals?count=100`,
-            { headers: { project_id: apiKey } }
-          );
-          if (wRes.ok) {
-            withdrawals = await wRes.json();
-          }
-        } catch (wErr) {
-          console.warn('Failed to fetch treasury withdrawal amounts', wErr);
-        }
-      }
+      const withdrawals =
+        proposal.governance_type === 'treasury_withdrawals'
+          ? await fetchProposalTreasuryWithdrawals(apiKey, proposal.tx_hash, proposal.cert_index)
+          : null;
 
       const { summary, treasuryTotalLovelace } = parseSummary(
         proposal.governance_type,
