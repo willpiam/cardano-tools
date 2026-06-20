@@ -55,6 +55,17 @@ function voteLabel(vote: string | null): string {
   return vote.charAt(0).toUpperCase() + vote.slice(1);
 }
 
+function formatTypeBadgeLabel(row: DRepVotingHistoryRowData): string {
+  const typeLabel = formatGovActionType(row.govActionType);
+  if (
+    row.govActionType === 'treasury_withdrawals' &&
+    row.treasuryWithdrawalTotalLovelace != null
+  ) {
+    return `${typeLabel} · ${formatAdaCompact(row.treasuryWithdrawalTotalLovelace)}`;
+  }
+  return typeLabel;
+}
+
 interface DRepVotingHistoryRowProps {
   row: DRepVotingHistoryRowData;
   rowKey: string;
@@ -134,14 +145,8 @@ export function DRepVotingHistoryRow({
               className="drep-voting-history-type-badge"
               style={{ backgroundColor: typeColors.bg, color: typeColors.fg }}
             >
-              {formatGovActionType(row.govActionType)}
+              {formatTypeBadgeLabel(row)}
             </span>
-            {row.govActionType === 'treasury_withdrawals' &&
-              row.treasuryWithdrawalTotalLovelace != null && (
-                <span className="drep-voting-history-treasury-badge">
-                  {formatAdaCompact(row.treasuryWithdrawalTotalLovelace)}
-                </span>
-              )}
             {cachedTitle && (
               <span className="drep-voting-history-action-title">{cachedTitle}</span>
             )}

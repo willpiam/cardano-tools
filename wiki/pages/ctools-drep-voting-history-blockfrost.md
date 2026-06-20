@@ -50,7 +50,7 @@ On refresh, paginated proposal and vote lists still load from Blockfrost, but de
 
 For governance actions with `governance_type === 'treasury_withdrawals'`, the page fetches on-chain withdrawal totals via Blockfrost `GET /governance/proposals/{tx_hash}/{cert_index}/withdrawals` (falling back to parsing `governance_description`). See [Treasury withdrawal governance amounts](treasury-withdrawal-governance-amounts.md) for ledger encoding.
 
-- **Summary row:** compact badge (e.g. `₳70M`, `₳6.3K`) via `src/utils/formatAda.ts`.
+- **Summary row:** single type badge combining action label and compact amount (e.g. `Treasury Withdrawals · ₳70M`) via `src/utils/formatAda.ts`.
 - **Expanded details:** exact ADA amount and recipient count.
 - **Search:** compact badge text is included in the title search haystack.
 
