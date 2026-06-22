@@ -235,6 +235,59 @@ async function persistDrepMetadataDocCache(
   });
 }
 
+/** Metadata shape embedded in enriched GET /governance/dreps list items. */
+export interface DrepListItemMetadataFields {
+  url?: string;
+  hash?: string;
+  json_metadata?: unknown;
+  error?: { code: string; message: string };
+}
+
+/**
+ * Seed shared DRep metadata doc cache from a list-item metadata blob.
+ * Skips when an existing entry already matches the on-chain anchor URL.
+ */
+export async function seedDrepMetadataDocFromListItem(
+  drepId: string,
+  metadata: DrepListItemMetadataFields | null | undefined
+): Promise<boolean> {
+  if (!metadata) return false;
+
+  const anchorUrl = metadata.url?.trim() ?? '';
+  const hashHex = metadata.hash?.trim() || undefined;
+  const blockfrostError = metadata.error ?? null;
+  const existing = await getDrepMetadataDocCache(drepId);
+
+  if (isDrepMetadataDocCacheHit(existing, anchorUrl)) {
+    return false;
+  }
+
+  if (!anchorUrl) {
+    await persistDrepMetadataDocCache(drepId, {
+      metadata: null,
+      rawPayload: metadata.json_metadata ?? null,
+      anchorUrl: '',
+      hashHex,
+      blockfrostError,
+    });
+    return true;
+  }
+
+  if (metadata.json_metadata != null) {
+    const parsed = parseCip119Metadata(metadata.json_metadata);
+    await persistDrepMetadataDocCache(drepId, {
+      metadata: parsed,
+      rawPayload: metadata.json_metadata,
+      anchorUrl,
+      hashHex,
+      blockfrostError,
+    });
+    return true;
+  }
+
+  return false;
+}
+
 /**
  * Return cached doc when present; otherwise fetch from Blockfrost (with IPFS fallback).
  * When gatewayIndex is set, only that gateway is tried for the fallback path.

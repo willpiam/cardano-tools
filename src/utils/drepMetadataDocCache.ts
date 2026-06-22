@@ -82,6 +82,43 @@ export async function getDrepMetadataDocCache(
   }
 }
 
+export async function getDrepMetadataDocCacheBatch(
+  drepIds: string[]
+): Promise<Map<string, CachedDrepMetadataDoc>> {
+  const map = new Map<string, CachedDrepMetadataDoc>();
+  if (drepIds.length === 0) return map;
+
+  try {
+    const db = await openDrepVotingHistoryDb();
+    const keys = drepIds.map((id) => normalizeDrepMetadataCacheKey(id));
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction(STORE_DREP_METADATA_DOCS, 'readonly');
+      const store = tx.objectStore(STORE_DREP_METADATA_DOCS);
+      let pending = keys.length;
+
+      for (let i = 0; i < keys.length; i++) {
+        const key = keys[i];
+        const drepId = drepIds[i];
+        const request = store.get(key);
+        request.onsuccess = () => {
+          if (request.result) {
+            map.set(drepId, request.result as CachedDrepMetadataDoc);
+          }
+          pending--;
+          if (pending === 0) resolve();
+        };
+        request.onerror = () => reject(request.error ?? new Error('IndexedDB read failed'));
+      }
+
+      tx.onerror = () => reject(tx.error ?? new Error('IndexedDB read failed'));
+    });
+  } catch (err) {
+    console.warn('Failed to batch-read DRep metadata doc cache', err);
+  }
+
+  return map;
+}
+
 export async function putDrepMetadataDocCache(
   drepId: string,
   entry: CachedDrepMetadataDoc

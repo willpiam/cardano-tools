@@ -13,6 +13,11 @@ const TOOL_LINKS = [
     to: '/drep-vote',
   },
   {
+    title: 'Popular DReps',
+    description: 'Browse DReps ranked by delegated voting power.',
+    to: '/popular-dreps',
+  },
+  {
     title: 'DRep Voting History',
     description: 'Look up a DRep and view voting activity across governance proposals.',
     to: '/drephistory',

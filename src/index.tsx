@@ -16,6 +16,7 @@ import AssetCip20Messages from './pages/AssetCip20Messages';
 import Home from './pages/Home';
 import TreasuryDonation from './pages/TreasuryDonation';
 import DRepBulkVote from './pages/DRepBulkVote';
+import PopularDreps from './pages/PopularDreps';
 
 function ConchLegacyRedirect() {
   const { search } = useLocation();
@@ -51,6 +52,9 @@ root.render(
               <Route path="voter-history" element={<DRepVotingHistory />} />
               <Route path="voterhistory" element={<DRepVotingHistory />} />
               <Route path="governance-actions" element={<GovernanceActions />} />
+              <Route path="popular-dreps" element={<PopularDreps />} />
+              <Route path="top-dreps" element={<PopularDreps />} />
+              <Route path="dreps" element={<PopularDreps />} />
               <Route path="governanceactions" element={<GovernanceActions />} />
               <Route path="gov-actions" element={<GovernanceActions />} />
               <Route path="live-actions" element={<GovernanceActions />} />

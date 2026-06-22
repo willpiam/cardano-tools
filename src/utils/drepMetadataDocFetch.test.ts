@@ -3,6 +3,7 @@ import {
   ensureDrepMetadataDocCached,
   fetchDrepMetadataDocWithGatewayFallback,
   fetchDrepMetadataFromBlockfrost,
+  seedDrepMetadataDocFromListItem,
 } from './drepMetadataDocFetch';
 
 jest.mock('./drepMetadataDocCache', () => ({
@@ -13,10 +14,12 @@ jest.mock('./drepMetadataDocCache', () => ({
 
 import {
   getDrepMetadataDocCache,
+  isDrepMetadataDocCacheHit,
   putDrepMetadataDocCache,
 } from './drepMetadataDocCache';
 
 const mockGetCache = getDrepMetadataDocCache as jest.MockedFunction<typeof getDrepMetadataDocCache>;
+const mockIsHit = isDrepMetadataDocCacheHit as jest.MockedFunction<typeof isDrepMetadataDocCacheHit>;
 const mockPutCache = putDrepMetadataDocCache as jest.MockedFunction<typeof putDrepMetadataDocCache>;
 
 const sampleDrepDoc = {
@@ -163,5 +166,52 @@ describe('ensureDrepMetadataDocCached', () => {
     expect(result.outcome).toBe('fetched');
     expect(result.metadata?.givenName).toBe('Test DRep');
     expect(mockPutCache).toHaveBeenCalled();
+  });
+});
+
+describe('seedDrepMetadataDocFromListItem', () => {
+  afterEach(() => {
+    mockGetCache.mockReset();
+    mockPutCache.mockReset();
+    mockIsHit.mockReset();
+    mockGetCache.mockResolvedValue(null);
+    mockIsHit.mockReturnValue(false);
+  });
+
+  it('skips write when cache already matches anchor', async () => {
+    const existing = {
+      metadata: null,
+      rawPayload: sampleDrepDoc,
+      anchorUrl: 'https://example.com/drep.json',
+      cachedAtSec: 1,
+    };
+    mockGetCache.mockResolvedValue(existing);
+    mockIsHit.mockReturnValue(true);
+
+    const wrote = await seedDrepMetadataDocFromListItem('drep1abc', {
+      url: 'https://example.com/drep.json',
+      hash: 'deadbeef',
+      json_metadata: { body: { givenName: 'New' } },
+    });
+
+    expect(wrote).toBe(false);
+    expect(mockPutCache).not.toHaveBeenCalled();
+  });
+
+  it('writes parsed metadata when anchor is new', async () => {
+    const wrote = await seedDrepMetadataDocFromListItem('drep1abc', {
+      url: 'https://example.com/drep.json',
+      hash: 'deadbeef',
+      json_metadata: sampleDrepDoc,
+    });
+
+    expect(wrote).toBe(true);
+    expect(mockPutCache).toHaveBeenCalledWith(
+      'drep1abc',
+      expect.objectContaining({
+        anchorUrl: 'https://example.com/drep.json',
+        metadata: expect.objectContaining({ givenName: 'Test DRep' }),
+      })
+    );
   });
 });

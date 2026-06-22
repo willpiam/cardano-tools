@@ -57,9 +57,11 @@ export function GovernanceChartEmpty({ size }: { size: number }) {
 export function GovernancePie({
   data,
   size,
+  valueFormatter,
 }: {
   data: ChartSlice[];
   size: number;
+  valueFormatter?: (value: number) => string;
 }) {
   if (data.length === 0) {
     return <GovernanceChartEmpty size={size} />;
@@ -88,7 +90,7 @@ export function GovernancePie({
         </Pie>
         <Tooltip
           formatter={(value: number, _name, item) => [
-            value,
+            valueFormatter ? valueFormatter(value) : value,
             String(item?.payload?.name ?? 'Actions'),
           ]}
         />
