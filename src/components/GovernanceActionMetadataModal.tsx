@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { downloadJson } from '../functions/downloadJson';
 import type { GovernanceMetadata, MetadataError } from '../functions/governanceActionsFetch';
@@ -44,6 +44,9 @@ export function GovernanceActionMetadataModal({
   const [wideView, setWideView] = useState(false);
   const [contentView, setContentView] = useState<ContentView>('formatted');
 
+  const onCacheUpdatedRef = useRef(onCacheUpdated);
+  onCacheUpdatedRef.current = onCacheUpdated;
+
   const isIpfsAnchor = parseIpfsLink(anchorUrl) !== null;
 
   const fetchMetadata = useCallback(
@@ -71,43 +74,15 @@ export function GovernanceActionMetadataModal({
           hashHex,
           cachedAtSec: Math.floor(Date.now() / 1000),
         });
-        onCacheUpdated?.();
+        onCacheUpdatedRef.current?.();
       }
 
       setMetadata(result.metadata);
       setRawPayload(result.rawPayload);
       setStatus('loaded');
     },
-    [anchorUrl, cacheKey, hashHex, onCacheUpdated]
+    [anchorUrl, cacheKey, hashHex]
   );
-
-  const loadMetadata = useCallback(async () => {
-    setStatus('loading');
-    setError(null);
-    setMetadata(null);
-    setRawPayload(null);
-
-    const result = await ensureGovernanceMetadataDocCached({
-      cacheKey,
-      anchorUrl,
-      hashHex,
-      gatewayIndex: 0,
-    });
-
-    if (result.outcome === 'cached' || result.outcome === 'fetched') {
-      if (result.outcome === 'fetched') onCacheUpdated?.();
-      setMetadata(result.metadata);
-      setRawPayload(result.rawPayload);
-      setLastFetchUrl(result.fetchUrl);
-      setStatus('loaded');
-      return;
-    }
-
-    setError(result.metadataError);
-    setRawPayload(result.rawPayload);
-    setLastFetchUrl(result.fetchUrl);
-    setStatus('error');
-  }, [anchorUrl, cacheKey, hashHex, onCacheUpdated]);
 
   useEffect(() => {
     if (!open) {
@@ -122,8 +97,44 @@ export function GovernanceActionMetadataModal({
       return;
     }
 
+    let cancelled = false;
+
+    async function loadMetadata() {
+      setStatus('loading');
+      setError(null);
+      setMetadata(null);
+      setRawPayload(null);
+
+      const result = await ensureGovernanceMetadataDocCached({
+        cacheKey,
+        anchorUrl,
+        hashHex,
+        gatewayIndex: 0,
+      });
+
+      if (cancelled) return;
+
+      if (result.outcome === 'cached' || result.outcome === 'fetched') {
+        if (result.outcome === 'fetched') onCacheUpdatedRef.current?.();
+        setMetadata(result.metadata);
+        setRawPayload(result.rawPayload);
+        setLastFetchUrl(result.fetchUrl);
+        setStatus('loaded');
+        return;
+      }
+
+      setError(result.metadataError);
+      setRawPayload(result.rawPayload);
+      setLastFetchUrl(result.fetchUrl);
+      setStatus('error');
+    }
+
     void loadMetadata();
-  }, [open, anchorUrl, cacheKey, loadMetadata]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, anchorUrl, cacheKey, hashHex]);
 
   useEffect(() => {
     if (!open) return;

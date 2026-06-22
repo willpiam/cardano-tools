@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { downloadJson } from '../functions/downloadJson';
 import { drepMetadataDownloadFilename, type DrepMetadata } from '../functions/drepMetadata';
@@ -42,6 +42,9 @@ export function DRepMetadataModal({
   const [wideView, setWideView] = useState(false);
   const [contentView, setContentView] = useState<ContentView>('formatted');
 
+  const onCacheUpdatedRef = useRef(onCacheUpdated);
+  onCacheUpdatedRef.current = onCacheUpdated;
+
   const isIpfsAnchor = parseIpfsLink(anchorUrl) !== null;
 
   const fetchViaGateway = useCallback(
@@ -71,46 +74,51 @@ export function DRepMetadataModal({
           hashHex,
           cachedAtSec: Math.floor(Date.now() / 1000),
         });
-        onCacheUpdated?.();
+        onCacheUpdatedRef.current?.();
       }
 
       setMetadata(result.metadata);
       setRawPayload(result.rawPayload);
       setStatus('loaded');
     },
-    [anchorUrl, drepId, hashHex, onCacheUpdated]
+    [anchorUrl, drepId, hashHex]
   );
 
-  const loadMetadata = useCallback(async () => {
-    setStatus('loading');
-    setError(null);
-    setMetadata(null);
-    setRawPayload(null);
+  const reloadMetadata = useCallback(
+    async (options?: { isStale?: () => boolean }) => {
+      setStatus('loading');
+      setError(null);
+      setMetadata(null);
+      setRawPayload(null);
 
-    const result = await ensureDrepMetadataDocCached({ drepId, apiKey });
+      const result = await ensureDrepMetadataDocCached({ drepId, apiKey });
 
-    setAnchorUrl(result.anchorUrl);
-    setHashHex(result.hashHex);
-    setLastFetchUrl(result.fetchUrl);
+      if (options?.isStale?.()) return;
 
-    if (result.outcome === 'absent') {
-      setStatus('absent');
+      setAnchorUrl(result.anchorUrl);
+      setHashHex(result.hashHex);
+      setLastFetchUrl(result.fetchUrl);
+
+      if (result.outcome === 'absent') {
+        setStatus('absent');
+        setRawPayload(result.rawPayload);
+        return;
+      }
+
+      if (result.outcome === 'cached' || result.outcome === 'fetched') {
+        if (result.outcome === 'fetched') onCacheUpdatedRef.current?.();
+        setMetadata(result.metadata);
+        setRawPayload(result.rawPayload);
+        setStatus('loaded');
+        return;
+      }
+
+      setError(result.metadataError);
       setRawPayload(result.rawPayload);
-      return;
-    }
-
-    if (result.outcome === 'cached' || result.outcome === 'fetched') {
-      if (result.outcome === 'fetched') onCacheUpdated?.();
-      setMetadata(result.metadata);
-      setRawPayload(result.rawPayload);
-      setStatus('loaded');
-      return;
-    }
-
-    setError(result.metadataError);
-    setRawPayload(result.rawPayload);
-    setStatus('error');
-  }, [apiKey, drepId, onCacheUpdated]);
+      setStatus('error');
+    },
+    [apiKey, drepId]
+  );
 
   useEffect(() => {
     if (!open) {
@@ -127,8 +135,13 @@ export function DRepMetadataModal({
       return;
     }
 
-    void loadMetadata();
-  }, [open, drepId, apiKey, loadMetadata]);
+    let cancelled = false;
+    void reloadMetadata({ isStale: () => cancelled });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, drepId, apiKey, reloadMetadata]);
 
   useEffect(() => {
     if (!open) return;
@@ -353,7 +366,7 @@ export function DRepMetadataModal({
             )}
 
             {!anchorUrl && (
-              <button type="button" className="ipfs-link-modal-copy-btn" onClick={() => void loadMetadata()}>
+              <button type="button" className="ipfs-link-modal-copy-btn" onClick={() => void reloadMetadata()}>
                 Try again
               </button>
             )}
