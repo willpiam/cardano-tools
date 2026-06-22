@@ -16,6 +16,7 @@
 - [Source: cip95](pages/source-cip95.md) - CIP-95: CIP-30 extension for Conway-era governance (DRep/stake keys, extended signTx/signData) for Ada holders and DReps.
 - [Source: cip129](pages/source-cip129.md) - CIP-129: Bech32 and byte encodings for DRep, CC hot/cold, and governance action identifiers (Conway era).
 - [Source: cip21](pages/source-cip21.md) - CIP-21: Canonical CBOR and structural rules for transactions signed by hardware wallets.
+- [Source: Reforming Treasury Governance](pages/source-reforming-treasury-governance.md) - Real info-action JSON-LD metadata (CIP-100 + CIP-108); treasury governance reform proposal by AtlasHub DRep.
 
 ## Entities / Concepts
 - [Blockfrost Icebreakers](pages/blockfrost-icebreakers.md) - Incentivized operator program for decentralized Blockfrost fleet participation.
@@ -23,6 +24,7 @@
 - [CIP-1694 explained (Intersect article)](pages/cip-1694-explained-intersect-article.md) - Plain-language recap of workshop history, governance bodies, actions, and bootstrap incentives from Intersect MBO.
 - [Governance metadata framework (CIP-100)](pages/governance-metadata-framework-cip100.md) - Base JSON-LD governance metadata: anchors, hashing, `body`/`authors`, extension contexts, metadatum label 1694.
 - [Governance action metadata standard (CIP-108)](pages/governance-action-metadata-cip108.md) - Standardized off-chain fields (`title`, `abstract`, `motivation`, `rationale`, `references`) for CIP-1694 governance actions.
+- [Governance action metadata example](pages/governance-action-metadata-example.md) - Concrete JSON-LD shape for governance actions: CIP-100 envelope, CIP-108 body, HTML rationale, references; paired with ctools parsing behavior.
 - [DRep metadata standard (CIP-119)](pages/drep-metadata-cip119.md) - Proposed DRep profile anchor fields (`givenName`, narrative blocks, `Identity`/`Link` references, `doNotList`).
 - [Cardano Multiplatform Lib (CML)](pages/cardano-multiplatform-lib-cml.md) - Multi-target Rust/JS/WASM Cardano library; crate split and NPM packages; treasury donation builder helpers from CML 6.2.0.
 - [CIP-95 wallet bridge (Conway governance)](pages/cip95-wallet-bridge.md) - Browser wallet extension for Conway certs, DRep signing, and governance dApp flows atop CIP-30.

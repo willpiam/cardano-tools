@@ -198,6 +198,21 @@ Created wiki scaffold with raw sources nested under wiki/.
 ## [2026-06-19] ingest | DRep voting history treasury withdrawal display
 - Updated `wiki/pages/ctools-drep-voting-history-blockfrost.md` with treasury withdrawal fetch, cache, badge, and detail display.
 
+## [2026-06-22] ingest | Reforming-Treasury-Governance.json
+- Source(s) processed:
+  - `wiki/raw/Reforming-Treasury-Governance.json`
+- Pages created/updated:
+  - created `wiki/pages/source-reforming-treasury-governance.md`
+  - created `wiki/pages/governance-action-metadata-example.md`
+  - updated `wiki/pages/governance-action-metadata-cip108.md`
+  - updated `wiki/pages/governance-metadata-framework-cip100.md`
+  - updated `wiki/pages/ctools-governance-actions-live.md`
+  - updated `wiki/pages/wiki-home.md`
+  - updated `wiki/index.md`
+- Contradictions or open questions:
+  - empty `authors` array is common in the wild but CIP-100 defines witness endorsement; documented as observed practice, not spec contradiction
+  - substantive treasury reform ideas are informational (`info_action`); not yet reflected as operational governance process in wiki
+
 ## [2026-06-19] query | Treasury withdrawal governance amounts
 - Question asked: How does a withdrawal governance action indicate to the ledger how much it withdraws from the treasury, and how can we query this value?
 - Pages consulted: `wiki/pages/cardano-governance-cip1694.md`, `wiki/pages/source-cip1694.md`, `wiki/pages/cip95-wallet-bridge.md`, `wiki/pages/ctools-governance-actions-live.md`, `wiki/pages/cardano-multiplatform-lib-cml.md`.

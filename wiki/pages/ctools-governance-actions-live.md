@@ -72,7 +72,7 @@ The page component calls `fetchLiveGovernanceActions` whenever `apiKey` is set i
 
 ## CIP-108 display
 
-When step 2 succeeds, the card prefers `metadata.title` over the on-chain title and shows `abstract`. A collapsible **Show CIP-108 details** section exposes `motivation`, `rationale`, and `references` (label, URI, optional `hashDigest` / `hashAlgorithm`). This aligns with the vocabulary in [Governance action metadata standard (CIP-108)](governance-action-metadata-cip108.md); the parser accepts JSON-LD-style `references.@set` arrays.
+When step 2 succeeds, the card prefers `metadata.title` over the on-chain title and shows `abstract`. A collapsible **Show CIP-108 details** section exposes `motivation`, `rationale`, and `references` (label, URI, optional `hashDigest` / `hashAlgorithm`). This aligns with the vocabulary in [Governance action metadata standard (CIP-108)](governance-action-metadata-cip108.md); the parser accepts JSON-LD-style `references.@set` arrays. See [Governance action metadata example](governance-action-metadata-example.md) for a full real-world JSON-LD document (Reforming Treasury Governance info action).
 
 Metadata errors show step (`step1` vs `step2`), message, `code`, optional HTTP status, and `details`.
 
@@ -104,6 +104,7 @@ Each action links to Cardanoscan: `https://cardanoscan.io/govAction/{id}` (trunc
 
 - [DRep voting history: Blockfrost key and URL params](ctools-drep-voting-history-blockfrost.md)
 - [Governance action metadata standard (CIP-108)](governance-action-metadata-cip108.md)
+- [Governance action metadata example](governance-action-metadata-example.md)
 - [Governance metadata framework (CIP-100)](governance-metadata-framework-cip100.md)
 - [Cardano governance model (CIP-1694)](cardano-governance-cip1694.md)
 - [Governance identifiers (CIP-129)](governance-identifiers-cip129.md)

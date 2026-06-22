@@ -28,6 +28,9 @@ CIP-108 defines a common off-chain metadata structure for governance actions in 
 - The source is marked **Proposed**, not Active.
 - The CIP's own acceptance checklist reports incomplete support across indexers/renderers.
 
+## Concrete example
+- [Governance action metadata example](governance-action-metadata-example.md) — real `info_action` JSON-LD from [Source: Reforming Treasury Governance](source-reforming-treasury-governance.md) showing CIP-100 envelope + CIP-108 `body` fields.
+
 ## Related pages
 - [Source: cip108](source-cip108.md)
 - [Source: cip100](source-cip100.md)

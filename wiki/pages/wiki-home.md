@@ -25,6 +25,7 @@ This wiki is maintained incrementally by an LLM.
 - [CIP-1694 explained (Intersect article)](cip-1694-explained-intersect-article.md)
 - [Governance metadata framework (CIP-100)](governance-metadata-framework-cip100.md)
 - [Governance action metadata standard (CIP-108)](governance-action-metadata-cip108.md)
+- [Governance action metadata example](governance-action-metadata-example.md) (Reforming Treasury Governance JSON-LD)
 - [DRep metadata standard (CIP-119)](drep-metadata-cip119.md)
 - [CIP-95 wallet bridge (Conway governance)](cip95-wallet-bridge.md)
 - [Governance identifiers (CIP-129)](governance-identifiers-cip129.md)

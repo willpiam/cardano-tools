@@ -29,6 +29,7 @@ CIP-108 specifies an off-chain metadata vocabulary for Cardano governance action
 
 ## Related pages
 - [Governance action metadata standard (CIP-108)](governance-action-metadata-cip108.md)
+- [Governance action metadata example](governance-action-metadata-example.md)
 - [Source: cip100](source-cip100.md)
 - [Governance metadata framework (CIP-100)](governance-metadata-framework-cip100.md)
 - [Source: cip1694](source-cip1694.md)

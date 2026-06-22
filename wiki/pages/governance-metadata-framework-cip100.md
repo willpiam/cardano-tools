@@ -29,6 +29,9 @@ The CIP reserves **metadatum label 1694** (per CIP-10 family) as a shared label 
 ## Intentional deltas in extension CIPs
 Some later CIPs narrow or relax CIP-100 rules for specific metadata kinds. For example, **CIP-119** recommends leaving `authors` empty for DRep registration/update anchors and deriving authenticity from the on-chain DRep credential rather than CIP-100 author witnesses—this does not invalidate CIP-100 for other metadata types; readers should follow the applicable extension CIP when present.
 
+## Concrete example
+- [Governance action metadata example](governance-action-metadata-example.md) — live document with `hashAlgorithm`, empty `authors`, and CIP-108 `body` nested under CIP-100 `@context`.
+
 ## Related pages
 - [Source: cip100](source-cip100.md)
 - [Governance action metadata standard (CIP-108)](governance-action-metadata-cip108.md)

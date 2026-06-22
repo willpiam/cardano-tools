@@ -1,4 +1,5 @@
 import ReactMarkdown from 'react-markdown';
+import rehypeRaw from 'rehype-raw';
 import remarkGfm from 'remark-gfm';
 import { preprocessGovernanceMarkdown } from '../utils/governanceMarkdown';
 import './IpfsLinkModal.css';
@@ -18,6 +19,7 @@ export function MarkdownContent({ content, className = '' }: MarkdownContentProp
     <ReactMarkdown
       className={rootClass}
       remarkPlugins={[remarkGfm]}
+      rehypePlugins={[rehypeRaw]}
       linkTarget="_blank"
       components={{
         a: ({ href, children }) => (

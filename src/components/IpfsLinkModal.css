@@ -359,7 +359,8 @@
   word-break: break-word;
 }
 
-.governance-markdown strong {
+.governance-markdown strong,
+.governance-markdown b {
   color: #f8fafc;
   font-weight: 700;
 }
