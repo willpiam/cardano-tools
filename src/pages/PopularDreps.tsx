@@ -7,6 +7,7 @@ import { Button } from '../components/Button';
 import { DRepMetadataModal } from '../components/DRepMetadataModal';
 import { PopularDrepsSettingsModal } from '../components/PopularDrepsSettingsModal';
 import { EmergoInsightsModal } from '../components/EmergoInsightsModal';
+import { TopDrepsInsightsModal } from '../components/TopDrepsInsightsModal';
 import {
   DEFAULT_POPULAR_DREPS_PAGE_SIZE,
   fetchAndCachePopularDrepsPage,
@@ -14,7 +15,9 @@ import {
   type PopularDrepRow,
 } from '../functions/popularDrepsFetch';
 import {
+  DEFAULT_TOP_DREPS_INSIGHTS_N,
   fetchEmergoInsightsBreakdown,
+  fetchTopDrepsInsightsBreakdown,
   type DelegationBreakdownLovelace,
 } from '../functions/emergoInsights';
 import { formatAdaCompact } from '../utils/formatAda';
@@ -67,6 +70,12 @@ const PopularDreps = () => {
   const [insightsLoading, setInsightsLoading] = useState(false);
   const [insightsError, setInsightsError] = useState<string | null>(null);
   const [insightsBreakdown, setInsightsBreakdown] = useState<DelegationBreakdownLovelace | null>(null);
+  const [topInsightsModalOpen, setTopInsightsModalOpen] = useState(false);
+  const [topInsightsLoading, setTopInsightsLoading] = useState(false);
+  const [topInsightsError, setTopInsightsError] = useState<string | null>(null);
+  const [topInsightsBreakdown, setTopInsightsBreakdown] = useState<DelegationBreakdownLovelace | null>(null);
+  const [topInsightsDrepIds, setTopInsightsDrepIds] = useState<string[]>([]);
+  const [topInsightsAppliedN, setTopInsightsAppliedN] = useState(DEFAULT_TOP_DREPS_INSIGHTS_N);
 
   const refreshCacheCounts = useCallback(async () => {
     const [pages, metadataDocs] = await Promise.all([
@@ -259,6 +268,35 @@ const PopularDreps = () => {
     }
   };
 
+  const loadTopDrepsInsights = async (n: number) => {
+    if (!apiKey) return;
+    setTopInsightsLoading(true);
+    setTopInsightsError(null);
+    setTopInsightsBreakdown(null);
+    setTopInsightsDrepIds([]);
+
+    try {
+      const result = await fetchTopDrepsInsightsBreakdown(apiKey, n);
+      setTopInsightsBreakdown(result.breakdown);
+      setTopInsightsDrepIds(result.topDrepIds);
+      setTopInsightsAppliedN(n);
+    } catch (err) {
+      console.error('Failed to load top DReps insights', err);
+      setTopInsightsError(err instanceof Error ? err.message : 'Failed to load top DReps insights');
+    } finally {
+      setTopInsightsLoading(false);
+    }
+  };
+
+  const handleOpenTopDrepsInsights = async () => {
+    setTopInsightsModalOpen(true);
+    await loadTopDrepsInsights(DEFAULT_TOP_DREPS_INSIGHTS_N);
+  };
+
+  const handleApplyTopDrepsInsightsN = (n: number) => {
+    void loadTopDrepsInsights(n);
+  };
+
   return (
     <div className="min-h-screen flex flex-col">
       <div
@@ -295,9 +333,14 @@ const PopularDreps = () => {
             <h1 style={{ margin: 0 }}>Popular DReps</h1>
             <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
               {apiKey && (
-                <Button onClick={() => void handleOpenInsights()} disabled={insightsLoading}>
-                  Emergo Insights
-                </Button>
+                <>
+                  <Button onClick={() => void handleOpenInsights()} disabled={insightsLoading}>
+                    Emergo Insights
+                  </Button>
+                  <Button onClick={() => void handleOpenTopDrepsInsights()} disabled={topInsightsLoading}>
+                    Top DReps Insights
+                  </Button>
+                </>
               )}
               <button
                 type="button"
@@ -556,6 +599,17 @@ const PopularDreps = () => {
         loading={insightsLoading}
         error={insightsError}
         breakdown={insightsBreakdown}
+      />
+
+      <TopDrepsInsightsModal
+        open={topInsightsModalOpen}
+        onClose={() => setTopInsightsModalOpen(false)}
+        loading={topInsightsLoading}
+        error={topInsightsError}
+        breakdown={topInsightsBreakdown}
+        topDrepIds={topInsightsDrepIds}
+        appliedN={topInsightsAppliedN}
+        onApplyN={handleApplyTopDrepsInsightsN}
       />
     </div>
   );

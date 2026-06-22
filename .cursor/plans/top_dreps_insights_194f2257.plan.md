@@ -4,16 +4,16 @@ overview: Add a second "Top DReps Insights" popup on the Popular DReps page that
 todos:
   - id: refactor-insights-core
     content: "Generalize emergoInsights.ts: featuredSet bucket, parameterized classify/compute, delegationBucketMeta, resolveTopNDrepIds + fetchTopDrepsInsightsBreakdown"
-    status: pending
+    status: completed
   - id: shared-modal
     content: Extract DelegationInsightsModal; slim EmergoInsightsModal wrapper; add TopDrepsInsightsModal with N input + Apply
-    status: pending
+    status: completed
   - id: wire-page
     content: Add Top DReps Insights button and fetch/modal state to PopularDreps.tsx
-    status: pending
+    status: completed
   - id: tests
     content: Update emergoInsights tests and add top-N ID resolution / featuredSet breakdown tests
-    status: pending
+    status: completed
 isProject: false
 ---
 
