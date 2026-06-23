@@ -24,7 +24,7 @@ import {
   validateCip119Form,
   type DrepMetadataFormInput,
 } from '../functions/cip119MetadataDocument';
-import { uploadJsonToPinata } from '../functions/pinataUpload';
+import { uploadImageToPinata, uploadJsonToPinata, sha256HexFromBytes } from '../functions/pinataUpload';
 import { fetchProtocolParametersSnapshot } from '../functions/blockfrostProtocolParams';
 import {
   deriveDRepFromWallet,
@@ -43,6 +43,7 @@ import { drepMetadataDownloadFilename } from '../functions/drepMetadata';
 import { ensureDrepMetadataDocCached } from '../utils/drepMetadataDocFetch';
 import { downloadJson } from '../functions/downloadJson';
 import type { DrepMetadataReference } from '../functions/drepMetadata';
+import { IPFS_GATEWAYS, parseIpfsLink } from '../utils/ipfsGateways';
 
 type WizardStep = 'connect' | 'profile' | 'preview' | 'publish' | 'submit';
 
@@ -122,9 +123,19 @@ const sectionStyle: React.CSSProperties = {
 async function sha256HexFromUrl(url: string): Promise<string> {
   const res = await fetch(url, { mode: 'cors' });
   if (!res.ok) throw new Error(`Failed to fetch image (${res.status})`);
-  const buf = await res.arrayBuffer();
-  const hashBuf = await crypto.subtle.digest('SHA-256', buf);
-  return Array.from(new Uint8Array(hashBuf), (b) => b.toString(16).padStart(2, '0')).join('');
+  return sha256HexFromBytes(new Uint8Array(await res.arrayBuffer()));
+}
+
+function profileImagePreviewUrl(
+  contentUrl: string | undefined,
+  localPreviewUrl: string | null
+): string | null {
+  if (localPreviewUrl) return localPreviewUrl;
+  const url = contentUrl?.trim();
+  if (!url) return null;
+  const parsed = parseIpfsLink(url);
+  if (parsed) return IPFS_GATEWAYS[0].buildUrl(parsed);
+  return url;
 }
 
 const DRepMetadataEditor: React.FC = () => {
@@ -154,6 +165,10 @@ const DRepMetadataEditor: React.FC = () => {
   const [loadExistingError, setLoadExistingError] = useState<string | null>(null);
   const [imageHashLoading, setImageHashLoading] = useState(false);
   const [imageHashError, setImageHashError] = useState<string | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imageLocalPreviewUrl, setImageLocalPreviewUrl] = useState<string | null>(null);
+  const [imageUploading, setImageUploading] = useState(false);
+  const [imageUploadError, setImageUploadError] = useState<string | null>(null);
 
   const [showRawJson, setShowRawJson] = useState(false);
   const [metadataBytes, setMetadataBytes] = useState<Uint8Array | null>(null);
@@ -206,6 +221,23 @@ const DRepMetadataEditor: React.FC = () => {
   useEffect(() => {
     if (pinataJwt) setLocalPinataJwt(pinataJwt);
   }, [pinataJwt]);
+
+  useEffect(() => {
+    return () => {
+      if (imageLocalPreviewUrl?.startsWith('blob:')) {
+        URL.revokeObjectURL(imageLocalPreviewUrl);
+      }
+    };
+  }, [imageLocalPreviewUrl]);
+
+  const setLocalImagePreview = (file: File | null) => {
+    setImageFile(file);
+    setImageLocalPreviewUrl((prev) => {
+      if (prev?.startsWith('blob:')) URL.revokeObjectURL(prev);
+      return file ? URL.createObjectURL(file) : null;
+    });
+    setImageUploadError(null);
+  };
 
   const resolveWalletDrep = useCallback(async () => {
     if (!isWalletConnected || !walletName) {
@@ -260,6 +292,11 @@ const DRepMetadataEditor: React.FC = () => {
   const txMode = registrationStatus ? resolveDrepMetadataTxMode(registrationStatus) : null;
 
   const previewMetadata = useMemo(() => formInputToDrepMetadata(form), [form]);
+
+  const profilePreviewSrc = useMemo(
+    () => profileImagePreviewUrl(form.imageContentUrl, imageLocalPreviewUrl),
+    [form.imageContentUrl, imageLocalPreviewUrl]
+  );
 
   const rawJsonPreview = useMemo(() => {
     try {
@@ -338,6 +375,40 @@ const DRepMetadataEditor: React.FC = () => {
       );
     } finally {
       setImageHashLoading(false);
+    }
+  };
+
+  const handleImageFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0] ?? null;
+    setLocalImagePreview(file);
+    event.target.value = '';
+  };
+
+  const handleUploadImageToPinata = async () => {
+    const jwt = (pinataJwt || localPinataJwt).trim();
+    if (!jwt) {
+      setImageUploadError('Pinata JWT is required. Set it on the Connect step.');
+      return;
+    }
+    if (!imageFile) {
+      setImageUploadError('Choose an image file first.');
+      return;
+    }
+
+    setImageUploading(true);
+    setImageUploadError(null);
+    try {
+      const uploaded = await uploadImageToPinata(jwt, imageFile);
+      updateForm({
+        imageContentUrl: uploaded.url,
+        imageSha256: uploaded.sha256Hex,
+      });
+      setLocalImagePreview(null);
+      setImageFile(null);
+    } catch (err: unknown) {
+      setImageUploadError(err instanceof Error ? err.message : 'Image upload failed');
+    } finally {
+      setImageUploading(false);
     }
   };
 
@@ -660,12 +731,80 @@ const DRepMetadataEditor: React.FC = () => {
 
           <div style={sectionStyle}>
             <h3 style={{ marginTop: 0, fontSize: '1rem' }}>Profile image</h3>
+
+            {profilePreviewSrc && (
+              <img
+                src={profilePreviewSrc}
+                alt="Profile preview"
+                style={{
+                  display: 'block',
+                  maxWidth: '120px',
+                  maxHeight: '120px',
+                  borderRadius: '8px',
+                  marginBottom: '0.75rem',
+                  objectFit: 'cover',
+                  border: '1px solid #374151',
+                }}
+              />
+            )}
+
+            <p style={{ color: '#9ca3af', fontSize: '0.88rem', marginTop: 0 }}>
+              Upload an avatar to IPFS (JPEG, PNG, WebP, or GIF, max 5 MB). sha256 is computed automatically.
+            </p>
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center', marginBottom: '1rem' }}>
+              <label
+                style={{
+                  display: 'inline-block',
+                  padding: '0.45rem 0.75rem',
+                  borderRadius: '6px',
+                  border: '1px solid #4b5563',
+                  background: '#1f2937',
+                  color: '#e5e7eb',
+                  cursor: 'pointer',
+                  fontSize: '0.9rem',
+                }}
+              >
+                Choose image
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  onChange={handleImageFileChange}
+                  style={{ display: 'none' }}
+                />
+              </label>
+              {imageFile && (
+                <span style={{ fontSize: '0.85rem', color: '#9ca3af' }}>
+                  {imageFile.name} ({Math.round(imageFile.size / 1024)} KB)
+                </span>
+              )}
+              <Button
+                onClick={() => void handleUploadImageToPinata()}
+                disabled={imageUploading || !imageFile}
+              >
+                {imageUploading ? 'Uploading…' : 'Upload to IPFS via Pinata'}
+              </Button>
+            </div>
+            {imageUploadError && (
+              <p style={{ color: '#fca5a5', fontSize: '0.85rem', marginTop: 0 }}>{imageUploadError}</p>
+            )}
+            {!pinataReady && imageFile && (
+              <p style={{ color: '#fcd34d', fontSize: '0.85rem' }}>
+                Set a Pinata JWT on the Connect step before uploading.
+              </p>
+            )}
+
+            <p style={{ color: '#6b7280', fontSize: '0.85rem', margin: '1rem 0 0.5rem' }}>
+              Or enter a URL manually
+            </p>
             <label style={labelStyle}>Image URL</label>
             <input
               value={form.imageContentUrl ?? ''}
-              onChange={(e) => updateForm({ imageContentUrl: e.target.value })}
+              onChange={(e) => {
+                updateForm({ imageContentUrl: e.target.value });
+                setImageUploadError(null);
+              }}
               style={fieldStyle}
-              placeholder="https://…"
+              placeholder="https://… or ipfs://…"
             />
             <label style={{ ...labelStyle, marginTop: '0.75rem' }}>sha256 (recommended for remote URLs)</label>
             <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>

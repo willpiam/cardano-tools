@@ -1,8 +1,15 @@
 import type { DrepMetadata } from '../functions/drepMetadata';
+import { IPFS_GATEWAYS, parseIpfsLink } from '../utils/ipfsGateways';
 import './IpfsLinkModal.css';
 
 interface DRepMetadataViewProps {
   metadata: DrepMetadata;
+}
+
+function imageDisplayUrl(contentUrl: string): string {
+  const parsed = parseIpfsLink(contentUrl);
+  if (parsed) return IPFS_GATEWAYS[0].buildUrl(parsed);
+  return contentUrl;
 }
 
 export function DRepMetadataView({ metadata }: DRepMetadataViewProps) {
@@ -27,7 +34,7 @@ export function DRepMetadataView({ metadata }: DRepMetadataViewProps) {
 
       {metadata.image?.contentUrl && (
         <img
-          src={metadata.image.contentUrl}
+          src={imageDisplayUrl(metadata.image.contentUrl)}
           alt={metadata.givenName ? `${metadata.givenName} profile` : 'DRep profile'}
           style={{
             maxWidth: '120px',
