@@ -17,6 +17,7 @@ import Home from './pages/Home';
 import TreasuryDonation from './pages/TreasuryDonation';
 import DRepBulkVote from './pages/DRepBulkVote';
 import PopularDreps from './pages/PopularDreps';
+import DRepMetadataEditor from './pages/DRepMetadataEditor';
 
 function ConchLegacyRedirect() {
   const { search } = useLocation();
@@ -68,6 +69,9 @@ root.render(
               <Route path="donate-treasury" element={<TreasuryDonation />} />
               <Route path="treasury-donation" element={<TreasuryDonation />} />
               <Route path="donate" element={<TreasuryDonation />} />
+              <Route path="drep-metadata" element={<DRepMetadataEditor />} />
+              <Route path="set-drep-metadata" element={<DRepMetadataEditor />} />
+              <Route path="drep-profile" element={<DRepMetadataEditor />} />
               {/* <Route path="/old-app" element={<OldApp />} /> */}
               <Route path="*" element={<NotFound />} />
             </Route>

@@ -23,6 +23,12 @@ const TOOL_LINKS = [
     to: '/drephistory',
   },
   {
+    title: 'DRep Metadata Setter',
+    description:
+      'Author CIP-119 profile metadata, publish to IPFS via Pinata, and register or update your DRep on mainnet.',
+    to: '/drep-metadata',
+  },
+  {
     title: 'Conch protocol',
     description:
       'Read on-chain Conch messages: CIP-20 metadata (label 674) tied to a native asset’s transaction history (Blockfrost).',

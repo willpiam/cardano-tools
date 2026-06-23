@@ -1,5 +1,6 @@
 export const BLOCKFROST_API_KEY_STORAGE_KEY = 'ctools:blockfrost-api-key';
 export const BULK_VOTE_CONFIG_STORAGE_KEY = 'ctools:tool-config:bulk-vote';
+export const DREP_METADATA_CONFIG_STORAGE_KEY = 'ctools:tool-config:drep-metadata';
 export const DREP_HISTORY_CONFIG_STORAGE_KEY = 'ctools:tool-config:drep-history';
 
 export interface BulkVoteAnchorConfig {
@@ -11,6 +12,11 @@ export interface BulkVoteAnchorConfig {
 export interface BulkVoteToolConfig {
   pinataJwt?: string;
   anchor?: BulkVoteAnchorConfig;
+  savedAtSec?: number;
+}
+
+export interface DRepMetadataToolConfig {
+  pinataJwt?: string;
   savedAtSec?: number;
 }
 
@@ -72,6 +78,19 @@ export function getBulkVoteConfigFromStorage(): BulkVoteToolConfig | null {
 export function saveBulkVoteConfigToStorage(partial: Partial<BulkVoteToolConfig>): void {
   const existing = getBulkVoteConfigFromStorage() ?? {};
   writeJson(BULK_VOTE_CONFIG_STORAGE_KEY, {
+    ...existing,
+    ...partial,
+    savedAtSec: Math.floor(Date.now() / 1000),
+  });
+}
+
+export function getDRepMetadataConfigFromStorage(): DRepMetadataToolConfig | null {
+  return readJson<DRepMetadataToolConfig>(DREP_METADATA_CONFIG_STORAGE_KEY);
+}
+
+export function saveDRepMetadataConfigToStorage(partial: Partial<DRepMetadataToolConfig>): void {
+  const existing = getDRepMetadataConfigFromStorage() ?? {};
+  writeJson(DREP_METADATA_CONFIG_STORAGE_KEY, {
     ...existing,
     ...partial,
     savedAtSec: Math.floor(Date.now() / 1000),
