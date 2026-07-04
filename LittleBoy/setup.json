@@ -1,0 +1,16 @@
+{
+  "targets": [
+    {
+      "drepId": "drep1ygr9tuapcanc3kpeyy4dc3vmrz9cfe5q7v9wj3x9j0ap3tswtre9j",
+      "drep_name": "Yoroi W₳llet"
+    },
+    {
+      "drepId": "drep1y2200we9c904un36tzaearntzzl63snffuul9qsk0te4utqfkke0w",
+      "drep_name": "YUTA"
+    },
+    {
+      "drepId": "drep1ytvlwvyjmzfyn56n0zz4f6lj94wxhmsl5zky6knnzrf4jygpyahug",
+      "drep_name": "EMURGO"
+    }
+  ]
+}

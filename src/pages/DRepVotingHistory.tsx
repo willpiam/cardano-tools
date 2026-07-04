@@ -140,6 +140,10 @@ function actionSearchHaystack(
   return parts.join(' ').toLowerCase();
 }
 
+function isLiveUnvotedProposal(row: MergedProposal): boolean {
+  return row.vote === null && !isGovernanceActionFinalized(row.timeStatus);
+}
+
 interface IpfsModalState {
   url: string;
   hashHex?: string;
@@ -258,6 +262,7 @@ const DRepVotingHistory = () => {
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
   const [expandedRowKey, setExpandedRowKey] = useState<string | null>(null);
   const [titleSearchQuery, setTitleSearchQuery] = useState('');
+  const [showOnlyUnvotedLive, setShowOnlyUnvotedLive] = useState(false);
   const [metadataDocCache, setMetadataDocCache] = useState<
     Map<string, CachedGovernanceMetadataDoc>
   >(new Map());
@@ -315,6 +320,7 @@ const DRepVotingHistory = () => {
   useEffect(() => {
     setExpandedRowKey(null);
     setTitleSearchQuery('');
+    setShowOnlyUnvotedLive(false);
     setDrepProfileStatus('idle');
     setDrepProfileMetadata(null);
     setDrepProfileError(null);
@@ -949,12 +955,13 @@ const DRepVotingHistory = () => {
 
   const filteredMergedData = useMemo(() => {
     const query = titleSearchQuery.trim().toLowerCase();
-    if (!query) return mergedData;
     return mergedData.filter((row) => {
+      if (showOnlyUnvotedLive && !isLiveUnvotedProposal(row)) return false;
+      if (!query) return true;
       const cachedTitle = resolveCachedTitle(row);
       return actionSearchHaystack(row, cachedTitle).includes(query);
     });
-  }, [mergedData, titleSearchQuery, metadataTitleByKey]);
+  }, [mergedData, titleSearchQuery, showOnlyUnvotedLive, metadataTitleByKey]);
 
   useEffect(() => {
     if (!expandedRowKey) return;
@@ -1106,7 +1113,9 @@ const DRepVotingHistory = () => {
     for (const row of mergedData) {
       if (!isGovernanceActionFinalized(row.timeStatus)) {
         live += 1;
-        if (row.vote === null) liveUnvoted += 1;
+      }
+      if (isLiveUnvotedProposal(row)) {
+        liveUnvoted += 1;
       }
     }
     return { live, liveUnvoted };
@@ -1404,27 +1413,41 @@ const DRepVotingHistory = () => {
               </div>
 
               <div className="drep-voting-history-search-bar">
-                <input
-                  type="search"
-                  className="drep-voting-history-search-input"
-                  placeholder="Search proposals..."
-                  value={titleSearchQuery}
-                  onChange={(e) => setTitleSearchQuery(e.target.value)}
-                  aria-label="Search proposals by title, type, or ID"
-                />
-                {titleSearchQuery.trim() ? (
-                  <span className="drep-voting-history-search-count">
-                    Showing {filteredMergedData.length} of {mergedData.length}
-                  </span>
-                ) : uncachedMetadataCount > 0 ? (
-                  <span className="drep-voting-history-search-hint">
-                    Titles appear after metadata is loaded via Settings.
-                  </span>
-                ) : null}
+                <div className="drep-voting-history-search-row">
+                  <input
+                    type="search"
+                    className="drep-voting-history-search-input"
+                    placeholder="Search proposals..."
+                    value={titleSearchQuery}
+                    onChange={(e) => setTitleSearchQuery(e.target.value)}
+                    aria-label="Search proposals by title, type, or ID"
+                  />
+                  {titleSearchQuery.trim() || showOnlyUnvotedLive ? (
+                    <span className="drep-voting-history-search-count">
+                      Showing {filteredMergedData.length} of {mergedData.length}
+                    </span>
+                  ) : uncachedMetadataCount > 0 ? (
+                    <span className="drep-voting-history-search-hint">
+                      Titles appear after metadata is loaded via Settings.
+                    </span>
+                  ) : null}
+                </div>
+                <label className="drep-voting-history-filter-checkbox">
+                  <input
+                    type="checkbox"
+                    checked={showOnlyUnvotedLive}
+                    onChange={(e) => setShowOnlyUnvotedLive(e.target.checked)}
+                  />
+                  <span>Show only open actions not yet voted on</span>
+                </label>
               </div>
 
               {filteredMergedData.length === 0 && mergedData.length > 0 && (
-                <p className="drep-voting-history-search-empty">No proposals match your search.</p>
+                <p className="drep-voting-history-search-empty">
+                  {showOnlyUnvotedLive
+                    ? 'No open actions without a vote from this DRep match your filters.'
+                    : 'No proposals match your search.'}
+                </p>
               )}
 
               {filteredMergedData.length > 0 && (
