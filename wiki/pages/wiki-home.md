@@ -14,6 +14,7 @@ This wiki is maintained incrementally by an LLM.
 - Conway wallet web bridge: [Source: cip95](source-cip95.md) (CIP-95 extends CIP-30 for DRep/Ada-holder governance in the browser).
 - Governance identifiers: [Source: cip129](source-cip129.md) (`drep1`, `cc_hot1`, `cc_cold1`, `gov_action1` encodings).
 - Hardware wallet tx interop: [Source: cip21](source-cip21.md) (canonical CBOR and Conway signing limits for Ledger/Trezor).
+- ADA Handles naming/resolution: [Source: Handle Documentation](source-handle-documentation.md) (Handle.me standard, `api.handle.me`, DRep subhandles).
 
 ## Open questions
 - What are the concrete reward mechanics and payout cadence for Icebreakers?
@@ -30,6 +31,7 @@ This wiki is maintained incrementally by an LLM.
 - [CIP-95 wallet bridge (Conway governance)](cip95-wallet-bridge.md)
 - [Governance identifiers (CIP-129)](governance-identifiers-cip129.md)
 - [Hardware wallet transaction interoperability (CIP-21)](hardware-wallet-transaction-interop-cip21.md)
+- [Cardano ADA Handles](cardano-ada-handles.md) (Handle.me resolution, API, dApp best practices)
 - [Cardano Multiplatform Lib (CML)](cardano-multiplatform-lib-cml.md)
 - [DRep voting history: Blockfrost key and URL](ctools-drep-voting-history-blockfrost.md) (ctools app; includes Conch `/conch` query params)
 - [Live Governance Actions](ctools-governance-actions-live.md) (ctools app; `/governance-actions`)

@@ -12,7 +12,7 @@
 
 ## References: links and identity
 - **`Link`:** Labeled URIs (social/site); labels SHOULD describe the destination (e.g. "X", "Personal Website").
-- **`Identity`:** URIs where the DRep publishes their **DRep ID** prominently so readers can correlate metadata with real profiles (social proof by content, not PKI in the MVP).
+- **`Identity`:** URIs where the DRep publishes their **DRep ID** prominently so readers can correlate metadata with real profiles (social proof by content, not PKI in the MVP). An [ADA Handle](cardano-ada-handles.md) or DRep subhandle (`*@drep`) can serve as a human-readable identity link; Handle API returns both legacy and [CIP-129](governance-identifiers-cip129.md) `drep1` IDs.
 
 ## Authors and signing (difference from base CIP-100)
 CIP-119 recommends **`authors` be empty** and tooling **not** treat missing author witnesses as an error for DRep metadata. Rationale: the registering/updating **DRep credential** supplies on-chain linkage; mandatory CIP-100 author witnesses were seen as the wrong fit for user-generated profile content.
@@ -28,6 +28,7 @@ Off-chain CIP-119 metadata is attached at **DRep registration/update** on-chain.
 
 ## Related pages
 - [Governance identifiers (CIP-129)](governance-identifiers-cip129.md) — `drep1` Bech32 for the on-chain DRep credential (separate from this metadata document)
+- [Cardano ADA Handles](cardano-ada-handles.md) — optional `$handle` / `*@drep` identity and resolution via Handle.me API
 - [Source: cip119](source-cip119.md)
 - [CIP-95 wallet bridge (Conway governance)](cip95-wallet-bridge.md)
 - [Governance metadata framework (CIP-100)](governance-metadata-framework-cip100.md)

@@ -50,6 +50,9 @@ Explorers (e.g. Cardanoscan) and APIs (Blockfrost, Koios) increasingly accept th
 - **CIP-119** — off-chain DRep **profile** metadata at registration; CIP-129 is the **identifier** format, not the narrative document.
 - **CIP-21** — Trezor may lack DRep/CC key derivation and Conway signing paths; identifier display can still use `drep1` from software-derived hashes.
 
+## Handle.me DRep subhandles
+Handle.me **DRep subhandles** (e.g. `goose@drep`) resolve via `GET https://api.handle.me/handles/{name}` with a nested **`drep`** object exposing **`cip_105`** and **`cip_129`** Bech32 strings alongside `resolved_addresses.ada`. See [Cardano ADA Handles](cardano-ada-handles.md).
+
 ## ctools usage
 - **DRep bulk vote / voting history:** `drep1...` IDs from wallet (`CML.Ed25519KeyHash.to_bech32('drep')` after Blake2b-224 of CIP-95 pubkey) or manual paste; Lucid `drepIDToCredential` parses Bech32 for voting.
 - **Live Governance Actions:** Cardanoscan links use `https://cardanoscan.io/govAction/{id}`; Blockfrost APIs key proposals by `tx_hash` + `cert_index` (equivalent to CIP-1694 `#` form). CIP-129 `gov_action1` is the shareable encoded bundle of the same pair.
@@ -58,6 +61,7 @@ Explorers (e.g. Cardanoscan) and APIs (Blockfrost, Koios) increasingly accept th
 CIP-129 does not require a hard fork. Wallets and explorers may show **both** legacy CIP-105-style prefixes and CIP-129 during migration; key-generation tools can adopt new prefixes with find-and-replace style updates per the CIP implementation plan.
 
 ## Related pages
+- [Cardano ADA Handles](cardano-ada-handles.md)
 - [Source: cip129](source-cip129.md)
 - [Cardano governance model (CIP-1694)](cardano-governance-cip1694.md)
 - [CIP-95 wallet bridge (Conway governance)](cip95-wallet-bridge.md)

@@ -17,6 +17,7 @@
 - [Source: cip129](pages/source-cip129.md) - CIP-129: Bech32 and byte encodings for DRep, CC hot/cold, and governance action identifiers (Conway era).
 - [Source: cip21](pages/source-cip21.md) - CIP-21: Canonical CBOR and structural rules for transactions signed by hardware wallets.
 - [Source: Reforming Treasury Governance](pages/source-reforming-treasury-governance.md) - Real info-action JSON-LD metadata (CIP-100 + CIP-108); treasury governance reform proposal by AtlasHub DRep.
+- [Source: Handle Documentation](pages/source-handle-documentation.md) - Handle.me docs clippings (frontmatter only) plus HandleResolution.svg; ADA Handles naming, resolution algorithm, REST API, DRep subhandles.
 
 ## Entities / Concepts
 - [Blockfrost Icebreakers](pages/blockfrost-icebreakers.md) - Incentivized operator program for decentralized Blockfrost fleet participation.
@@ -30,6 +31,7 @@
 - [CIP-95 wallet bridge (Conway governance)](pages/cip95-wallet-bridge.md) - Browser wallet extension for Conway certs, DRep signing, and governance dApp flows atop CIP-30.
 - [Governance identifiers (CIP-129)](pages/governance-identifiers-cip129.md) - `drep1`, `cc_hot1`, `cc_cold1`, `gov_action1` formats; header byte preserves type in raw-byte storage.
 - [Hardware wallet transaction interoperability (CIP-21)](pages/hardware-wallet-transaction-interop-cip21.md) - HW signing constraints: canonical CBOR, one vote per tx, cert combinations, device Conway gaps; bulk multi-vote txs fail on Ledger via Eternl.
+- [Cardano ADA Handles](pages/cardano-ada-handles.md) - Handle.me human-readable `$handle` names; four-step resolution (policies, CIP-68/67 labels, classic); api.handle.me; dApp best practices; DRep `*@drep` subhandles with CIP-129 IDs; stake-credential→DRep-ID path documented as invalid.
 
 ## ctools application
 - [DRep voting history: Blockfrost key and URL params](pages/ctools-drep-voting-history-blockfrost.md) - Blockfrost key URL/Redux flow; vote summary + CIP-100 anchor charts (CBOR enrichment via `voteTxAnchors.ts`).

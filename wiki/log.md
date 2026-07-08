@@ -218,3 +218,26 @@ Created wiki scaffold with raw sources nested under wiki/.
 - Pages consulted: `wiki/pages/cardano-governance-cip1694.md`, `wiki/pages/source-cip1694.md`, `wiki/pages/cip95-wallet-bridge.md`, `wiki/pages/ctools-governance-actions-live.md`, `wiki/pages/cardano-multiplatform-lib-cml.md`.
 - New page created: `wiki/pages/treasury-withdrawal-governance-amounts.md`
 
+## [2026-07-05] ingest | Handle Documentation + HandleResolution.svg
+- Source(s) processed:
+  - `wiki/raw/Handle Documentation.md` (frontmatter-only clipping; source `https://docs.handle.me/`)
+  - `wiki/raw/Handle Documentation (1).md` (frontmatter-only clipping; source Resolution page)
+  - `wiki/raw/HandleResolution.svg` (Handles Resolution four-step algorithm diagram)
+  - Upstream docs at docs.handle.me (Resolution best practices, Welcome, Quick Start, DRep Handles API example, Rest API, Limits and Tiers) used to fill empty clippings
+- Pages created/updated:
+  - created `wiki/pages/source-handle-documentation.md`
+  - created `wiki/pages/cardano-ada-handles.md`
+  - updated `wiki/pages/drep-metadata-cip119.md` (Identity / ADA Handle cross-link)
+  - updated `wiki/pages/governance-identifiers-cip129.md` (DRep subhandle API cross-link)
+  - updated `wiki/pages/wiki-home.md`
+  - updated `wiki/index.md`
+- Contradictions or open questions:
+  - markdown clippings contain no body text; wiki documents this and relies on SVG + live docs fetch
+  - Authentication page marked "Coming Soon" upstream; rate limit stated as 5 req/s free tier—verify before production load
+  - policy slot numbers and labels taken from resolution diagram; on-chain `$handle_policies` UTxO is authoritative for policy activation
+
+## [2026-07-05] query | stake credential from ADA handle → DRep ID
+- Question asked: Can you resolve stake credential from an ADA handle, then resolve DRep ID from that?
+- Pages consulted: `wiki/pages/cardano-ada-handles.md`, `wiki/pages/cip95-wallet-bridge.md`, `wiki/pages/governance-identifiers-cip129.md`, `wiki/pages/drep-metadata-cip119.md`, `wiki/pages/ctools-drep-voting-history-blockfrost.md`
+- Updated `wiki/pages/cardano-ada-handles.md` with "DRep ID resolution paths" table clarifying that stake credential → DRep ID is not a valid chain (separate key domains per CIP-95); `*@drep` subhandles remain the Handle-native path.
+

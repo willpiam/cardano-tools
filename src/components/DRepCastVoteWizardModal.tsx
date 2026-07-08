@@ -567,12 +567,12 @@ export function DRepCastVoteWizardModal({
               Your {selectedVote ? voteLabel(selectedVote) : ''} vote was submitted on-chain.
             </p>
             <a
-              href={`https://cardanoscan.io/transaction/${submittedTxHash}`}
+              href={`https://cardanoscan.io/vote/${submittedTxHash}`}
               target="_blank"
               rel="noopener noreferrer"
               className="cast-vote-wizard-tx-link"
             >
-              View transaction on Cardanoscan
+              View vote on-chain
             </a>
             <code className="cast-vote-wizard-action-id">{submittedTxHash}</code>
           </div>
