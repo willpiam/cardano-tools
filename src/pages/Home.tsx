@@ -45,6 +45,12 @@ const TOOL_LINKS = [
     to: '/commit',
   },
   {
+    title: 'Treasury Balance',
+    description:
+      'View the current on-chain Cardano treasury balance in ADA and USD.',
+    to: '/treasury-balance',
+  },
+  {
     title: 'Treasury Donation',
     description:
       'Donate ADA directly to the Cardano treasury. Built with the Cardano Multiplatform Library (CML) for fine-grained transaction control.',

@@ -15,6 +15,7 @@ import GovernanceActions from './pages/GovernanceActions';
 import AssetCip20Messages from './pages/AssetCip20Messages';
 import Home from './pages/Home';
 import TreasuryDonation from './pages/TreasuryDonation';
+import TreasuryBalance from './pages/TreasuryBalance';
 import DRepBulkVote from './pages/DRepBulkVote';
 import PopularDreps from './pages/PopularDreps';
 import DRepMetadataEditor from './pages/DRepMetadataEditor';
@@ -66,6 +67,8 @@ root.render(
               <Route path="conch" element={<AssetCip20Messages />} />
               <Route path="cip20-asset" element={<ConchLegacyRedirect />} />
               <Route path="asset-cip20-messages" element={<ConchLegacyRedirect />} />
+              <Route path="treasury-balance" element={<TreasuryBalance />} />
+              <Route path="treasury" element={<TreasuryBalance />} />
               <Route path="donate-treasury" element={<TreasuryDonation />} />
               <Route path="treasury-donation" element={<TreasuryDonation />} />
               <Route path="donate" element={<TreasuryDonation />} />
