@@ -11,14 +11,14 @@ import { getAssetCip20History, type Cip20MessageRow } from '../utils/cip20AssetH
 import { assetFingerprintFromUnitHex } from '../utils/cip14AssetFingerprint';
 import { clearConchTxCache, countConchTxCache } from '../utils/conchHistoryCache';
 
-const DEFAULT_TX_LIMIT = 40;
-const MAX_TX_LIMIT = 500;
+const DEFAULT_PAGE_SIZE = 40;
+const MAX_PAGE_SIZE = 100;
 
-function parseTxLimit(raw: string | null): number {
-  if (!raw) return DEFAULT_TX_LIMIT;
+function parsePageSize(raw: string | null): number {
+  if (!raw) return DEFAULT_PAGE_SIZE;
   const n = parseInt(raw, 10);
-  if (!Number.isFinite(n) || n < 1) return DEFAULT_TX_LIMIT;
-  return Math.min(n, MAX_TX_LIMIT);
+  if (!Number.isFinite(n) || n < 1) return DEFAULT_PAGE_SIZE;
+  return Math.min(n, MAX_PAGE_SIZE);
 }
 
 function truncateHash(hash: string): string {
@@ -31,9 +31,12 @@ const AssetCip20Messages = () => {
 
   const [localApiKey, setLocalApiKey] = useState(apiKey || '');
   const [localAssetId, setLocalAssetId] = useState('');
-  const [localTxLimit, setLocalTxLimit] = useState(String(DEFAULT_TX_LIMIT));
+  const [localPageSize, setLocalPageSize] = useState(String(DEFAULT_PAGE_SIZE));
   const [rows, setRows] = useState<Cip20MessageRow[]>([]);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasLoaded, setHasLoaded] = useState(false);
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
@@ -54,8 +57,8 @@ const AssetCip20Messages = () => {
     }
     const assetId = urlParams.get('assetId');
     if (assetId) setLocalAssetId(assetId);
-    const txLimit = urlParams.get('txLimit');
-    if (txLimit) setLocalTxLimit(txLimit);
+    const pageSize = urlParams.get('pageSize') ?? urlParams.get('txLimit');
+    if (pageSize) setLocalPageSize(pageSize);
   }, [dispatch]);
 
   useEffect(() => {
@@ -72,11 +75,12 @@ const AssetCip20Messages = () => {
     setLastLoadCachedCount(0);
   }, []);
 
-  const syncUrlParams = (key: string, assetId: string, txLimit: number) => {
+  const syncUrlParams = (key: string, assetId: string, pageSize: number) => {
     const url = new URL(window.location.href);
     url.searchParams.set('blockfrostApiKey', key);
     url.searchParams.set('assetId', assetId);
-    url.searchParams.set('txLimit', String(txLimit));
+    url.searchParams.set('pageSize', String(pageSize));
+    url.searchParams.delete('txLimit');
     window.history.replaceState({}, '', url.toString());
   };
 
@@ -88,9 +92,9 @@ const AssetCip20Messages = () => {
     setLocalApiKey(key);
 
     const assetTrim = localAssetId.trim();
-    const limit = parseTxLimit(localTxLimit.trim());
+    const pageSize = parsePageSize(localPageSize.trim());
 
-    syncUrlParams(key, assetTrim, limit);
+    syncUrlParams(key, assetTrim, pageSize);
   };
 
   const handleLoadHistory = async () => {
@@ -101,19 +105,17 @@ const AssetCip20Messages = () => {
       return;
     }
 
-    const limit = parseTxLimit(localTxLimit.trim());
+    const pageSize = parsePageSize(localPageSize.trim());
     setLoading(true);
     setError(null);
 
     try {
-      const { rows: data, cachedTxCount: loadCachedCount } = await getAssetCip20History(
-        assetTrim,
-        key,
-        limit
-      );
-      setRows(data);
+      const result = await getAssetCip20History(assetTrim, key, { page: 1, count: pageSize });
+      setRows(result.rows);
+      setPage(1);
+      setHasMore(result.hasMore);
       setHasLoaded(true);
-      setLastLoadCachedCount(loadCachedCount);
+      setLastLoadCachedCount(result.cachedTxCount);
       const totalCached = await countConchTxCache();
       setCachedTxCount(totalCached);
     } catch (err) {
@@ -121,6 +123,39 @@ const AssetCip20Messages = () => {
       setError(err instanceof Error ? err.message : 'Failed to load history');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleLoadMore = async () => {
+    const key = (apiKey || '').trim() || localApiKey.trim();
+    const assetTrim = localAssetId.trim();
+    if (!key || !assetTrim || loadingMore || !hasMore) return;
+
+    const pageSize = parsePageSize(localPageSize.trim());
+    const nextPage = page + 1;
+    setLoadingMore(true);
+    setError(null);
+
+    try {
+      const result = await getAssetCip20History(assetTrim, key, {
+        page: nextPage,
+        count: pageSize,
+      });
+      setRows((prev) => {
+        const seen = new Set(prev.map((row) => row.tx));
+        const appended = result.rows.filter((row) => !seen.has(row.tx));
+        return [...prev, ...appended];
+      });
+      setPage(nextPage);
+      setHasMore(result.hasMore);
+      setLastLoadCachedCount(result.cachedTxCount);
+      const totalCached = await countConchTxCache();
+      setCachedTxCount(totalCached);
+    } catch (err) {
+      console.error('Conch protocol history', err);
+      setError(err instanceof Error ? err.message : 'Failed to load more history');
+    } finally {
+      setLoadingMore(false);
     }
   };
 
@@ -151,7 +186,7 @@ const AssetCip20Messages = () => {
           <p style={{ color: '#9ca3af', fontSize: '0.92rem', margin: 0, lineHeight: 1.55 }}>
             <strong style={{ color: '#d1d5db' }}>Conch</strong> is a simple on-chain messaging pattern: short human-readable text is published as{' '}
             <strong>CIP-20</strong> transaction metadata (label <code style={{ fontSize: '0.85rem' }}>674</code>) on transactions that move a chosen native
-            asset. This page scans that asset’s transaction history via Blockfrost and lists those messages in time order. Paste the asset’s full hex{' '}
+            asset. This page scans that asset’s transaction history via Blockfrost and lists those messages newest first. Paste the asset’s full hex{' '}
             <strong>unit</strong> (policy id + hex-encoded asset name), not the CIP-14 <code style={{ fontSize: '0.85rem' }}>asset1…</code> fingerprint.
             Blockfrost API keys in the URL can leak via referrers and shared links; treat bookmarked URLs as sensitive.
           </p>
@@ -234,14 +269,14 @@ const AssetCip20Messages = () => {
             )}
 
             <label style={{ display: 'block', marginBottom: '0.35rem', fontWeight: 'bold' }}>
-              Transaction limit (max {MAX_TX_LIMIT})
+              Transactions per page (max {MAX_PAGE_SIZE})
             </label>
             <input
               type="number"
               min={1}
-              max={MAX_TX_LIMIT}
-              value={localTxLimit}
-              onChange={(e) => setLocalTxLimit(e.target.value)}
+              max={MAX_PAGE_SIZE}
+              value={localPageSize}
+              onChange={(e) => setLocalPageSize(e.target.value)}
               style={{
                 width: '8rem',
                 padding: '0.5rem',
@@ -257,7 +292,7 @@ const AssetCip20Messages = () => {
               </Button>
               <Button
                 onClick={handleLoadHistory}
-                disabled={(!apiKey && !localApiKey.trim()) || !localAssetId.trim() || loading}
+                disabled={(!apiKey && !localApiKey.trim()) || !localAssetId.trim() || loading || loadingMore}
               >
                 Load history
               </Button>
@@ -265,7 +300,7 @@ const AssetCip20Messages = () => {
                 type="button"
                 className="voting-history-settings-icon-btn"
                 onClick={() => setSettingsModalOpen(true)}
-                disabled={loading}
+                disabled={loading || loadingMore}
                 title="Settings"
                 aria-label="Open Conch history settings"
               >
@@ -327,6 +362,12 @@ const AssetCip20Messages = () => {
             <p style={{ color: '#9ca3af' }}>No Conch messages (CIP-20 / label 674) found in the scanned transactions.</p>
           )}
 
+          {hasLoaded && hasMore && !loading && (
+            <Button onClick={handleLoadMore} disabled={loadingMore || (!apiKey && !localApiKey.trim())}>
+              {loadingMore ? 'Loading…' : 'Load more'}
+            </Button>
+          )}
+
           <div style={{ width: '100%', marginTop: '2rem', textAlign: 'center' }}>
             <a
               href="https://projects.williamdoyle.ca"
@@ -343,7 +384,7 @@ const AssetCip20Messages = () => {
             onClose={() => setSettingsModalOpen(false)}
             cachedTxCount={cachedTxCount}
             onClearCache={() => void handleClearCache()}
-            clearDisabled={cachedTxCount === 0 || loading}
+            clearDisabled={cachedTxCount === 0 || loading || loadingMore}
           />
         </div>
       </div>

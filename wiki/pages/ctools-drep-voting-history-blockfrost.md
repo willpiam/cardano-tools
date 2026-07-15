@@ -70,11 +70,11 @@ The **Conch protocol** reader (`src/pages/AssetCip20Messages.tsx`, route **`/con
 - **Apply settings (save to URL)** dispatches the trimmed key (or uses the key already in Redux), then `replaceState` with:
   - **`blockfrostApiKey`**
   - **`assetId`** — full native asset unit (policy hex + asset name hex) used for `GET /assets/{asset}/transactions`
-  - **`txLimit`** — max number of asset transactions to scan (capped in the UI; default 40)
+  - **`pageSize`** — asset transactions scanned per Blockfrost page (default 40, max 100). Legacy query param **`txLimit`** is still read on mount as a fallback for old bookmarks; Apply writes `pageSize` and removes `txLimit`.
 
-**Load history** runs the Blockfrost fetches (header `project_id` only) and does not add the secret to Blockfrost request URLs. Helpers live in `src/utils/cip20AssetHistory.ts`.
+**Load history** fetches page 1 of asset transactions (`order=desc`, newest first) via Blockfrost (header `project_id` only) and does not add the secret to Blockfrost request URLs. **Load more** fetches the next page and appends CIP-20 message rows. Helpers live in `src/utils/cip20AssetHistory.ts`.
 
-Per-transaction metadata lookups are cached in browser **IndexedDB** (`ctools-conch-history`, store `transactions`) keyed by normalized tx hash. On each load the asset transaction list is always refetched; Blockfrost `GET /txs/{hash}/metadata` is skipped for txs already in cache (including txs confirmed to have no CIP-20 label `674`). A **Settings** gear on the Conch page opens a modal showing the cache count and a **Clear {n} cached Conch transactions** button. Cache module: `src/utils/conchHistoryCache.ts`; settings modal: `src/components/ConchHistorySettingsModal.tsx`.
+Per-transaction metadata lookups are cached in browser **IndexedDB** (`ctools-conch-history`, store `transactions`) keyed by normalized tx hash. On each page load the asset transaction list for that page is refetched; Blockfrost `GET /txs/{hash}/metadata` is skipped for txs already in cache (including txs confirmed to have no CIP-20 label `674`). A **Settings** gear on the Conch page opens a modal showing the cache count and a **Clear {n} cached Conch transactions** button. Cache module: `src/utils/conchHistoryCache.ts`; settings modal: `src/components/ConchHistorySettingsModal.tsx`.
 
 The Conch reader derives the CIP-14 **`asset1…` fingerprint** from the hex unit via **`@emurgo/cip14-js`** (`AssetFingerprint.fromParts`) and shows it as a link to the token on **Cardanoscan**; per-transaction links in the results table use **Cardanoscan** (`/transaction/{hash}`), not cexplorer. To author new CIP-20 / 674 payloads in transactions, the app’s **Commit** page is linked from the Conch UI (`/commit`).
 

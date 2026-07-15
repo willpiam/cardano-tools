@@ -24,10 +24,17 @@ export interface Cip20MessageRow {
   message: string;
 }
 
+export interface Cip20HistoryPageOptions {
+  page: number;
+  count: number;
+}
+
 export interface Cip20HistoryResult {
   rows: Cip20MessageRow[];
   cachedTxCount: number;
   fetchedTxCount: number;
+  scannedTxCount: number;
+  hasMore: boolean;
 }
 
 async function bfFetchJson<T>(path: string, apiKey: string): Promise<T> {
@@ -41,29 +48,18 @@ async function bfFetchJson<T>(path: string, apiKey: string): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-/** Paginate asset txs ascending until `amount` rows or no more pages. */
+/** Fetch a single page of asset txs descending (newest first). */
 export async function fetchAssetTransactions(
   assetId: string,
   apiKey: string,
-  amount: number
+  options: Cip20HistoryPageOptions
 ): Promise<BlockfrostAssetTx[]> {
-  if (amount <= 0) return [];
-
+  const page = Math.max(1, Math.floor(options.page));
+  const count = Math.min(100, Math.max(1, Math.floor(options.count)));
   const enc = encodeURIComponent(assetId);
-  const out: BlockfrostAssetTx[] = [];
-  let page = 1;
-
-  while (out.length < amount) {
-    const count = Math.min(100, amount - out.length);
-    const path = `/assets/${enc}/transactions?page=${page}&count=${count}&order=asc`;
-    const chunk = await bfFetchJson<BlockfrostAssetTx[]>(path, apiKey);
-    if (chunk.length === 0) break;
-    out.push(...chunk);
-    if (chunk.length < count) break;
-    page++;
-  }
-
-  return out;
+  const path = `/assets/${enc}/transactions?page=${page}&count=${count}&order=desc`;
+  const chunk = await bfFetchJson<BlockfrostAssetTx[]>(path, apiKey);
+  return Array.isArray(chunk) ? chunk : [];
 }
 
 export async function fetchTxMetadata(
@@ -152,11 +148,21 @@ async function mapWithConcurrency<T, U>(
 export async function getAssetCip20History(
   assetId: string,
   apiKey: string,
-  amount: number
+  options: Cip20HistoryPageOptions
 ): Promise<Cip20HistoryResult> {
-  const history = await fetchAssetTransactions(assetId, apiKey, amount);
+  const count = Math.min(100, Math.max(1, Math.floor(options.count)));
+  const history = await fetchAssetTransactions(assetId, apiKey, {
+    page: options.page,
+    count,
+  });
   if (history.length === 0) {
-    return { rows: [], cachedTxCount: 0, fetchedTxCount: 0 };
+    return {
+      rows: [],
+      cachedTxCount: 0,
+      fetchedTxCount: 0,
+      scannedTxCount: 0,
+      hasMore: false,
+    };
   }
 
   const cacheByKey = await getConchTxCacheBatch(history.map((row) => row.tx_hash));
@@ -190,5 +196,7 @@ export async function getAssetCip20History(
     rows,
     cachedTxCount,
     fetchedTxCount: uncached.length,
+    scannedTxCount: history.length,
+    hasMore: history.length === count,
   };
 }

@@ -241,3 +241,7 @@ Created wiki scaffold with raw sources nested under wiki/.
 - Pages consulted: `wiki/pages/cardano-ada-handles.md`, `wiki/pages/cip95-wallet-bridge.md`, `wiki/pages/governance-identifiers-cip129.md`, `wiki/pages/drep-metadata-cip119.md`, `wiki/pages/ctools-drep-voting-history-blockfrost.md`
 - Updated `wiki/pages/cardano-ada-handles.md` with "DRep ID resolution paths" table clarifying that stake credential → DRep ID is not a valid chain (separate key domains per CIP-95); `*@drep` subhandles remain the Handle-native path.
 
+## [2026-07-15] ingest | Conch Load more pagination
+- Replaced Conch hard `txLimit` scan with **`pageSize`** (transactions per page, default 40, max 100) and a **Load more** button that fetches the next Blockfrost asset-tx page (`order=desc`).
+- Updated `wiki/pages/ctools-drep-voting-history-blockfrost.md` Conch section; legacy `txLimit` still read on mount.
+
