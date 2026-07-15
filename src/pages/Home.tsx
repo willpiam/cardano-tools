@@ -29,7 +29,7 @@ const TOOL_LINKS = [
     to: '/drep-metadata',
   },
   {
-    title: 'Conch protocol',
+    title: '🐚 Conch protocol',
     description:
       'Read on-chain Conch messages: CIP-20 metadata (label 674) tied to a native asset’s transaction history (Blockfrost).',
     to: '/conch',
