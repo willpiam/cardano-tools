@@ -4,7 +4,7 @@
 - [Wiki Home](pages/wiki-home.md) - High-level overview and current synthesis.
 
 ## Sources
-- [Source: blockfrost-platform-main](pages/source-blockfrost-platform-main.md) - Decentralized Cardano API platform; fleet (Icebreakers) and solitary operating modes.
+- [Source: blockfrost-platform-main](pages/source-blockfrost-platform-main.md) - Decentralized Cardano API platform; fleet (Icebreakers) and solitary operating modes; Emurgo CSL in raw Cargo tree only.
 - [Source: cip100](pages/source-cip100.md) - Active CIP defining JSON-LD governance metadata anchors, `body` signing patterns, and extension model (foundation for CIP-108/119).
 - [Source: cip108](pages/source-cip108.md) - Proposed CIP defining off-chain metadata vocabulary for governance actions as a CIP-100 extension.
 - [Source: cip119](pages/source-cip119.md) - Proposed CIP for DRep registration/update off-chain profile metadata extending CIP-100 / Schema.org Person.
@@ -27,7 +27,7 @@
 - [Governance action metadata standard (CIP-108)](pages/governance-action-metadata-cip108.md) - Standardized off-chain fields (`title`, `abstract`, `motivation`, `rationale`, `references`) for CIP-1694 governance actions.
 - [Governance action metadata example](pages/governance-action-metadata-example.md) - Concrete JSON-LD shape for governance actions: CIP-100 envelope, CIP-108 body, HTML rationale, references; paired with ctools parsing behavior.
 - [DRep metadata standard (CIP-119)](pages/drep-metadata-cip119.md) - Proposed DRep profile anchor fields (`givenName`, narrative blocks, `Identity`/`Link` references, `doNotList`).
-- [Cardano Multiplatform Lib (CML)](pages/cardano-multiplatform-lib-cml.md) - Multi-target Rust/JS/WASM Cardano library; crate split and NPM packages; treasury donation builder helpers from CML 6.2.0.
+- [Cardano Multiplatform Lib (CML)](pages/cardano-multiplatform-lib-cml.md) - Multi-target Rust/JS/WASM Cardano library; crate split and NPM packages; treasury donation builder helpers from CML 6.2.0; ctools uses Anastasia Labs packaging (not `@emurgo`).
 - [CIP-95 wallet bridge (Conway governance)](pages/cip95-wallet-bridge.md) - Browser wallet extension for Conway certs, DRep signing, and governance dApp flows atop CIP-30.
 - [Governance identifiers (CIP-129)](pages/governance-identifiers-cip129.md) - `drep1`, `cc_hot1`, `cc_cold1`, `gov_action1` formats; header byte preserves type in raw-byte storage.
 - [Hardware wallet transaction interoperability (CIP-21)](pages/hardware-wallet-transaction-interop-cip21.md) - HW signing constraints: canonical CBOR, one vote per tx, cert combinations, device Conway gaps; bulk multi-vote txs fail on Ledger via Eternl.
@@ -37,3 +37,4 @@
 - [DRep voting history: Blockfrost key and URL params](pages/ctools-drep-voting-history-blockfrost.md) - Blockfrost key URL/Redux flow; vote summary + CIP-100 anchor charts (CBOR enrichment via `voteTxAnchors.ts`).
 - [Live Governance Actions](pages/ctools-governance-actions-live.md) - Blockfrost-backed browser for live mainnet proposals: type filters, treasury sort, two-step metadata (anchor + CIP-108 fetch), Cardanoscan links.
 - [Treasury withdrawal governance amounts](pages/treasury-withdrawal-governance-amounts.md) - How CIP-1694 encodes treasury withdrawal lovelace on-chain (credential map in `proposal_procedure`) and how to query totals via Blockfrost/ctools.
+- [Emurgo library inventory](pages/ctools-emurgo-libraries.md) - Direct `@emurgo/cip14-js`; transitive message-signing via Lucid; CML is not Emurgo; CSL only under ingested Blockfrost Platform raw tree.

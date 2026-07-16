@@ -17,6 +17,7 @@ Most application work uses **`cml-chain`**; reach for **`cml-multi-era`** when i
 
 ## JavaScript / WASM consumption
 - NPM packages include **`@dcspark/cardano-multiplatform-lib-browser`** and **`@dcspark/cardano-multiplatform-lib-nodejs`**.
+- In this repo’s app dependency tree, ctools pins **`@anastasia-labs/cardano-multiplatform-lib-browser`** (same CML lineage; Anastasia Labs / dcSpark packaging—not an `@emurgo/*` package). For Emurgo packages actually present in the tree, see [Emurgo library inventory](ctools-emurgo-libraries.md).
 - An **asm.js** build exists on NPM but is **deprecated path**: performance and currency with the mainline builds are poor.
 - Bundlers should use **Webpack 5+** per upstream guidance in the raw doc.
 
@@ -37,6 +38,7 @@ The ingested combined raw file contains **placeholder `todo` commands** in its g
 ## Related pages
 - [Source: cardano-multiplatform-lib-combined](source-cardano-multiplatform-lib-combined.md)
 - [Source: CML release 6.2.0](source-cml-release-6-2-0-treasury-donation.md)
+- [Emurgo library inventory](ctools-emurgo-libraries.md) (contrast: Emurgo cip14 / message-signing / CSL vs CML)
 - [Hardware wallet transaction interoperability (CIP-21)](hardware-wallet-transaction-interop-cip21.md)
 - [Governance identifiers (CIP-129)](governance-identifiers-cip129.md)
 - [Wiki Home](wiki-home.md)

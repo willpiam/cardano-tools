@@ -245,3 +245,13 @@ Created wiki scaffold with raw sources nested under wiki/.
 - Replaced Conch hard `txLimit` scan with **`pageSize`** (transactions per page, default 40, max 100) and a **Load more** button that fetches the next Blockfrost asset-tx page (`order=desc`).
 - Updated `wiki/pages/ctools-drep-voting-history-blockfrost.md` Conch section; legacy `txLimit` still read on mount.
 
+## [2026-07-15] ingest | Conch saved settings (API key + asset id)
+- Conch now persists Blockfrost API key (shared `ctools:blockfrost-api-key`) and asset id (`ctools:tool-config:conch`) in localStorage, with a **Load saved settings** banner and optional **Save API key to URL** checkbox (DRep Voting History pattern).
+- Updated `wiki/pages/ctools-drep-voting-history-blockfrost.md` Conch section; helpers in `src/utils/toolConfigStorage.ts`.
+
+## [2026-07-16] query | Emurgo library inventory for ctools
+- Question asked: Inventory all Emurgo library uses in the codebase; ensure the wiki records the details.
+- Pages consulted: `wiki/index.md`, `wiki/pages/wiki-home.md`, `wiki/pages/ctools-drep-voting-history-blockfrost.md`, `wiki/pages/cardano-multiplatform-lib-cml.md`, `wiki/pages/source-blockfrost-platform-main.md`.
+- New page created: `wiki/pages/ctools-emurgo-libraries.md`.
+- Also updated: `wiki/index.md`, `wiki/pages/wiki-home.md`, `wiki/pages/cardano-multiplatform-lib-cml.md` (clarify Anastasia Labs CML ≠ `@emurgo`), `wiki/pages/source-blockfrost-platform-main.md` (CSL in raw tree), `wiki/pages/ctools-drep-voting-history-blockfrost.md` (cross-link).
+

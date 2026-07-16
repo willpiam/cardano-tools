@@ -64,13 +64,11 @@ Putting API keys in query parameters can expose them in shared links, referrer h
 
 ## Conch protocol (same URL pattern)
 
-The **Conch protocol** reader (`src/pages/AssetCip20Messages.tsx`, route **`/conch`**; legacy paths `/cip20-asset` and `/asset-cip20-messages` redirect to `/conch` with query preserved) reuses the same Blockfrost key flow:
+The **Conch protocol** reader (`src/pages/AssetCip20Messages.tsx`, route **`/conch`**; legacy paths `/cip20-asset` and `/asset-cip20-messages` redirect to `/conch` with query preserved) reuses the shared Blockfrost key flow plus tool-local asset id persistence (same pattern as DRep Voting History):
 
-- On mount, reads **`blockfrostApiKey`** from the query string and dispatches `setBlockfrostConfig` like the other tools.
-- **Apply settings (save to URL)** dispatches the trimmed key (or uses the key already in Redux), then `replaceState` with:
-  - **`blockfrostApiKey`**
-  - **`assetId`** — full native asset unit (policy hex + asset name hex) used for `GET /assets/{asset}/transactions`
-  - **`pageSize`** — asset transactions scanned per Blockfrost page (default 40, max 100). Legacy query param **`txLimit`** is still read on mount as a fallback for old bookmarks; Apply writes `pageSize` and removes `txLimit`.
+- On mount, reads **`blockfrostApiKey`** from the query string (if present), dispatches `setBlockfrostConfig`, and saves the key to shared localStorage (`ctools:blockfrost-api-key`). **`assetId`** from the URL fills the form and is saved to Conch tool config (`ctools:tool-config:conch` via `saveConchConfigToStorage`). **`pageSize`** (or legacy **`txLimit`**) sets transactions per page.
+- A **Load saved settings from this browser** banner appears when a cached Blockfrost key and/or cached Conch `assetId` is available and not already supplied by the URL / Redux. Choosing it restores missing values from localStorage (`getBlockfrostApiKeyFromStorage`, `getConchConfigFromStorage`).
+- **Apply settings** always writes the Blockfrost key and asset id to localStorage. It updates the URL with **`assetId`** and **`pageSize`** (removes legacy **`txLimit`**). **`blockfrostApiKey`** is written to the URL only when **Save API key to URL** is checked (defaults on if the URL already had the key; otherwise off and the param is removed).
 
 **Load history** fetches page 1 of asset transactions (`order=desc`, newest first) via Blockfrost (header `project_id` only) and does not add the secret to Blockfrost request URLs. **Load more** fetches the next page and appends CIP-20 message rows. Helpers live in `src/utils/cip20AssetHistory.ts`.
 
@@ -88,6 +86,7 @@ The Conch reader derives the CIP-14 **`asset1…` fingerprint** from the hex uni
 - Charts: `src/components/DRepVoteSummaryChart.tsx`, `src/components/DRepVoteMetadataChart.tsx`, `src/components/governanceChartShared.tsx`
 - Vote anchor parsing: `src/functions/voteTxAnchors.ts`
 - State: `src/store/blockfrostSlice.ts`
+- Tool config localStorage (Blockfrost key + Conch asset id): `src/utils/toolConfigStorage.ts`
 - Conch / CIP-20 history helpers: `src/utils/cip20AssetHistory.ts`
 - Conch transaction metadata cache: `src/utils/conchHistoryCache.ts`
-- CIP-14 fingerprint from unit hex: `src/utils/cip14AssetFingerprint.ts` (uses `@emurgo/cip14-js`)
+- CIP-14 fingerprint from unit hex: `src/utils/cip14AssetFingerprint.ts` (uses `@emurgo/cip14-js`); full Emurgo dep inventory: [Emurgo library inventory](ctools-emurgo-libraries.md)

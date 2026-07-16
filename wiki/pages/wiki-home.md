@@ -33,5 +33,6 @@ This wiki is maintained incrementally by an LLM.
 - [Hardware wallet transaction interoperability (CIP-21)](hardware-wallet-transaction-interop-cip21.md)
 - [Cardano ADA Handles](cardano-ada-handles.md) (Handle.me resolution, API, dApp best practices)
 - [Cardano Multiplatform Lib (CML)](cardano-multiplatform-lib-cml.md)
+- [Emurgo library inventory](ctools-emurgo-libraries.md) (ctools: `@emurgo/cip14-js` direct; message-signing transitive; CSL in raw Blockfrost Platform only)
 - [DRep voting history: Blockfrost key and URL](ctools-drep-voting-history-blockfrost.md) (ctools app; includes Conch `/conch` query params)
 - [Live Governance Actions](ctools-governance-actions-live.md) (ctools app; `/governance-actions`)

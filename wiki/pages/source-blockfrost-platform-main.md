@@ -22,6 +22,10 @@ Blockfrost Platform is presented as a decentralized API node stack for Cardano o
 - Icebreaker NFT License reward address (for Icebreakers participation).
 - Icebreaker account secret (for program participation).
 
+## Emurgo serialization crate (raw tree only)
+The ingested Blockfrost Platform tree declares Emurgo’s Rust **`cardano-serialization-lib` `15.0.3`** (workspace `Cargo.toml`) and uses it in `common`, `gateway`, `sdk_bridge`, and `integration_tests` (keys, Hydra verification / coin selection, tx building). This is **not** wired into the ctools React app; see [Emurgo library inventory](ctools-emurgo-libraries.md).
+
 ## Related pages
 - [Blockfrost Icebreakers](blockfrost-icebreakers.md)
+- [Emurgo library inventory](ctools-emurgo-libraries.md)
 - [Wiki Home](wiki-home.md)
